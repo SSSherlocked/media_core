@@ -103,12 +103,19 @@ extension _MediaKitEngineConfig on MediaKitPlayerAdapter {
       applied = await _runNativeCommand(command) && applied;
     }
 
-    MediaCoreLog.info(
-      LogCategory.renderer,
-      'mpv list option "$key" mounted ${await _readNativeProperty('$key-count') ?? '<unknown>'} of '
-          '${entries.length} entries',
-      fields: <String, Object?>{'entries': entries.length},
-    );
+    // The read-back costs one more native round trip for the whole option and
+    // exists only to put the mounted count in the log. Logging defaults to
+    // `nothing`, so a shipping build paid that round trip for a line nobody
+    // recorded — per list option, on every apply. Ask the logger first; the
+    // emitted set is unchanged, because this is the same predicate `log` uses.
+    if (MediaCoreLog.isEnabled(LogCategory.renderer, LogLevel.info)) {
+      MediaCoreLog.info(
+        LogCategory.renderer,
+        'mpv list option "$key" mounted ${await _readNativeProperty('$key-count') ?? '<unknown>'} of '
+            '${entries.length} entries',
+        fields: <String, Object?>{'entries': entries.length},
+      );
+    }
 
     return applied;
   }

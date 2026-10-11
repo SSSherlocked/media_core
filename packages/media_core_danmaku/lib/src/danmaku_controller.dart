@@ -1,9 +1,6 @@
 import 'dart:async';
 
 import 'package:media_core/media_core.dart';
-
-import 'package:rxdart/rxdart.dart';
-
 import 'package:media_core_danmaku/src/danmaku_config.dart';
 import 'package:media_core_danmaku/src/danmaku_failure.dart';
 import 'package:media_core_danmaku/src/danmaku_filter_policy.dart';
@@ -14,6 +11,7 @@ import 'package:media_core_danmaku/src/danmaku_session_state.dart';
 import 'package:media_core_danmaku/src/danmaku_similarity_filter.dart';
 import 'package:media_core_danmaku/src/danmaku_sink.dart';
 import 'package:media_core_danmaku/src/danmaku_transport.dart';
+import 'package:rxdart/rxdart.dart';
 
 /// Owns exactly one room-bound danmaku session.
 ///

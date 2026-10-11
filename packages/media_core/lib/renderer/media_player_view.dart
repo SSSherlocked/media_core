@@ -167,6 +167,19 @@ final class _MediaPlayerViewState extends State<MediaPlayerView> {
   /// The video output the current build wants.
   PlayerVideo? _desired;
 
+  /// The engine's picture widget for the output currently rendered.
+  ///
+  /// Cached against the output's identity and the background behind it, because
+  /// this widget is the most expensive one in the tree: building it constructs
+  /// the engine's own surface widget (a texture or platform view) for no change
+  /// at all. A host page that rebuilds on every transport tick — the natural way
+  /// to drive chrome from playback state — would otherwise rebuild the surface
+  /// tens of times a second. Reusing the identical instance lets Flutter skip
+  /// the subtree entirely.
+  Widget? _picture;
+  PlayerVideo? _pictureOutput;
+  Color? _pictureBackground;
+
   bool _surfaceSyncScheduled = false;
 
   /// Zoom state, owned by this view when the host did not supply one.
@@ -387,14 +400,7 @@ final class _MediaPlayerViewState extends State<MediaPlayerView> {
 
     // Without a video widget there is nothing to render: an audio-only
     // player, or one whose surface is not ready yet, paints its background.
-    final Widget picture = video == null
-        ? ColoredBox(color: _backgroundColor, child: const SizedBox.expand())
-        // Keyed per adapter instance: on a backend swap the old surface
-        // unmounts instead of being updated onto a foreign controller.
-        : KeyedSubtree(
-            key: ValueKey('${video.runtimeType}_${identityHashCode(video)}'),
-            child: video.build(),
-          );
+    final Widget picture = _pictureFor(video);
 
     Widget content = picture;
 
@@ -417,6 +423,32 @@ final class _MediaPlayerViewState extends State<MediaPlayerView> {
         return _withCaptureBoundary(_withGestures(_withZoom(content)));
       },
     );
+  }
+
+  /// Builds — or reuses — the picture for [video].
+  ///
+  /// The cache is keyed on the output's identity and on the background painted
+  /// when there is none: both are the only inputs to the widget below, and the
+  /// fit, the alignment and the mirror are applied outside it (the fit through
+  /// the adapter's own notifier, the rest by the wrappers in [build]).
+  Widget _pictureFor(PlayerVideo? video) {
+    final background = _backgroundColor;
+
+    if (identical(video, _pictureOutput) && _pictureBackground == background && _picture != null) {
+      return _picture!;
+    }
+
+    _pictureOutput = video;
+    _pictureBackground = background;
+
+    return _picture = video == null
+        ? ColoredBox(color: background, child: const SizedBox.expand())
+        // Keyed per adapter instance: on a backend swap the old surface
+        // unmounts instead of being updated onto a foreign controller.
+        : KeyedSubtree(
+            key: ValueKey('${video.runtimeType}_${identityHashCode(video)}'),
+            child: video.build(),
+          );
   }
 
   /// Wraps [child] in the capture boundary when the host wants screenshots.

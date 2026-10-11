@@ -67,7 +67,14 @@ void main() {
     );
     await tester.pump();
     expect(_opacityOf(tester, 'controls'), 0.0, reason: 'hover mode hides withControls layers while idle');
-    expect(_opacityOf(tester, 'content'), 1.0, reason: 'always layers never hide');
+    // An always layer is not wrapped in an AnimatedOpacity at all: there is no
+    // other opacity for it to fade to, so the wrapper would only add a layer.
+    expect(find.text('content'), findsOneWidget, reason: 'always layers never hide');
+    expect(
+      find.ancestor(of: find.text('content'), matching: find.byType(AnimatedOpacity)),
+      findsNothing,
+      reason: 'always layers are not animated',
+    );
 
     final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await gesture.addPointer(location: tester.getCenter(find.byType(MediaPlayerOverlay)));
@@ -78,7 +85,7 @@ void main() {
     await tester.pump(const Duration(seconds: 6));
     await tester.pump();
     expect(_opacityOf(tester, 'controls'), 0.0, reason: 'auto-hide after idle delay');
-    expect(_opacityOf(tester, 'content'), 1.0, reason: 'always layers still visible');
+    expect(find.text('content'), findsOneWidget, reason: 'always layers still visible');
   });
 
   testWidgets('stage: portrait video + fill strategy uses cover fit', (WidgetTester tester) async {
