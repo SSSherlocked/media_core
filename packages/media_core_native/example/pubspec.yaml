@@ -13,11 +13,11 @@ dependencies:
 
   # The plugin under test.
   media_core_native:
-    ^0.2.0
+    path: ..
 
   # The vocabulary the report is expressed in.
   media_core:
-    ^0.1.0
+    path: ../../media_core
 
 dev_dependencies:
   flutter_test:

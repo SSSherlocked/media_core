@@ -4,6 +4,7 @@ description: System media surfaces for media_core - media notification, lock scr
 
 
 version: 0.1.0
+publish_to: none
 repository: https://github.com/liuchuancong/media_core
 issue_tracker: https://github.com/liuchuancong/media_core/issues
 
@@ -19,7 +20,7 @@ dependencies:
 
   # The player whose state is published and whose transport is driven.
   media_core:
-    ^0.1.0
+    path: ../media_core
 
   # The platform media surfaces. audio_service is the one abstraction that
   # reaches all four: a notification on Android, the lock screen and Control

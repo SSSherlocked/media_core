@@ -1,6 +1,7 @@
 name: media_core_ingest
 description: Playable input pipeline for media_core - decide when an upstream must be normalised (manifest rewrite, expiring URL, codec/container remux) and hand the player one loopback URL instead of teaching every host the same tricks.
 version: 0.1.0
+publish_to: none
 repository: https://github.com/liuchuancong/media_core
 issue_tracker: https://github.com/liuchuancong/media_core/issues
 resolution: workspace

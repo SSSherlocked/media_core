@@ -1,6 +1,7 @@
 name: media_core_presentation
 description: Presentation capability for media_core (fullscreen / PiP / floating window with video-orientation awareness).
 version: 0.1.0
+publish_to: none
 repository: https://github.com/liuchuancong/media_core
 issue_tracker: https://github.com/liuchuancong/media_core/issues
 resolution: workspace
@@ -13,7 +14,7 @@ dependencies:
   flutter:
     sdk: flutter
   media_core:
-    ^0.1.0
+    path: ../media_core
 
   # Desktop fullscreen / always-on-top floating window (Windows, macOS, Linux)
   window_manager: ^0.5.2

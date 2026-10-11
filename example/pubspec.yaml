@@ -32,55 +32,55 @@ dependencies:
 
   # The framework itself.
   media_core:
-    ^0.1.0
+    path: ../packages/media_core
 
   # The backend this example plays through (it brings media_kit /
   # media_kit_video in from the pinned upstream revision).
   media_core_media_kit:
-    ^0.1.0
+    path: ../packages/media_core_media_kit
 
   # Logging: the framework logs through this package, and the example turns
   # it on so the demo pages can show what the framework decides.
   media_core_logging:
-    ^0.1.0
+    path: ../packages/media_core_logging
 
   # Memory accounting: the memory demo page and the cache demo both read it.
   media_core_memory:
-    ^0.1.0
+    path: ../packages/media_core_memory
 
   # Feature modules, one import per demo page below.
   media_core_live:
-    ^0.1.0
+    path: ../packages/media_core_live
   media_core_feed:
-    ^0.1.0
+    path: ../packages/media_core_feed
   media_core_audio:
-    ^0.1.0
+    path: ../packages/media_core_audio
   media_core_presentation:
-    ^0.1.0
+    path: ../packages/media_core_presentation
   media_core_danmaku:
-    ^0.1.0
+    path: ../packages/media_core_danmaku
   media_core_multiview:
-    ^0.1.0
+    path: ../packages/media_core_multiview
   media_core_list_playback:
-    ^0.1.0
+    path: ../packages/media_core_list_playback
   media_core_download:
-    ^0.1.0
+    path: ../packages/media_core_download
   media_core_recording_ffmpeg:
-    ^0.1.0
+    path: ../packages/media_core_recording_ffmpeg
 
   # The control sets (six design languages) and the zoom controller the styles
   # page switches between.
   media_core_ui:
-    ^0.1.0
+    path: ../packages/media_core_ui
 
   # The platform capability probe the probe demo prints.
   media_core_native:
-    ^0.2.0
+    path: ../packages/media_core_native
 
   # System media surfaces (notification / lock screen / SMTC / MPRIS) for the
   # video player.
   media_core_mediasession:
-    ^0.1.0
+    path: ../packages/media_core_mediasession
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

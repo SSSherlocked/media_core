@@ -1,6 +1,7 @@
 name: media_core_multiview
 description: Multi-cell live wall for media_core - N players side by side with per-cell health, one audio owner, a decode budget and per-cell danmaku.
 version: 0.1.0
+publish_to: none
 repository: https://github.com/liuchuancong/media_core
 issue_tracker: https://github.com/liuchuancong/media_core/issues
 resolution: workspace
@@ -13,9 +14,9 @@ dependencies:
   flutter:
     sdk: flutter
   media_core:
-    ^0.1.0
+    path: ../media_core
   media_core_danmaku:
-    ^0.1.0
+    path: ../media_core_danmaku
 
 dev_dependencies:
   flutter_test:

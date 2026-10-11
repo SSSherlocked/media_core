@@ -1,6 +1,7 @@
 name: media_core_danmaku
 description: Danmaku sessions for media_core - platform-agnostic transport contract, message normalization, deduplication and filtering.
 version: 0.1.0
+publish_to: none
 repository: https://github.com/liuchuancong/media_core
 issue_tracker: https://github.com/liuchuancong/media_core/issues
 resolution: workspace
@@ -13,9 +14,9 @@ dependencies:
   flutter:
     sdk: flutter
   media_core:
-    ^0.1.0
+    path: ../media_core
   media_core_memory:
-    ^0.1.0
+    path: ../media_core_memory
 
   flame_barrage: ^0.0.9
 

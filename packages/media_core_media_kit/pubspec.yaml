@@ -18,9 +18,9 @@ dependencies:
   flutter:
     sdk: flutter
   media_core:
-    ^0.1.0
+    path: ../media_core
   media_core_logging:
-    ^0.1.0
+    path: ../media_core_logging
 
   # Upstream Predidit/media-kit, pinned. The repository no longer carries copies
   # of these two packages: the fork patches described in pure_live's

@@ -16,7 +16,7 @@ dependencies:
   flutter:
     sdk: flutter
   media_core:
-    ^0.1.0
+    path: ../media_core
 
   # Desktop small window (Windows, macOS, Linux)
   window_manager: ^0.5.2
@@ -36,7 +36,7 @@ dependencies:
       ref: 9a4492893ca5eee8ffac0593d1cd93b1187b6b53
 
   media_core_win32:
-    ^0.1.0
+    path: ../media_core_win32
 
 dev_dependencies:
   flutter_test:

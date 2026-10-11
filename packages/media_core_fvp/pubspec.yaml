@@ -4,6 +4,7 @@ description: >-
   hardware decoding and software fallbacks behind the shared PlayerAdapter
   contract.
 version: 0.1.0
+publish_to: none
 repository: https://github.com/liuchuancong/media_core
 issue_tracker: https://github.com/liuchuancong/media_core/issues
 resolution: workspace
@@ -16,9 +17,9 @@ dependencies:
   flutter:
     sdk: flutter
   media_core:
-    ^0.1.0
+    path: ../media_core
   media_core_logging:
-    ^0.1.0
+    path: ../media_core_logging
 
   # Published package. Note that pure_live vendors a stripped copy (android/ios
   # plugin platforms only) to keep libmdk off desktop; that copy is not used

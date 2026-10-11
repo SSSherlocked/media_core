@@ -18,9 +18,9 @@ dependencies:
   flutter:
     sdk: flutter
   media_core:
-    ^0.1.0
+    path: ../media_core
   media_core_logging:
-    ^0.1.0
+    path: ../media_core_logging
   # Fork of bmxclaud's flv decoder; pinned to a commit so the published
   # package resolves deterministically.
   flv_lzc:

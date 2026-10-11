@@ -1,6 +1,7 @@
 name: media_core_memory
 description: Memory accounting for media_core - per-module reported footprint, budget thresholds with pressure levels, device snapshots and reports.
 version: 0.1.0
+publish_to: none
 repository: https://github.com/liuchuancong/media_core
 issue_tracker: https://github.com/liuchuancong/media_core/issues
 resolution: workspace
@@ -15,7 +16,7 @@ dependencies:
 
   # Pressure transitions and reports are logged under the memory category
   media_core_logging:
-    ^0.1.0
+    path: ../media_core_logging
 
   # Value equality for snapshots and reports
   equatable: ^3.0.0
