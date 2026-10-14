@@ -109,7 +109,8 @@ final class BackgroundProgress {
   const BackgroundProgress.indeterminate() : current = null, total = null;
 
   /// The platform draws a filled bar: [current] out of [total] (a download).
-  const BackgroundProgress.determinate({required this.current, required this.total}) : assert(total != null && total > 0);
+  const BackgroundProgress.determinate({required this.current, required this.total})
+    : assert(total != null && total > 0, 'total must be a positive count for a determinate bar');
 
   /// Completed units, or null when the end is unknown.
   final int? current;
@@ -248,7 +249,12 @@ final class BackgroundExecution {
       return null;
     } on MissingPluginException {
       return null;
-    } on FlutterError {
+    }
+    // FlutterError is reached only when there is no platform binding (a
+    // pure-Dart test, a CLI, an isolate); it is caught deliberately so the job
+    // degrades to no-op instead of crashing, even though it is an Error.
+    // ignore: avoid_catching_errors
+    on FlutterError {
       // Reached without a platform binding: a pure-Dart test, a CLI, an
       // isolate. There is no notification to post and nothing to report.
       return null;

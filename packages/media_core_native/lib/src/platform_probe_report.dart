@@ -35,6 +35,26 @@ final class PlatformProbeReport {
     required this.info,
   });
 
+  /// Parses a channel payload.
+  ///
+  /// Every section is optional. A platform implementation that reports only
+  /// what it can answer leaves the rest out, and the parser fills in the
+  /// "unknown" values — which is deliberately different from "unsupported".
+  factory PlatformProbeReport.fromPayload(Object? payload) {
+    if (payload is! Map) {
+      return unknown;
+    }
+
+    final map = payload.map((key, value) => MapEntry(key.toString(), value));
+
+    return PlatformProbeReport(
+      capabilities: _capabilitiesFrom(map['capabilities']),
+      device: _deviceFrom(map['device']),
+      codecs: _codecsFrom(map['codecs']),
+      info: _infoFrom(map['info']),
+    );
+  }
+
   /// Capabilities reported by the platform.
   final PlatformCapabilities capabilities;
 
@@ -57,26 +77,6 @@ final class PlatformProbeReport {
 
   /// Whether anything in this report came from the platform.
   bool get isReported => capabilities.reported || device.reported || codecs.reported;
-
-  /// Parses a channel payload.
-  ///
-  /// Every section is optional. A platform implementation that reports only
-  /// what it can answer leaves the rest out, and the parser fills in the
-  /// "unknown" values — which is deliberately different from "unsupported".
-  factory PlatformProbeReport.fromPayload(Object? payload) {
-    if (payload is! Map) {
-      return unknown;
-    }
-
-    final map = payload.map((key, value) => MapEntry(key.toString(), value));
-
-    return PlatformProbeReport(
-      capabilities: _capabilitiesFrom(map['capabilities']),
-      device: _deviceFrom(map['device']),
-      codecs: _codecsFrom(map['codecs']),
-      info: _infoFrom(map['info']),
-    );
-  }
 
   static PlatformCapabilities _capabilitiesFrom(Object? raw) {
     if (raw is! Map) {
@@ -155,7 +155,7 @@ Future<PlatformProbeReport> readPlatformReport(MediaCoreNativePlatform platform)
     final payload = await platform.invoke<Object?>(kProbeMethod);
 
     return PlatformProbeReport.fromPayload(payload);
-  } catch (_) {
+  } on Object catch (_) {
     return PlatformProbeReport.unknown;
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:media_core/media_core.dart';
 import 'package:media_core_native/media_core_native.dart';
@@ -11,7 +13,9 @@ void main() {
   runApp(const ProbeApp());
 }
 
+/// The example's root widget.
 class ProbeApp extends StatelessWidget {
+  /// Creates the probe example app.
   const ProbeApp({super.key});
 
   @override
@@ -20,7 +24,9 @@ class ProbeApp extends StatelessWidget {
   }
 }
 
+/// Page that runs the platform probe and prints what it answered.
 class ProbePage extends StatefulWidget {
+  /// Creates the probe page.
   const ProbePage({super.key});
 
   @override
@@ -36,7 +42,7 @@ class _ProbePageState extends State<ProbePage> {
   void initState() {
     super.initState();
 
-    _probe();
+    unawaited(_probe());
   }
 
   Future<void> _probe() async {
@@ -56,7 +62,7 @@ class _ProbePageState extends State<ProbePage> {
         _provider = provider;
         _loading = false;
       });
-    } catch (error) {
+    } on Object catch (error) {
       if (!mounted) {
         return;
       }
@@ -76,11 +82,7 @@ class _ProbePageState extends State<ProbePage> {
       appBar: AppBar(
         title: const Text('Platform probe'),
         actions: <Widget>[
-          IconButton(
-            tooltip: 'Probe again',
-            onPressed: _loading ? null : _probe,
-            icon: const Icon(Icons.refresh),
-          ),
+          IconButton(tooltip: 'Probe again', onPressed: _loading ? null : _probe, icon: const Icon(Icons.refresh)),
         ],
       ),
       body: _loading
@@ -140,8 +142,9 @@ class _ProbePageState extends State<ProbePage> {
                         codec.name: switch (provider.codecs[codec]) {
                           null => 'not reported',
                           final support when !support.hardware => 'software only',
-                          final support => 'hardware'
-                              '${support.hasSizeLimits ? ' up to ${support.maxWidth}x${support.maxHeight}' : ''}',
+                          final support =>
+                            'hardware'
+                                '${support.hasSizeLimits ? ' up to ${support.maxWidth}x${support.maxHeight}' : ''}',
                         },
                     },
                     footer: 'A codec that is absent answers "unknown", not "unsupported".',
@@ -200,10 +203,7 @@ class _Section extends StatelessWidget {
                   ],
                 ),
               ),
-            if (footer != null) ...<Widget>[
-              const SizedBox(height: 6),
-              Text(footer!, style: theme.textTheme.bodySmall),
-            ],
+            if (footer != null) ...<Widget>[const SizedBox(height: 6), Text(footer!, style: theme.textTheme.bodySmall)],
           ],
         ),
       ),
