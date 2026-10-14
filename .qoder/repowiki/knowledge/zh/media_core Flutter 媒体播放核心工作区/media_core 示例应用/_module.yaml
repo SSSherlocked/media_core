@@ -1,0 +1,8 @@
+schema_version: 1
+module_path: example_app
+title: media_core 示例应用
+scope:
+    - example/
+source_files: []
+depends_on: []
+related_to: []

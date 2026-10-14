@@ -1,0 +1,44 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: zh-CN
+branch: main
+nodes_managed: true
+exported_at: "2026-10-13T10:02:55Z"
+modules:
+    "":
+        dir_name: media_core Flutter 媒体播放核心工作区
+        title: media_core Flutter 媒体播放核心工作区
+        scope:
+            - README.md
+            - .gitignore
+            - .editorconfig
+            - .gitattributes
+            - analysis_options.yaml
+            - pubspec.yaml
+            - pubspec.lock
+            - CHANGELOG.md
+            - LICENSE
+        source_files: []
+        children:
+            - docs
+            - example_app
+        depends_on: []
+        related_to: []
+    docs:
+        dir_name: Media Core 多语言文档集
+        title: Media Core 多语言文档集
+        scope:
+            - doc/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    example_app:
+        dir_name: media_core 示例应用
+        title: media_core 示例应用
+        scope:
+            - example/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []

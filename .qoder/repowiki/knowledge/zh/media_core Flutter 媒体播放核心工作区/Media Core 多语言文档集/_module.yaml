@@ -1,0 +1,8 @@
+schema_version: 1
+module_path: docs
+title: Media Core 多语言文档集
+scope:
+    - doc/
+source_files: []
+depends_on: []
+related_to: []

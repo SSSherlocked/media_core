@@ -1,0 +1,16 @@
+schema_version: 1
+module_path: ""
+title: media_core Flutter 媒体播放核心工作区
+scope:
+    - README.md
+    - .gitignore
+    - .editorconfig
+    - .gitattributes
+    - analysis_options.yaml
+    - pubspec.yaml
+    - pubspec.lock
+    - CHANGELOG.md
+    - LICENSE
+source_files: []
+depends_on: []
+related_to: []
