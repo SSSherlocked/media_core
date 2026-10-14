@@ -2,6 +2,9 @@
 
 - `MediaSessionDriver.setForegroundHold`: keeps the surfaces "playing" (and so the Android foreground service) while the host reconnects, waits or is interrupted, also across a player released between two opens.
 - `MediaSessionDriver.onRemotePause`: told when the notification, lock screen or a media key pauses or stops; such a pause also cancels a resume planned for the end of an interruption.
+- `MediaSessionConfig.androidStopOnRemoveTask` now works: swiping the app away stops playback and the media service.
+- `MediaSessionConfig.androidResumeOnClick` (default on, audio_service's default): off, the notification goes with the media service and media buttons no longer restart an app that is not running.
+- On Android, `initialize` stops a media service a previous (killed) process left running, with its notification (`MediaSessionHandler.releaseInheritedService`).
 
 ## 0.1.0
 

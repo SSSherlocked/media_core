@@ -13,6 +13,7 @@ final class MediaSessionConfig {
     this.androidNotificationChannelName = 'Media playback',
     this.androidNotificationOngoing = false,
     this.androidStopOnRemoveTask = false,
+    this.androidResumeOnClick = true,
     this.showControls = true,
     this.processInterruptions = true,
     this.pauseOnBecomingNoisy = true,
@@ -37,6 +38,7 @@ final class MediaSessionConfig {
     this.androidNotificationChannelName = 'Video playback',
     this.androidNotificationOngoing = false,
     this.androidStopOnRemoveTask = false,
+    this.androidResumeOnClick = true,
     this.showControls = true,
     this.processInterruptions = true,
     this.pauseOnBecomingNoisy = true,
@@ -63,8 +65,17 @@ final class MediaSessionConfig {
   /// Whether the Android notification is ongoing while playing.
   final bool androidNotificationOngoing;
 
-  /// Whether playback stops when the task is removed on Android.
+  /// Whether playback stops when the task is removed on Android (the app is
+  /// swiped away from recents while its process lives on). Stopping also ends
+  /// the media service and, with [androidResumeOnClick] off, its notification.
   final bool androidStopOnRemoveTask;
+
+  /// audio_service's `androidResumeOnClick`. On (its default), the
+  /// notification survives the media service (detached when the service ends)
+  /// and media buttons may restart the app. Off, the notification goes with
+  /// the service and media buttons do not reach an app that is not running,
+  /// which is what a host that ends playback on exit wants.
+  final bool androidResumeOnClick;
 
   /// Whether transport controls are shown in the notification.
   ///

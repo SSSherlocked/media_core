@@ -167,6 +167,7 @@ base class MediaSessionDriver implements KernelAudioDriver {
         onSkipToQueueItem: skipToQueueItemHandler == null ? null : (index) async => skipToQueueItemHandler!.call(index),
         onSetSpeed: setSpeedHandler == null ? null : (rate) async => setSpeedHandler!.call(rate),
         controlsBuilder: _buildControls,
+        stopOnTaskRemoved: config.androidStopOnRemoveTask,
       ),
       config: asvc.AudioServiceConfig(
         androidNotificationChannelId: config.androidNotificationChannelId,
@@ -174,8 +175,13 @@ base class MediaSessionDriver implements KernelAudioDriver {
         androidNotificationOngoing: config.androidNotificationOngoing,
         androidStopForegroundOnPause: !config.androidNotificationOngoing,
         androidNotificationClickStartsActivity: true,
+        androidResumeOnClick: config.androidResumeOnClick,
       ),
     );
+
+    // Nothing plays this early, so a media service that is already running
+    // was left by a previous process (see releaseInheritedService).
+    if (Platform.isAndroid) _handler?.releaseInheritedService();
 
     if (!_supportsAudioSession) {
       return;

@@ -99,6 +99,7 @@ final class MediaSessionHandler extends BaseAudioHandler {
     Future<void> Function(int index)? onSkipToQueueItem,
     Future<void> Function(double rate)? onSetSpeed,
     this.controlsBuilder,
+    this.stopOnTaskRemoved = false,
   }) : _onPlay = onPlay,
        _onPause = onPause,
        _onSeek = onSeek,
@@ -122,6 +123,11 @@ final class MediaSessionHandler extends BaseAudioHandler {
 
   /// Whether the platform may offer skip-previous.
   bool get canSkipToPrevious => _onPrevious != null;
+
+  /// Whether removing the app's task (swiping it away from recents) stops
+  /// playback, and with it the media service. Off, playback carries on,
+  /// audio_service's default.
+  final bool stopOnTaskRemoved;
 
   /// Optional builder for notification controls.
   ///
@@ -166,6 +172,21 @@ final class MediaSessionHandler extends BaseAudioHandler {
     );
   }
 
+  /// Stops a media service, and drops its notification, that a previous
+  /// process left behind.
+  ///
+  /// When a process is killed while its media service is in the foreground,
+  /// Android can restart the service in a new process, still in the
+  /// foreground with the old notification, and audio_service starts the
+  /// engine there with nothing playing. audio_service stops its service only
+  /// on a change into idle, and a fresh handler starts idle, so this passes
+  /// through ready first. Nothing plays yet when it runs, so it never stops
+  /// real playback.
+  void releaseInheritedService() {
+    playbackState.add(PlaybackState(processingState: AudioProcessingState.ready));
+    publishIdle();
+  }
+
   /// Pushes [item] as the current media item.
   void publishMediaItem(MediaSessionItem item) {
     mediaItem.add(item.toMediaItem());
@@ -205,6 +226,11 @@ final class MediaSessionHandler extends BaseAudioHandler {
   Future<void> stop() async {
     await _onStop();
     await super.stop();
+  }
+
+  @override
+  Future<void> onTaskRemoved() async {
+    if (stopOnTaskRemoved) await stop();
   }
 
   @override
