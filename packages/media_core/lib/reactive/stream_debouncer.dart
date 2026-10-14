@@ -16,8 +16,10 @@ import 'dart:async';
 /// });
 /// ```
 class StreamDebouncer {
+  /// Creates a debouncer that waits [delay] of quiet before running an action.
   StreamDebouncer({required this.delay});
 
+  /// Quiet period that must elapse before the scheduled action is executed.
   final Duration delay;
 
   Timer? _timer;
@@ -25,8 +27,10 @@ class StreamDebouncer {
 
   int _generation = 0;
 
+  /// Whether this debouncer has been disposed and ignores further actions.
   bool get isDisposed => _disposed;
 
+  /// Whether [run] still schedules actions.
   bool get isAlive => !_disposed;
 
   /// Whether an operation is currently waiting for the debounce period.
@@ -94,8 +98,10 @@ class StreamDebouncer {
 /// When a call is replaced by a newer call, the previous Future completes
 /// with `null`.
 class AsyncDebouncer<T> {
+  /// Creates a debouncer that waits [delay] of quiet before running an action.
   AsyncDebouncer({required this.delay});
 
+  /// Quiet period that must elapse before the scheduled action is executed.
   final Duration delay;
 
   Timer? _timer;
@@ -106,15 +112,23 @@ class AsyncDebouncer<T> {
 
   int _generation = 0;
 
+  /// Whether this debouncer has been disposed and answers callers with `null`.
   bool get isDisposed => _disposed;
 
+  /// Whether [run] still schedules actions.
   bool get isAlive => !_disposed;
 
+  /// Whether an operation is waiting for the debounce period with a caller
+  /// still awaiting its future.
   bool get isPending => _pending != null;
 
+  /// Schedules [action] and returns the future of the latest caller.
+  ///
+  /// A call that is replaced before the quiet period ends completes with `null`
+  /// so awaiting callers never hang on work that no longer matters.
   Future<T?> run(Future<T> Function() action) {
     if (_disposed) {
-      return Future<T?>.value(null);
+      return Future<T?>.value();
     }
 
     _timer?.cancel();

@@ -18,7 +18,17 @@ import 'package:equatable/equatable.dart';
 /// - Renderer
 /// - PlayerIdentity snapshot
 final class DisplaySize extends Equatable {
+  /// Creates a display size from explicit surface dimensions.
   const DisplaySize({required this.width, required this.height});
+
+  /// Restores a display size from a map produced by [toMap].
+  factory DisplaySize.fromMap(Map<String, dynamic> map) {
+    return DisplaySize(
+      width: (map['width'] as num?)?.toDouble() ?? 0,
+
+      height: (map['height'] as num?)?.toDouble() ?? 0,
+    );
+  }
 
   /// Empty display size.
   const DisplaySize.zero() : width = 0, height = 0;
@@ -131,16 +141,9 @@ final class DisplaySize extends Equatable {
     return DisplaySize(width: width.roundToDouble(), height: height.roundToDouble());
   }
 
+  /// Converts to a simple map.
   Map<String, dynamic> toMap() {
     return {'width': width, 'height': height};
-  }
-
-  factory DisplaySize.fromMap(Map<String, dynamic> map) {
-    return DisplaySize(
-      width: (map['width'] as num?)?.toDouble() ?? 0,
-
-      height: (map['height'] as num?)?.toDouble() ?? 0,
-    );
   }
 
   @override

@@ -1,6 +1,6 @@
-import 'package:media_core/cache/cache_key.dart';
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/cache/cache_key.dart';
 
 /// Immutable cache entry.
 ///
@@ -10,6 +10,10 @@ import 'package:equatable/equatable.dart';
 /// The cache entry does not know where it is stored. The same entry can be
 /// used by memory or disk storage.
 final class CacheEntry<T> extends Equatable {
+  /// Creates a cache entry for [value] under [key].
+  ///
+  /// [createdAt] and [accessedAt] default to the current time so callers can
+  /// omit them when storing a fresh entry.
   CacheEntry({
     required this.key,
     required this.value,
@@ -21,24 +25,33 @@ final class CacheEntry<T> extends Equatable {
   }) : createdAt = createdAt ?? clock.now(),
        accessedAt = accessedAt ?? createdAt ?? clock.now();
 
+  /// Key this entry is stored under.
   final CacheKey key;
 
+  /// The cached value.
   final T value;
 
+  /// Moment the entry was first created.
   final DateTime createdAt;
 
+  /// Moment the entry was last read or touched.
   final DateTime accessedAt;
 
+  /// Moment after which the entry is no longer valid, if it expires at all.
   final DateTime? expiresAt;
 
+  /// Size of the value in bytes, used by byte-bounded eviction policies.
   final int sizeBytes;
 
+  /// Free-form policy metadata attached to this entry.
   final Map<String, Object?> metadata;
 
+  /// Whether the entry carries an expiration deadline.
   bool get hasExpiration => expiresAt != null;
 
+  /// Whether the entry's expiration deadline has already passed.
   bool get isExpired {
-    final DateTime? expiration = expiresAt;
+    final expiration = expiresAt;
 
     if (expiration == null) {
       return false;
@@ -47,12 +60,16 @@ final class CacheEntry<T> extends Equatable {
     return !clock.now().isBefore(expiration);
   }
 
+  /// Whether the entry may still be served from the cache.
   bool get isValid => !isExpired;
 
+  /// How long ago the entry was created.
   Duration get age => clock.now().difference(createdAt);
 
+  /// How long the entry has gone unaccessed.
   Duration get idleDuration => clock.now().difference(accessedAt);
 
+  /// Returns a copy of this entry with a refreshed access time.
   CacheEntry<T> touch({DateTime? accessedAt}) {
     return CacheEntry<T>(
       key: key,
@@ -65,6 +82,7 @@ final class CacheEntry<T> extends Equatable {
     );
   }
 
+  /// Returns a copy of this entry with the given fields replaced.
   CacheEntry<T> copyWith({
     CacheKey? key,
     T? value,
@@ -85,6 +103,10 @@ final class CacheEntry<T> extends Equatable {
     );
   }
 
+  /// Serializes the entry for disk storage.
+  ///
+  /// [valueEncoder] converts the typed value into a JSON-compatible form;
+  /// without it the raw value is stored as-is.
   Map<String, dynamic> toMap({Object? Function(T value)? valueEncoder}) {
     return <String, dynamic>{
       'key': key.value,

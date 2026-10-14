@@ -1,5 +1,5 @@
-import 'package:media_core/cache/cache_entry.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/cache/cache_entry.dart';
 
 /// Result of a cache lookup.
 ///
@@ -15,14 +15,18 @@ sealed class CacheResult<T> extends Equatable {
 
   const factory CacheResult.expired(CacheEntry<T> entry) = CacheExpired<T>;
 
+  /// Whether the lookup returned a usable entry.
   bool get isHit => this is CacheHit<T>;
 
+  /// Whether the lookup found no entry at all.
   bool get isMiss => this is CacheMiss<T>;
 
+  /// Whether the lookup found an entry that is no longer valid.
   bool get isExpired => this is CacheExpired<T>;
 
+  /// The entry carried by a hit or expired result, or null on a miss.
   CacheEntry<T>? get entry {
-    final CacheResult<T> result = this;
+    final result = this;
 
     if (result is CacheHit<T>) {
       return result.entry;
@@ -41,6 +45,7 @@ sealed class CacheResult<T> extends Equatable {
 
 /// Cache hit.
 final class CacheHit<T> extends CacheResult<T> {
+  /// Creates a hit carrying the usable [entry].
   const CacheHit(this.entry);
 
   @override
@@ -55,6 +60,7 @@ final class CacheHit<T> extends CacheResult<T> {
 
 /// Cache miss.
 final class CacheMiss<T> extends CacheResult<T> {
+  /// Creates a miss result; there is no entry to carry.
   const CacheMiss();
 
   @override
@@ -63,6 +69,7 @@ final class CacheMiss<T> extends CacheResult<T> {
 
 /// Cache entry exists but has expired.
 final class CacheExpired<T> extends CacheResult<T> {
+  /// Creates an expired result carrying the stale [entry].
   const CacheExpired(this.entry);
 
   @override

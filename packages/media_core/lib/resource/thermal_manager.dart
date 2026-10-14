@@ -1,5 +1,5 @@
-import 'package:media_core/resource/thermal_state.dart';
 import 'package:media_core/resource/resource_pressure.dart';
+import 'package:media_core/resource/thermal_state.dart';
 
 /// Manages device thermal resource state.
 ///
@@ -36,7 +36,7 @@ import 'package:media_core/resource/resource_pressure.dart';
 /// Platform Thermal API
 ///          |
 ///          v
-///   ThermalManager.update()
+///   ThermalManager.state = ...
 ///          |
 ///          v
 ///    ThermalState
@@ -50,25 +50,23 @@ import 'package:media_core/resource/resource_pressure.dart';
 /// ```
 final class ThermalManager {
   /// Creates thermal manager.
-  ThermalManager({this.initialState = ThermalState.normal}) : _state = initialState;
+  ThermalManager({this.initialState = ThermalState.normal}) : state = initialState;
 
   /// Initial thermal state.
   final ThermalState initialState;
 
   /// Current thermal state.
-  ThermalState _state;
-
-  /// Current thermal state.
-  ThermalState get state {
-    return _state;
-  }
+  ///
+  /// Assign this to feed a new reading in; the manager only stores it
+  /// and converts it into a [ResourcePressure], it does not read sensors.
+  ThermalState state;
 
   /// Current thermal resource pressure.
   ///
   /// Converts thermal state into
   /// unified resource pressure.
   ResourcePressure get pressure {
-    switch (_state) {
+    switch (state) {
       case ThermalState.normal:
         return ResourcePressure.none;
 
@@ -90,42 +88,29 @@ final class ThermalManager {
 
   /// Whether device requires reduction.
   bool get requiresReduction {
-    return _state.requiresReduction;
+    return state.requiresReduction;
   }
 
   /// Whether emergency thermal handling
   /// is required.
   bool get isCritical {
-    return _state.isCritical;
-  }
-
-  /// Updates thermal state.
-  ///
-  /// This only updates internal state.
-  ///
-  /// It does not:
-  ///
-  /// - read sensors
-  /// - throttle hardware
-  /// - change playback
-  void update(ThermalState value) {
-    _state = value;
+    return state.isCritical;
   }
 
   /// Resets thermal state.
   void reset() {
-    _state = ThermalState.normal;
+    state = ThermalState.normal;
   }
 
   /// Creates thermal snapshot.
   ThermalSnapshot snapshot() {
-    return ThermalSnapshot(state: _state, pressure: pressure);
+    return ThermalSnapshot(state: state, pressure: pressure);
   }
 
   @override
   String toString() {
     return 'ThermalManager('
-        'state=$_state, '
+        'state=$state, '
         'pressure=$pressure'
         ')';
   }

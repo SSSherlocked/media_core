@@ -1,5 +1,6 @@
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/identity/library.dart' show GenerationId, PlayerId, RequestId, SessionId, SlotId, SourceId;
 
 /// Unique identifier of an operation.
 ///
@@ -54,7 +55,7 @@ final class OperationId extends Equatable implements Comparable<OperationId> {
 
   /// Creates a new unique runtime operation identifier.
   ///
-  /// [clock.now] is intentionally used instead of [DateTime.now] so the
+  /// `clock.now()` is intentionally used instead of [DateTime.now] so the
   /// identifier can be deterministic in tests.
   factory OperationId.generate() {
     final timestamp = clock.now().microsecondsSinceEpoch;
@@ -64,6 +65,22 @@ final class OperationId extends Equatable implements Comparable<OperationId> {
   }
 
   const OperationId._(this.value);
+
+  /// Parses an existing operation identifier.
+  ///
+  /// Throws [ArgumentError] when [value] is empty.
+  factory OperationId.parse(String value) => OperationId(value);
+
+  /// Creates an [OperationId] from JSON.
+  ///
+  /// The JSON representation is simply the raw string value.
+  factory OperationId.fromJson(Object? json) {
+    if (json is! String) {
+      throw const FormatException('OperationId JSON value must be a String.');
+    }
+
+    return OperationId(json);
+  }
 
   static int _counter = 0;
 
@@ -81,27 +98,9 @@ final class OperationId extends Equatable implements Comparable<OperationId> {
   /// Returns whether this identifier is not empty.
   bool get isNotEmpty => value.isNotEmpty;
 
-  /// Parses an existing operation identifier.
-  ///
-  /// Throws [ArgumentError] when [value] is empty.
-  static OperationId parse(String value) {
-    return OperationId(value);
-  }
-
   /// Returns whether [value] is a valid operation identifier value.
   static bool isValid(String value) {
     return value.trim().isNotEmpty;
-  }
-
-  /// Creates an [OperationId] from JSON.
-  ///
-  /// The JSON representation is simply the raw string value.
-  static OperationId fromJson(Object? json) {
-    if (json is! String) {
-      throw FormatException('OperationId JSON value must be a String.');
-    }
-
-    return OperationId(json);
   }
 
   /// Converts this identifier to its JSON representation.

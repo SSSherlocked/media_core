@@ -1,5 +1,6 @@
 import 'package:media_core/adapter/composite_support.dart';
 import 'package:media_core/source/media_source.dart';
+import 'package:meta/meta.dart';
 
 /// A decision about how to play a [MediaSource] on a given backend.
 ///
@@ -27,6 +28,7 @@ import 'package:media_core/source/media_source.dart';
 ///
 /// - PlayerKernel
 /// - MediaSourcePlanner
+@immutable
 sealed class MediaSourcePlan {
   /// Creates a plan.
   const MediaSourcePlan();
@@ -45,6 +47,7 @@ sealed class MediaSourcePlan {
 /// backend can already consume through its native merging API —
 /// from the planner's point of view both cases end in "hand it
 /// over, no work here".
+@immutable
 final class DirectPlan extends MediaSourcePlan {
   /// Creates a direct plan.
   const DirectPlan(this.source);
@@ -56,8 +59,7 @@ final class DirectPlan extends MediaSourcePlan {
   bool get isPlayable => true;
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) || other is DirectPlan && other.source == source;
+  bool operator ==(Object other) => identical(this, other) || other is DirectPlan && other.source == source;
 
   @override
   int get hashCode => Object.hash(DirectPlan, source);
@@ -79,6 +81,7 @@ final class DirectPlan extends MediaSourcePlan {
 /// caller that has the plan but not the registration (for example a
 /// debug screen or a replayed plan in a test) can still see which
 /// consumption strategy the plan chose.
+@immutable
 final class CompositePlan extends MediaSourcePlan {
   /// Creates a composite plan.
   ///
@@ -103,10 +106,7 @@ final class CompositePlan extends MediaSourcePlan {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is CompositePlan &&
-          other.source == source &&
-          other.mode == mode;
+      identical(this, other) || other is CompositePlan && other.source == source && other.mode == mode;
 
   @override
   int get hashCode => Object.hash(CompositePlan, source, mode);
@@ -120,6 +120,7 @@ final class CompositePlan extends MediaSourcePlan {
 /// The message carried here is user-facing-safe by convention: it
 /// explains what was rejected and why, without leaking internals a
 /// UI layer would have to redact anyway.
+@immutable
 final class UnsupportedPlan extends MediaSourcePlan {
   /// Creates an unsupported plan.
   const UnsupportedPlan(this.reason, {this.source});
@@ -139,10 +140,7 @@ final class UnsupportedPlan extends MediaSourcePlan {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is UnsupportedPlan &&
-          other.reason == reason &&
-          other.source == source;
+      identical(this, other) || other is UnsupportedPlan && other.reason == reason && other.source == source;
 
   @override
   int get hashCode => Object.hash(UnsupportedPlan, reason, source);

@@ -1,16 +1,17 @@
-import 'package:media_core/task/task_id.dart';
-import 'package:media_core/task/task_type.dart';
-import 'package:media_core/task/task_state.dart';
-import 'package:media_core/task/task_context.dart';
-import 'package:media_core/task/task_priority.dart';
 import 'package:clock/clock.dart';
-import 'package:media_core/task/task_json_converters.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/identity/generation_id.dart';
+import 'package:media_core/identity/identity_json_converters.dart';
 import 'package:media_core/identity/player_id.dart';
 import 'package:media_core/identity/request_id.dart';
-import 'package:media_core/identity/generation_id.dart';
 import 'package:media_core/operation/operation_context.dart';
-import 'package:media_core/identity/identity_json_converters.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/task/library.dart' show TaskManager, TaskScheduler;
+import 'package:media_core/task/task_context.dart';
+import 'package:media_core/task/task_id.dart';
+import 'package:media_core/task/task_json_converters.dart';
+import 'package:media_core/task/task_priority.dart';
+import 'package:media_core/task/task_state.dart';
+import 'package:media_core/task/task_type.dart';
 
 part 'player_task.freezed.dart';
 part 'player_task.g.dart';
@@ -53,8 +54,6 @@ part 'player_task.g.dart';
 /// ```
 @freezed
 abstract class PlayerTask with _$PlayerTask {
-  const PlayerTask._();
-
   /// Creates a player task.
   const factory PlayerTask({
     /// Unique task identity.
@@ -110,6 +109,14 @@ abstract class PlayerTask with _$PlayerTask {
   }) = _PlayerTask;
 
   // ---------------------------------------------------------------------------
+  // Serialization
+  // ---------------------------------------------------------------------------
+
+  /// Creates a task from JSON.
+  factory PlayerTask.fromJson(Map<String, dynamic> json) => _$PlayerTaskFromJson(json);
+  const PlayerTask._();
+
+  // ---------------------------------------------------------------------------
   // Factory constructors
   // ---------------------------------------------------------------------------
 
@@ -131,7 +138,6 @@ abstract class PlayerTask with _$PlayerTask {
     return PlayerTask(
       id: id,
       type: type,
-      state: TaskState.created,
       priority: priority,
       context: context,
       operationContext: operationContext,
@@ -604,11 +610,4 @@ abstract class PlayerTask with _$PlayerTask {
   PlayerTask withoutError() {
     return copyWith(error: null);
   }
-
-  // ---------------------------------------------------------------------------
-  // Serialization
-  // ---------------------------------------------------------------------------
-
-  /// Creates a task from JSON.
-  factory PlayerTask.fromJson(Map<String, dynamic> json) => _$PlayerTaskFromJson(json);
 }

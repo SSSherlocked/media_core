@@ -1,12 +1,13 @@
 import 'dart:async';
-import 'package:media_core/presentation/presentation_event.dart';
-import 'package:media_core/presentation/presentation_state.dart';
-import 'package:media_core/presentation/presentation_adapter.dart';
-import 'package:media_core/presentation/presentation_request.dart';
-import 'package:rxdart/rxdart.dart';
+
 import 'package:media_core/geometry/video_orientation.dart';
-import 'package:media_core/presentation/presentation_controller.dart';
+import 'package:media_core/presentation/presentation_adapter.dart';
 import 'package:media_core/presentation/presentation_capabilities.dart';
+import 'package:media_core/presentation/presentation_controller.dart';
+import 'package:media_core/presentation/presentation_event.dart';
+import 'package:media_core/presentation/presentation_request.dart';
+import 'package:media_core/presentation/presentation_state.dart';
+import 'package:rxdart/rxdart.dart';
 
 /// Application level presentation service.
 ///
@@ -32,7 +33,11 @@ import 'package:media_core/presentation/presentation_capabilities.dart';
 ///
 /// PresentationAdapter
 ///
+/// Nothing in the package constructs this service; it is a host-facing API
+/// layer that a host builds from its own [PresentationController] and adapter.
+/// It stays inert until a host wires it.
 final class PresentationService {
+  /// Binds [controller] to [adapter], forwarding the adapter's events into the controller.
   PresentationService({required PresentationController controller, required PresentationAdapter adapter})
     : _controller = controller,
       _adapter = adapter {
@@ -105,7 +110,7 @@ final class PresentationService {
 
     try {
       await _adapter.apply(request.copyWith(generation: generation));
-    } catch (error) {
+    } on Object catch (error) {
       _controller.handleEvent(
         PresentationEvent.failed(
           mode: request.mode,

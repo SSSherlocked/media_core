@@ -1,7 +1,8 @@
-import 'package:media_core/geometry/video_orientation.dart';
-import 'package:media_core/presentation/presentation_mode.dart';
-import 'package:media_core/presentation/presentation_capabilities.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/geometry/video_orientation.dart';
+import 'package:media_core/presentation/presentation_capabilities.dart';
+import 'package:media_core/presentation/presentation_mode.dart';
+import 'package:media_core/presentation/presentation_state.dart' show PresentationState;
 
 part 'presentation_snapshot.freezed.dart';
 
@@ -29,6 +30,7 @@ part 'presentation_snapshot.freezed.dart';
 /// PresentationController
 @freezed
 abstract class PresentationSnapshot with _$PresentationSnapshot {
+  /// Creates a presentation snapshot from its fields.
   const factory PresentationSnapshot({
     /// Current active presentation mode.
     ///
@@ -85,15 +87,7 @@ abstract class PresentationSnapshot with _$PresentationSnapshot {
 
   /// Creates initial snapshot.
   factory PresentationSnapshot.initial() {
-    return const PresentationSnapshot(
-      mode: PresentationMode.normal,
-      targetMode: null,
-      capabilities: PresentationCapabilities(),
-      transitioning: false,
-      enabled: true,
-      available: true,
-      generation: 0,
-    );
+    return const PresentationSnapshot();
   }
 
   // ============================================================
@@ -140,8 +134,7 @@ abstract class PresentationSnapshot with _$PresentationSnapshot {
   bool get isTransitioningToFullscreen => transitioning && targetMode == PresentationMode.fullscreen;
 
   /// Whether switching to window-level fullscreen.
-  bool get isTransitioningToWindowFullscreen =>
-      transitioning && targetMode == PresentationMode.windowFullscreen;
+  bool get isTransitioningToWindowFullscreen => transitioning && targetMode == PresentationMode.windowFullscreen;
 
   /// Whether transition is targeting PiP.
   bool get isTransitioningToPip => transitioning && targetMode == PresentationMode.pip;

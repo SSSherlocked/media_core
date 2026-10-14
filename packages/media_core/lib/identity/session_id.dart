@@ -1,5 +1,6 @@
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/identity/library.dart' show GenerationId, OperationId, PlayerId, SlotId, SourceId;
 
 /// Unique identifier of a player session.
 ///
@@ -44,7 +45,7 @@ final class SessionId extends Equatable implements Comparable<SessionId> {
 
   /// Creates a new unique runtime session identifier.
   ///
-  /// [clock.now] is used instead of [DateTime.now] so session ID generation
+  /// `clock.now()` is used instead of [DateTime.now] so session ID generation
   /// can be controlled in tests.
   factory SessionId.generate() {
     final timestamp = clock.now().microsecondsSinceEpoch;
@@ -54,6 +55,22 @@ final class SessionId extends Equatable implements Comparable<SessionId> {
   }
 
   const SessionId._(this.value);
+
+  /// Parses an existing session identifier.
+  ///
+  /// Throws [ArgumentError] when [value] is empty.
+  factory SessionId.parse(String value) => SessionId(value);
+
+  /// Creates a [SessionId] from its JSON representation.
+  ///
+  /// The JSON representation is simply the raw string value.
+  factory SessionId.fromJson(Object? json) {
+    if (json is! String) {
+      throw const FormatException('SessionId JSON value must be a String.');
+    }
+
+    return SessionId(json);
+  }
 
   static int _counter = 0;
 
@@ -71,27 +88,9 @@ final class SessionId extends Equatable implements Comparable<SessionId> {
   /// Returns whether this identifier is not empty.
   bool get isNotEmpty => value.isNotEmpty;
 
-  /// Parses an existing session identifier.
-  ///
-  /// Throws [ArgumentError] when [value] is empty.
-  static SessionId parse(String value) {
-    return SessionId(value);
-  }
-
   /// Returns whether [value] can be used as a valid session identifier.
   static bool isValid(String value) {
     return value.trim().isNotEmpty;
-  }
-
-  /// Creates a [SessionId] from its JSON representation.
-  ///
-  /// The JSON representation is simply the raw string value.
-  static SessionId fromJson(Object? json) {
-    if (json is! String) {
-      throw FormatException('SessionId JSON value must be a String.');
-    }
-
-    return SessionId(json);
   }
 
   /// Converts this identifier to its JSON representation.

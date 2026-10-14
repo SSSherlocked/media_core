@@ -1,5 +1,6 @@
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/identity/library.dart' show GenerationId, OperationId, PlayerId, SessionId, SourceId;
 
 /// Unique identifier of a player slot.
 ///
@@ -53,7 +54,7 @@ final class SlotId extends Equatable implements Comparable<SlotId> {
 
   /// Creates a new unique runtime slot identifier.
   ///
-  /// [clock.now] is used instead of [DateTime.now] so slot ID generation
+  /// `clock.now()` is used instead of [DateTime.now] so slot ID generation
   /// can be controlled in tests.
   factory SlotId.generate() {
     final timestamp = clock.now().microsecondsSinceEpoch;
@@ -63,6 +64,22 @@ final class SlotId extends Equatable implements Comparable<SlotId> {
   }
 
   const SlotId._(this.value);
+
+  /// Parses an existing slot identifier.
+  ///
+  /// Throws [ArgumentError] when [value] is empty.
+  factory SlotId.parse(String value) => SlotId(value);
+
+  /// Creates a [SlotId] from its JSON representation.
+  ///
+  /// The JSON representation is simply the raw string value.
+  factory SlotId.fromJson(Object? json) {
+    if (json is! String) {
+      throw const FormatException('SlotId JSON value must be a String.');
+    }
+
+    return SlotId(json);
+  }
 
   static int _counter = 0;
 
@@ -80,27 +97,9 @@ final class SlotId extends Equatable implements Comparable<SlotId> {
   /// Returns whether this identifier is not empty.
   bool get isNotEmpty => value.isNotEmpty;
 
-  /// Parses an existing slot identifier.
-  ///
-  /// Throws [ArgumentError] when [value] is empty.
-  static SlotId parse(String value) {
-    return SlotId(value);
-  }
-
   /// Returns whether [value] can be used as a valid slot identifier.
   static bool isValid(String value) {
     return value.trim().isNotEmpty;
-  }
-
-  /// Creates a [SlotId] from its JSON representation.
-  ///
-  /// The JSON representation is simply the raw string value.
-  static SlotId fromJson(Object? json) {
-    if (json is! String) {
-      throw FormatException('SlotId JSON value must be a String.');
-    }
-
-    return SlotId(json);
   }
 
   /// Converts this identifier to its JSON representation.

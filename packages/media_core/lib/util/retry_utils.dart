@@ -29,7 +29,7 @@ abstract final class RetryUtils {
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         return await action();
-      } catch (error, stackTrace) {
+      } on Object catch (error, stackTrace) {
         lastError = error;
         lastStackTrace = stackTrace;
 
@@ -56,16 +56,16 @@ abstract final class RetryUtils {
     Duration maxDelay = const Duration(seconds: 10),
     double multiplier = 2,
   }) {
+    // No `catchError` wrapper that only rethrows: it turned the thrown value
+    // into `dynamic` (the analyzer rightly calls that an error) and changed
+    // nothing about who sees the failure.
     return run(
       action,
       maxAttempts: maxAttempts,
-      delay: Duration.zero,
       shouldRetry: (error, stackTrace, attempt) {
         return true;
       },
-    ).catchError((error, stackTrace) {
-      throw error;
-    });
+    );
   }
 
   /// Calculates exponential retry delay.

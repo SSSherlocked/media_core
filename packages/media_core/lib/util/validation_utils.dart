@@ -164,7 +164,7 @@ abstract final class ValidationUtils {
   }
 
   /// Throws [ArgumentError] when condition fails.
-  static void ensure(bool condition, String message) {
+  static void ensure({required bool condition, required String message}) {
     if (!condition) {
       throw ArgumentError(message);
     }

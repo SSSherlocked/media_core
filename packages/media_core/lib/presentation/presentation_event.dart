@@ -1,5 +1,5 @@
-import 'package:media_core/presentation/presentation_mode.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/presentation/presentation_mode.dart';
 
 part 'presentation_event.freezed.dart';
 
@@ -110,11 +110,11 @@ sealed class PresentationEvent with _$PresentationEvent {
   /// Reducer will clear transition state
   /// and expose error information.
   const factory PresentationEvent.failed({
-    /// Target mode if known.
-    PresentationMode? mode,
-
     /// Error message.
     required String error,
+
+    /// Target mode if known.
+    PresentationMode? mode,
 
     /// Request generation.
     @Default(0) int generation,

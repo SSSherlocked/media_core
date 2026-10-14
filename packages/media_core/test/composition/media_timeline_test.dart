@@ -8,24 +8,14 @@ import 'package:media_core/source/media_source.dart';
 import 'package:media_core/source/media_track.dart';
 import 'package:media_core/source/media_track_type.dart';
 
-MediaTrack _track(
-  String url,
-  MediaTrackType kind, {
-  Duration? startOffset,
-}) {
-  return MediaTrack(
-    uri: Uri.parse(url),
-    kind: kind,
-    startOffset: startOffset,
-  );
+MediaTrack _track(String url, MediaTrackType kind, {Duration? startOffset}) {
+  return MediaTrack(uri: Uri.parse(url), kind: kind, startOffset: startOffset);
 }
 
 void main() {
   group('MediaTimeline.from', () {
     test('progressive source gets a one-track timeline at the origin', () {
-      final source = ProgressiveMediaSource(
-        track: _track('https://example.com/v.mp4', MediaTrackType.video),
-      );
+      final source = ProgressiveMediaSource(track: _track('https://example.com/v.mp4', MediaTrackType.video));
 
       final timeline = MediaTimeline.from(source);
 
@@ -38,22 +28,14 @@ void main() {
     test('composite startOffsets align onto one presentation clock', () {
       final source = CompositeMediaSource(
         videoTracks: [
-          _track(
-            'https://example.com/v.m4s',
-            MediaTrackType.video,
-            startOffset: const Duration(milliseconds: 40),
-          ),
+          _track('https://example.com/v.m4s', MediaTrackType.video, startOffset: const Duration(milliseconds: 40)),
         ],
-        audioTracks: [
-          _track('https://example.com/a.m4s', MediaTrackType.audio),
-        ],
+        audioTracks: [_track('https://example.com/a.m4s', MediaTrackType.audio)],
       );
 
       final timeline = MediaTimeline.from(source);
 
-      final video = timeline[
-        source.videoTracks.first
-      ]!;
+      final video = timeline[source.videoTracks.first]!;
       final audio = timeline[source.audioTracks.first]!;
 
       // The earliest track (audio, offset zero) anchors the clock;
@@ -66,11 +48,7 @@ void main() {
     test('a shared period base is normalized away as originShift', () {
       final source = CompositeMediaSource(
         videoTracks: [
-          _track(
-            'https://example.com/v.m4s',
-            MediaTrackType.video,
-            startOffset: const Duration(seconds: 6),
-          ),
+          _track('https://example.com/v.m4s', MediaTrackType.video, startOffset: const Duration(seconds: 6)),
         ],
         audioTracks: [
           _track(
@@ -87,21 +65,14 @@ void main() {
       // at that base, not at wall-clock zero of the media files.
       expect(timeline.originShift, const Duration(seconds: 6));
       expect(timeline.primary!.offset, Duration.zero);
-      expect(
-        timeline[source.audioTracks.first]!.offset,
-        const Duration(milliseconds: 20),
-      );
+      expect(timeline[source.audioTracks.first]!.offset, const Duration(milliseconds: 20));
     });
 
     test('missing offsets are treated as zero, not failures', () {
       final source = CompositeMediaSource(
         videoTracks: [_track('https://example.com/v.m4s', MediaTrackType.video)],
         audioTracks: [
-          _track(
-            'https://example.com/a.m4s',
-            MediaTrackType.audio,
-            startOffset: const Duration(milliseconds: 10),
-          ),
+          _track('https://example.com/a.m4s', MediaTrackType.audio, startOffset: const Duration(milliseconds: 10)),
         ],
       );
 
@@ -116,9 +87,7 @@ void main() {
         videoTracks: [_track('https://example.com/v.m4s', MediaTrackType.video)],
         audioTracks: [_track('https://example.com/a.m4s', MediaTrackType.audio)],
       );
-      final audioOnly = CompositeMediaSource(
-        audioTracks: [_track('https://example.com/a.m4s', MediaTrackType.audio)],
-      );
+      final audioOnly = CompositeMediaSource(audioTracks: [_track('https://example.com/a.m4s', MediaTrackType.audio)]);
 
       expect(MediaTimeline.from(videoFirst).primary!.track.kind, MediaTrackType.video);
       expect(MediaTimeline.from(audioOnly).primary!.track.kind, MediaTrackType.audio);
@@ -126,15 +95,9 @@ void main() {
 
     test('time conversion round-trips per track', () {
       final source = CompositeMediaSource(
-        videoTracks: [
-          _track('https://example.com/v.m4s', MediaTrackType.video),
-        ],
+        videoTracks: [_track('https://example.com/v.m4s', MediaTrackType.video)],
         audioTracks: [
-          _track(
-            'https://example.com/a.m4s',
-            MediaTrackType.audio,
-            startOffset: const Duration(milliseconds: 30),
-          ),
+          _track('https://example.com/a.m4s', MediaTrackType.audio, startOffset: const Duration(milliseconds: 30)),
         ],
       );
 
@@ -153,10 +116,7 @@ void main() {
       );
       final stranger = _track('https://example.com/other.mp4', MediaTrackType.audio);
 
-      expect(
-        timeline.presentationTimeFor(stranger, const Duration(seconds: 1)),
-        const Duration(seconds: 1),
-      );
+      expect(timeline.presentationTimeFor(stranger, const Duration(seconds: 1)), const Duration(seconds: 1));
     });
   });
 
@@ -176,10 +136,7 @@ void main() {
 
     test('intersects and shiftedBy compose ranges', () {
       final a = MediaSegment(start: Duration.zero, duration: const Duration(seconds: 4));
-      final b = MediaSegment(
-        start: const Duration(seconds: 3),
-        duration: const Duration(seconds: 2),
-      );
+      final b = MediaSegment(start: const Duration(seconds: 3), duration: const Duration(seconds: 2));
       final c = a.shiftedBy(const Duration(seconds: 10));
 
       expect(a.intersects(b), isTrue);
@@ -190,9 +147,7 @@ void main() {
 
     test('timeline segmentAt finds the covering segment', () {
       final timeline = MediaTimeline(
-        tracks: [
-          TimelineTrack(track: _track('https://example.com/v.mp4', MediaTrackType.video)),
-        ],
+        tracks: [TimelineTrack(track: _track('https://example.com/v.mp4', MediaTrackType.video))],
         segments: [
           MediaSegment(start: Duration.zero, duration: const Duration(seconds: 30)),
           MediaSegment(start: const Duration(seconds: 30), duration: const Duration(seconds: 30)),
@@ -206,11 +161,7 @@ void main() {
 
   group('MediaCue', () {
     test('covers spans the cue window', () {
-      final cue = MediaCue(
-        start: const Duration(seconds: 2),
-        end: const Duration(seconds: 5),
-        text: 'hello',
-      );
+      final cue = MediaCue(start: const Duration(seconds: 2), end: const Duration(seconds: 5), text: 'hello');
 
       expect(cue.duration, const Duration(seconds: 3));
       expect(cue.covers(const Duration(seconds: 2)), isTrue);
@@ -219,9 +170,7 @@ void main() {
 
     test('cuesAt returns every active cue', () {
       final timeline = MediaTimeline(
-        tracks: [
-          TimelineTrack(track: _track('https://example.com/v.mp4', MediaTrackType.video)),
-        ],
+        tracks: [TimelineTrack(track: _track('https://example.com/v.mp4', MediaTrackType.video))],
         cues: [
           MediaCue(start: Duration.zero, end: const Duration(seconds: 3), text: 'a'),
           MediaCue(start: const Duration(seconds: 1), end: const Duration(seconds: 3), text: 'b'),

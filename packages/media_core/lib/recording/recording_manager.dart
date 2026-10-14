@@ -1,8 +1,8 @@
+import 'package:media_core/recording/recording_backend.dart';
 import 'package:media_core/recording/recording_config.dart';
 import 'package:media_core/recording/recording_result.dart';
-import 'package:media_core/recording/recording_source.dart';
-import 'package:media_core/recording/recording_backend.dart';
 import 'package:media_core/recording/recording_session.dart';
+import 'package:media_core/recording/recording_source.dart';
 
 /// Coordinates recording sessions for the media core.
 ///

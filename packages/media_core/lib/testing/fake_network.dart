@@ -10,12 +10,9 @@ import 'package:media_core/network/network_state.dart';
 /// State changes are pushed manually through [updateState] and
 /// replayed to subscribers of the broadcast streams.
 final class FakeNetworkMonitor implements NetworkMonitor {
-  final StreamController<NetworkState> _stateController =
-      StreamController<NetworkState>.broadcast();
-  final StreamController<NetworkCondition> _conditionController =
-      StreamController<NetworkCondition>.broadcast();
-  final StreamController<NetworkMetrics> _metricsController =
-      StreamController<NetworkMetrics>.broadcast();
+  final StreamController<NetworkState> _stateController = StreamController<NetworkState>.broadcast();
+  final StreamController<NetworkCondition> _conditionController = StreamController<NetworkCondition>.broadcast();
+  final StreamController<NetworkMetrics> _metricsController = StreamController<NetworkMetrics>.broadcast();
 
   NetworkState _state = NetworkState.initial();
   NetworkMetrics _metrics = const NetworkMetrics();
@@ -85,12 +82,6 @@ final class FakeNetworkMonitor implements NetworkMonitor {
 extension on NetworkState {
   /// Derives a condition snapshot from the state.
   NetworkCondition toCondition() {
-    return NetworkCondition(
-      connected: connected,
-      type: type,
-      quality: quality,
-      metered: metered,
-      expensive: expensive,
-    );
+    return NetworkCondition(connected: connected, type: type, quality: quality, metered: metered, expensive: expensive);
   }
 }

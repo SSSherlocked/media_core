@@ -1,9 +1,9 @@
-import 'package:media_core/error/error_context.dart';
-import 'package:media_core/error/error_classifier.dart';
-import 'package:media_core/error/player_exception.dart';
-import 'package:media_core/error/player_error_code.dart';
-import 'package:media_core/error/player_error_category.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/error/error_classifier.dart';
+import 'package:media_core/error/error_context.dart';
+import 'package:media_core/error/player_error_category.dart';
+import 'package:media_core/error/player_error_code.dart';
+import 'package:media_core/error/player_exception.dart';
 
 /// Immutable concrete failure produced by the media player core.
 ///
@@ -21,6 +21,8 @@ import 'package:equatable/equatable.dart';
 ///
 /// Those responsibilities belong to higher-level policy and recovery layers.
 final class PlayerFailure extends Equatable {
+  /// Records [code] as the failure, with the optional diagnostics that were
+  /// available where it happened.
   const PlayerFailure({required this.code, this.message, this.cause, this.stackTrace, this.context, this.category});
 
   /// Creates a failure from an error code.
@@ -261,6 +263,27 @@ final class PlayerFailure extends Equatable {
     );
   }
 
+  /// Creates a failure from an arbitrary [error].
+  ///
+  /// This is equivalent to [PlayerFailure.fromError].
+  factory PlayerFailure.from(
+    Object error, {
+    PlayerErrorCode code = PlayerErrorCode.unknown,
+    String? message,
+    StackTrace? stackTrace,
+    ErrorContext? context,
+    PlayerErrorCategory? category,
+  }) {
+    return PlayerFailure.fromError(
+      error,
+      code: code,
+      message: message,
+      stackTrace: stackTrace,
+      context: context,
+      category: category,
+    );
+  }
+
   /// The specific machine-readable error code.
   final PlayerErrorCode code;
 
@@ -457,14 +480,7 @@ final class PlayerFailure extends Equatable {
   /// After removing the explicit category, [effectiveCategory] will
   /// classify the error through [ErrorClassifier].
   PlayerFailure withoutCategory() {
-    return PlayerFailure(
-      code: code,
-      message: message,
-      cause: cause,
-      stackTrace: stackTrace,
-      context: context,
-      category: null,
-    );
+    return PlayerFailure(code: code, message: message, cause: cause, stackTrace: stackTrace, context: context);
   }
 
   /// Returns a copy with [category].
@@ -493,14 +509,7 @@ final class PlayerFailure extends Equatable {
 
   /// Returns a copy without structured context.
   PlayerFailure withoutContext() {
-    return PlayerFailure(
-      code: code,
-      message: message,
-      cause: cause,
-      stackTrace: stackTrace,
-      context: null,
-      category: category,
-    );
+    return PlayerFailure(code: code, message: message, cause: cause, stackTrace: stackTrace, category: category);
   }
 
   /// Returns a copy with [message].
@@ -523,14 +532,7 @@ final class PlayerFailure extends Equatable {
 
   /// Returns a copy without a message.
   PlayerFailure withoutMessage() {
-    return PlayerFailure(
-      code: code,
-      message: null,
-      cause: cause,
-      stackTrace: stackTrace,
-      context: context,
-      category: category,
-    );
+    return PlayerFailure(code: code, cause: cause, stackTrace: stackTrace, context: context, category: category);
   }
 
   /// Returns a copy with [cause].
@@ -547,14 +549,7 @@ final class PlayerFailure extends Equatable {
 
   /// Returns a copy without an underlying cause.
   PlayerFailure withoutCause() {
-    return PlayerFailure(
-      code: code,
-      message: message,
-      cause: null,
-      stackTrace: stackTrace,
-      context: context,
-      category: category,
-    );
+    return PlayerFailure(code: code, message: message, stackTrace: stackTrace, context: context, category: category);
   }
 
   /// Returns a copy with [stackTrace].
@@ -571,14 +566,7 @@ final class PlayerFailure extends Equatable {
 
   /// Returns a copy without a stack trace.
   PlayerFailure withoutStackTrace() {
-    return PlayerFailure(
-      code: code,
-      message: message,
-      cause: cause,
-      stackTrace: null,
-      context: context,
-      category: category,
-    );
+    return PlayerFailure(code: code, message: message, cause: cause, context: context, category: category);
   }
 
   // ===========================================================================
@@ -592,27 +580,6 @@ final class PlayerFailure extends Equatable {
   /// diagnostics.
   PlayerException toException() {
     return PlayerException(code: code, message: message, cause: cause, stackTrace: stackTrace, context: context);
-  }
-
-  /// Creates a failure from an arbitrary [error].
-  ///
-  /// This is equivalent to [PlayerFailure.fromError].
-  static PlayerFailure from(
-    Object error, {
-    PlayerErrorCode code = PlayerErrorCode.unknown,
-    String? message,
-    StackTrace? stackTrace,
-    ErrorContext? context,
-    PlayerErrorCategory? category,
-  }) {
-    return PlayerFailure.fromError(
-      error,
-      code: code,
-      message: message,
-      stackTrace: stackTrace,
-      context: context,
-      category: category,
-    );
   }
 
   // ===========================================================================

@@ -1,13 +1,13 @@
 import 'dart:typed_data';
 
-import 'package:media_core/core/player_core_state.dart';
-import 'package:media_core/adapter/player_adapter_event.dart';
-import 'package:media_core/adapter/player_adapter_context.dart';
-import 'package:media_core/adapter/player_adapter_metrics.dart';
-import 'package:media_core/source/player_source.dart';
-import 'package:media_core/screenshot/screenshot_request.dart';
-import 'package:media_core/adapter/player_adapter_capabilities.dart';
 import 'package:media_core/adapter/engine_option.dart';
+import 'package:media_core/adapter/player_adapter_capabilities.dart';
+import 'package:media_core/adapter/player_adapter_context.dart';
+import 'package:media_core/adapter/player_adapter_event.dart';
+import 'package:media_core/adapter/player_adapter_metrics.dart';
+import 'package:media_core/core/player_core_state.dart';
+import 'package:media_core/screenshot/screenshot_request.dart';
+import 'package:media_core/source/player_source.dart';
 
 /// Abstract media player backend adapter.
 ///
@@ -98,7 +98,7 @@ abstract interface class PlayerAdapter {
   /// Implementations that own a video track must keep the setting
   /// across later [open] calls, because recovery replays a source
   /// without going back through the application.
-  Future<void> setAudioOnly(bool audioOnly);
+  Future<void> setAudioOnly({required bool audioOnly});
 
   /// Applies raw engine options, spelled in the engine's own vocabulary.
   ///

@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'package:media_core/network/network_state.dart';
-import 'package:media_core/network/network_metrics.dart';
-import 'package:media_core/network/network_condition.dart';
 
+import 'package:media_core/network/network_condition.dart';
+import 'package:media_core/network/network_metrics.dart';
+import 'package:media_core/network/network_state.dart';
 
 /// Monitors network changes.
 ///
@@ -60,24 +60,21 @@ abstract interface class NetworkMonitor {
 /// Platform implementations can extend this class
 /// and update state through protected methods.
 abstract class BaseNetworkMonitor implements NetworkMonitor {
+  /// Creates a monitor with the broadcast controllers that back the state,
+  /// condition and metrics streams platform implementations publish into.
   BaseNetworkMonitor();
 
-  final StreamController<NetworkState> _stateController =
-      StreamController<NetworkState>.broadcast();
+  final StreamController<NetworkState> _stateController = StreamController<NetworkState>.broadcast();
 
-  final StreamController<NetworkCondition> _conditionController =
-      StreamController<NetworkCondition>.broadcast();
+  final StreamController<NetworkCondition> _conditionController = StreamController<NetworkCondition>.broadcast();
 
-  final StreamController<NetworkMetrics> _metricsController =
-      StreamController<NetworkMetrics>.broadcast();
+  final StreamController<NetworkMetrics> _metricsController = StreamController<NetworkMetrics>.broadcast();
 
   NetworkState _state = NetworkState.initial();
 
-  NetworkCondition _condition =
-      NetworkCondition.unknown();
+  NetworkCondition _condition = NetworkCondition.unknown();
 
-  NetworkMetrics _metrics =
-      NetworkMetrics.empty();
+  NetworkMetrics _metrics = NetworkMetrics.empty();
 
   bool _started = false;
 
@@ -140,27 +137,21 @@ abstract class BaseNetworkMonitor implements NetworkMonitor {
   Future<void> onStop();
 
   /// Updates current network state.
-  void updateState(
-    NetworkState value,
-  ) {
+  void updateState(NetworkState value) {
     _state = value;
 
     _stateController.add(value);
   }
 
   /// Updates current network condition.
-  void updateCondition(
-    NetworkCondition value,
-  ) {
+  void updateCondition(NetworkCondition value) {
     _condition = value;
 
     _conditionController.add(value);
   }
 
   /// Updates current metrics.
-  void updateMetrics(
-    NetworkMetrics value,
-  ) {
+  void updateMetrics(NetworkMetrics value) {
     _metrics = value;
 
     _metricsController.add(value);

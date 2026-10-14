@@ -1,11 +1,11 @@
-import 'package:media_core/coordinator/page_coordinator.dart';
-import 'package:media_core/coordinator/preload_coordinator.dart';
-import 'package:media_core/coordinator/playback_coordinator.dart';
-import 'package:media_core/coordinator/resource_coordinator.dart';
 import 'package:media_core/coordinator/lifecycle_coordinator.dart';
-import 'package:media_core/coordinator/player_coordinator.dart';
+import 'package:media_core/coordinator/page_coordinator.dart';
+import 'package:media_core/coordinator/playback_coordinator.dart';
 import 'package:media_core/coordinator/player_audio_coordinator.dart';
+import 'package:media_core/coordinator/player_coordinator.dart';
+import 'package:media_core/coordinator/preload_coordinator.dart';
 import 'package:media_core/coordinator/presentation_coordinator.dart';
+import 'package:media_core/coordinator/resource_coordinator.dart';
 
 /// Global coordinator for player runtime.
 ///

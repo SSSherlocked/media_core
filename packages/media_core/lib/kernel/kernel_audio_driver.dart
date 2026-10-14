@@ -1,4 +1,5 @@
 import 'package:media_core/kernel/player_handle.dart';
+import 'package:media_core/kernel/player_kernel.dart' show PlayerKernel;
 
 /// Driver interface for audio capability packages.
 ///

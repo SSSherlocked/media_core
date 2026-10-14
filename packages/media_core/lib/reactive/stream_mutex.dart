@@ -21,6 +21,8 @@ import 'dart:async';
 ///
 /// The second operation will not start until the first operation completes.
 class StreamMutex {
+  /// Creates an idle mutex whose queue tail is an already completed future, so
+  /// the first [run] starts without waiting.
   StreamMutex();
 
   Future<void> _tail = Future<void>.value();
@@ -84,9 +86,9 @@ class StreamMutex {
   /// This does not wait for the current operation. The busy check and the
   /// queueing of [action] happen in the same synchronous step, so two
   /// concurrent attempts cannot both win.
-  Future<T?> tryRun<T>(Future<T> Function() action) async {
+  Future<T?> tryRun<T>(Future<T> Function() action) {
     if (_disposed || isLocked) {
-      return null;
+      return Future<T?>.value();
     }
 
     return run(action);

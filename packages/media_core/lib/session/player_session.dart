@@ -1,11 +1,10 @@
-import 'package:media_core/session/session_state.dart';
-import 'package:media_core/session/session_context.dart';
-import 'package:media_core/session/session_snapshot.dart';
-import 'package:media_core/session/session_generation.dart';
 import 'package:clock/clock.dart';
-import 'package:rxdart/rxdart.dart';
 import 'package:media_core/identity/generation_id.dart';
-
+import 'package:media_core/session/session_context.dart';
+import 'package:media_core/session/session_generation.dart';
+import 'package:media_core/session/session_snapshot.dart';
+import 'package:media_core/session/session_state.dart';
+import 'package:rxdart/rxdart.dart';
 
 /// Represents one playback lifecycle session.
 ///
@@ -107,7 +106,7 @@ final class PlayerSession {
   bool _buffering = false;
 
   /// Message of the last error, cleared when the session opens again.
-  String? _errorMessage;
+  String? errorMessage;
 
   /// Records the playback facts the session reports but does not own.
   ///
@@ -128,11 +127,6 @@ final class PlayerSession {
     if (buffering != null) {
       _buffering = buffering;
     }
-  }
-
-  /// Records the message of the current error.
-  void updateErrorMessage(String? message) {
-    _errorMessage = message;
   }
 
   /// Creates snapshot.
@@ -156,7 +150,7 @@ final class PlayerSession {
 
       hasError: _state.hasError,
 
-      errorMessage: _errorMessage,
+      errorMessage: errorMessage,
 
       timestamp: clock.now(),
     );

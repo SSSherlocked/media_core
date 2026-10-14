@@ -1,11 +1,11 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/adapter/player_adapter_config.dart';
 import 'package:media_core/core/player_config.dart';
+import 'package:media_core/identity/player_id.dart';
+import 'package:media_core/identity/session_id.dart';
 import 'package:media_core/platform/platform_capabilities.dart';
 import 'package:media_core/platform/platform_codec_capabilities.dart';
 import 'package:media_core/platform/platform_device_profile.dart';
-import 'package:media_core/identity/player_id.dart';
-import 'package:media_core/adapter/player_adapter_config.dart';
-import 'package:media_core/identity/session_id.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'player_adapter_context.freezed.dart';
 

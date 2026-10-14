@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:media_core/task/player_task.dart' show PlayerTask;
 
 /// Cancellation token used to cooperatively cancel a [PlayerTask].
 ///
@@ -34,8 +35,7 @@ final class TaskCancelToken {
 
   /// Creates an already-cancelled token.
   factory TaskCancelToken.cancelled([Object? reason]) {
-    final token = TaskCancelToken();
-    token.cancel(reason);
+    final token = TaskCancelToken()..cancel(reason);
     return token;
   }
 

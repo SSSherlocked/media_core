@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:rxdart/rxdart.dart';
 
 /// Provides the public entry point for the reactive infrastructure used by
-/// [media_core].
+/// `media_core`.
 ///
 /// This class contains shared reactive types and lightweight factory helpers.
 /// RxDart remains the underlying reactive implementation rather than being

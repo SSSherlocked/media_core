@@ -14,6 +14,11 @@ import 'package:flutter/widgets.dart';
 /// The overlay can contain controls, loading indicators, gestures,
 /// danmaku, debug information, or other UI supplied by the caller.
 final class PlayerOverlay extends StatelessWidget {
+  /// Fills the enclosing stack with [child], aligned and pointer-transparent as
+  /// asked.
+  ///
+  /// [ignorePointer] is for content that must not steal touches from what is
+  /// underneath it — danmaku, debug text — while controls stay hit-testable.
   const PlayerOverlay({required this.child, super.key, this.alignment = Alignment.center, this.ignorePointer = false});
 
   /// Overlay content.

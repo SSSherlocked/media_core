@@ -1,9 +1,8 @@
-import 'package:media_core/geometry/video_geometry.dart';
-import 'package:media_core/geometry/geometry_event.dart';
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/geometry/geometry_event.dart';
+import 'package:media_core/geometry/video_geometry.dart';
 import 'package:media_core/geometry/video_orientation.dart';
-
 
 /// Current geometry state.
 ///
@@ -19,6 +18,7 @@ import 'package:media_core/geometry/video_orientation.dart';
 /// - resize renderer
 /// - call platform APIs
 final class GeometryState extends Equatable {
+  /// Creates geometry state from explicit values.
   const GeometryState({
     required this.geometry,
     required this.generation,

@@ -1,5 +1,5 @@
-import 'package:media_core/diagnostics/network_snapshot.dart';
 import 'package:clock/clock.dart';
+import 'package:media_core/diagnostics/network_snapshot.dart';
 
 /// Collects aggregate network diagnostics for the media core.
 ///
@@ -43,7 +43,7 @@ final class NetworkDiagnostics {
   NetworkSnapshot get snapshot => _snapshot;
 
   /// Updates the current connection state.
-  void setConnected(bool connected) {
+  void setConnected({required bool connected}) {
     _ensureNotDisposed();
 
     _snapshot = _snapshot.copyWith(timestamp: clock.now(), connected: connected);

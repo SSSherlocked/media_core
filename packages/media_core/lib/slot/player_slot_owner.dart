@@ -19,18 +19,6 @@ final class PlayerSlotOwner extends Equatable {
   /// Creates a slot owner.
   const PlayerSlotOwner({required this.type, this.id});
 
-  /// Owner type.
-  final PlayerSlotOwnerType type;
-
-  /// Optional owner identifier.
-  ///
-  /// Examples:
-  ///
-  /// - page id
-  /// - widget id
-  /// - preload task id
-  final String? id;
-
   /// Creates page owner.
   factory PlayerSlotOwner.page(String id) {
     return PlayerSlotOwner(type: PlayerSlotOwnerType.page, id: id);
@@ -50,6 +38,18 @@ final class PlayerSlotOwner extends Equatable {
   factory PlayerSlotOwner.system() {
     return const PlayerSlotOwner(type: PlayerSlotOwnerType.system);
   }
+
+  /// Owner type.
+  final PlayerSlotOwnerType type;
+
+  /// Optional owner identifier.
+  ///
+  /// Examples:
+  ///
+  /// - page id
+  /// - widget id
+  /// - preload task id
+  final String? id;
 
   /// Whether owner is page.
   bool get isPage {

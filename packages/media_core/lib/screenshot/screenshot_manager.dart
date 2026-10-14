@@ -1,11 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:typed_data';
-
 import 'package:clock/clock.dart';
-import 'package:media_core_logging/media_core_logging.dart';
-import 'package:rxdart/rxdart.dart';
-
 import 'package:media_core/identity/player_id.dart';
 import 'package:media_core/screenshot/player_screenshot.dart';
 import 'package:media_core/screenshot/screenshot_config.dart';
@@ -13,6 +9,9 @@ import 'package:media_core/screenshot/screenshot_format.dart';
 import 'package:media_core/screenshot/screenshot_options.dart';
 import 'package:media_core/screenshot/screenshot_request.dart';
 import 'package:media_core/screenshot/screenshot_surface.dart';
+import 'package:media_core/screenshot/screenshot_writer.dart' show ScreenshotWriter;
+import 'package:media_core_logging/media_core_logging.dart';
+import 'package:rxdart/rxdart.dart';
 
 /// Per-player facts a capture needs but does not own.
 ///
@@ -251,9 +250,7 @@ final class ScreenshotManager {
         final engineFirst = _context.engineCaptureAvailable();
 
         if (!config.surfaceFallback) {
-          return engineFirst
-              ? const <ScreenshotSource>[ScreenshotSource.engine]
-              : const <ScreenshotSource>[];
+          return engineFirst ? const <ScreenshotSource>[ScreenshotSource.engine] : const <ScreenshotSource>[];
         }
 
         return engineFirst
@@ -290,7 +287,7 @@ final class ScreenshotManager {
       // The engine returned the decoded frame, so the frame's own size is the
       // geometry the player reported for the stream.
       return _CapturedFrame(bytes: bytes, width: _context.frameWidth(), height: _context.frameHeight());
-    } catch (error) {
+    } on Object catch (error) {
       // An engine that cannot capture on this platform throws instead of
       // declaring no capability; the surface route is the answer either way.
       MediaCoreLog.debug(
@@ -322,7 +319,7 @@ final class ScreenshotManager {
           width: size?.width.round() ?? _context.frameWidth(),
           height: size?.height.round() ?? _context.frameHeight(),
         );
-      } catch (error) {
+      } on Object catch (error) {
         MediaCoreLog.debug(
           LogCategory.renderer,
           'surface screenshot failed',

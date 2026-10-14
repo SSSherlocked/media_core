@@ -56,7 +56,7 @@ final class PipController {
         return;
       }
 
-      final int generation = ++_generation;
+      final generation = ++_generation;
 
       _stateSubject.add(current.copyWith(transitioning: true, generation: generation, error: null));
     });
@@ -74,7 +74,7 @@ final class PipController {
         return;
       }
 
-      final int generation = ++_generation;
+      final generation = ++_generation;
 
       _stateSubject.add(current.copyWith(transitioning: true, generation: generation, error: null));
     });
@@ -109,14 +109,14 @@ final class PipController {
   }
 
   /// Updates PiP availability.
-  void updateAvailability(bool available) {
+  void updateAvailability({required bool available}) {
     _ensureNotDisposed();
 
     _stateSubject.add(current.copyWith(available: available));
   }
 
   /// Enables or disables PiP.
-  void updateEnabled(bool enabled) {
+  void updateEnabled({required bool enabled}) {
     _ensureNotDisposed();
 
     _stateSubject.add(current.copyWith(enabled: enabled));
@@ -124,7 +124,7 @@ final class PipController {
 
   /// Serializes PiP operations.
   Future<void> _enqueue(Future<void> Function() action) {
-    final Future<void> next = _operation.then((_) => action());
+    final next = _operation.then((_) => action());
 
     _operation = next.catchError((_) {});
 

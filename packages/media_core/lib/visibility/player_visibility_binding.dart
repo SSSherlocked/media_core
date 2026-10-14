@@ -19,6 +19,8 @@ import 'package:media_core/visibility/visibility_event.dart';
 /// await binding.dispose();
 /// ```
 final class PlayerVisibilityBinding {
+  /// Binds a [PlayerHandle] to a [VisibilityController] so that playback
+  /// pauses while the player is off screen and resumes when it returns.
   PlayerVisibilityBinding(this._handle, this._visibility) {
     _subscription = _visibility.events.listen(_onVisibilityEvent);
   }
@@ -53,11 +55,11 @@ final class PlayerVisibilityBinding {
         _resumeAfterInvisibility();
 
       case VisibilityEventType.changed:
-        // `setViewport(false)` and `setOccluded(true)` publish `changed`, and
-        // both mean "the player is not on screen any more". Acting on the
-        // event *type* alone would leave a scrolled-away or covered player
-        // playing, which is the whole reason this binding exists — so the
-        // decision is made from the controller's state instead.
+        // `setViewport(value: false)` and `setOccluded(value: true)` publish
+        // `changed`, and both mean "the player is not on screen any more".
+        // Acting on the event *type* alone would leave a scrolled-away or
+        // covered player playing, which is the whole reason this binding
+        // exists — so the decision is made from the controller's state instead.
         final state = _visibility.snapshot.state;
 
         if (!state.inViewport || state.occluded || !state.visible) {

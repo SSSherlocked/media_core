@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/media_core.dart' show DiagnosticsManager, NetworkMonitor;
 
 part 'network_metrics.freezed.dart';
 

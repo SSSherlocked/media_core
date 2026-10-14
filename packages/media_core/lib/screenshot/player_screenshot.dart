@@ -2,10 +2,9 @@ import 'dart:typed_data';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart' show ImageProvider, MemoryImage;
-import 'package:media_core_logging/media_core_logging.dart';
-
 import 'package:media_core/identity/player_id.dart';
 import 'package:media_core/screenshot/screenshot_format.dart';
+import 'package:media_core_logging/media_core_logging.dart';
 
 /// Where the pixels of a capture came from.
 enum ScreenshotSource {
@@ -133,17 +132,7 @@ final class PlayerScreenshot extends Equatable {
   }
 
   @override
-  List<Object?> get props => [
-    bytes,
-    format,
-    width,
-    height,
-    position,
-    capturedAt,
-    source,
-    playerId,
-    requestedFormat,
-  ];
+  List<Object?> get props => [bytes, format, width, height, position, capturedAt, source, playerId, requestedFormat];
 
   @override
   String toString() {
@@ -165,7 +154,12 @@ extension PlayerScreenshotLogging on PlayerScreenshot? {
     final screenshot = this;
 
     if (screenshot == null) {
-      MediaCoreLog.log(level, LogCategory.renderer, 'screenshot unavailable', fields: <String, Object?>{'action': action});
+      MediaCoreLog.log(
+        level,
+        LogCategory.renderer,
+        'screenshot unavailable',
+        fields: <String, Object?>{'action': action},
+      );
 
       return;
     }

@@ -1,10 +1,9 @@
-import 'package:media_core/slot/player_slot_status.dart';
 import 'package:clock/clock.dart';
-import 'package:media_core/identity/slot_id.dart';
+import 'package:equatable/equatable.dart';
 import 'package:media_core/identity/player_id.dart';
 import 'package:media_core/identity/session_id.dart';
-import 'package:equatable/equatable.dart';
-
+import 'package:media_core/identity/slot_id.dart';
+import 'package:media_core/slot/player_slot_status.dart';
 
 /// Immutable snapshot of a player slot.
 ///
@@ -28,10 +27,26 @@ final class PlayerSlotSnapshot extends Equatable {
   const PlayerSlotSnapshot({
     required this.slotId,
     required this.status,
+    required this.createdAt,
     this.playerId,
     this.sessionId,
-    required this.createdAt,
   });
+
+  /// Creates snapshot from runtime slot.
+  factory PlayerSlotSnapshot.fromState(
+    SlotId slotId,
+    PlayerSlotStatus status, {
+    PlayerId? playerId,
+    SessionId? sessionId,
+  }) {
+    return PlayerSlotSnapshot(
+      slotId: slotId,
+      status: status,
+      playerId: playerId,
+      sessionId: sessionId,
+      createdAt: clock.now(),
+    );
+  }
 
   /// Slot identity.
   final SlotId slotId;
@@ -61,22 +76,6 @@ final class PlayerSlotSnapshot extends Equatable {
   /// Whether slot was active.
   bool get isActive {
     return status == PlayerSlotStatus.active;
-  }
-
-  /// Creates snapshot from runtime slot.
-  factory PlayerSlotSnapshot.fromState(
-    SlotId slotId,
-    PlayerSlotStatus status, {
-    PlayerId? playerId,
-    SessionId? sessionId,
-  }) {
-    return PlayerSlotSnapshot(
-      slotId: slotId,
-      status: status,
-      playerId: playerId,
-      sessionId: sessionId,
-      createdAt: clock.now(),
-    );
   }
 
   /// Creates copy with changes.

@@ -1,11 +1,12 @@
-import 'package:media_core/identity/slot_id.dart';
+import 'package:equatable/equatable.dart';
+import 'package:media_core/error/error_context.dart' show ErrorContext;
+import 'package:media_core/identity/generation_id.dart';
+import 'package:media_core/identity/operation_id.dart';
 import 'package:media_core/identity/player_id.dart';
-import 'package:media_core/identity/source_id.dart';
 import 'package:media_core/identity/request_id.dart';
 import 'package:media_core/identity/session_id.dart';
-import 'package:media_core/identity/operation_id.dart';
-import 'package:media_core/identity/generation_id.dart';
-import 'package:equatable/equatable.dart';
+import 'package:media_core/identity/slot_id.dart';
+import 'package:media_core/identity/source_id.dart';
 
 /// Provides contextual information associated with an operation.
 ///
@@ -167,38 +168,55 @@ final class OperationContext extends Equatable {
   // Presence
   // ---------------------------------------------------------------------------
 
+  /// Whether a player identity is present.
   bool get hasPlayerId => playerId != null;
 
+  /// Whether a session identity is present.
   bool get hasSessionId => sessionId != null;
 
+  /// Whether a slot identity is present.
   bool get hasSlotId => slotId != null;
 
+  /// Whether a source identity is present.
   bool get hasSourceId => sourceId != null;
 
+  /// Whether a request identity is present.
   bool get hasRequestId => requestId != null;
 
+  /// Whether an operation identity is present.
   bool get hasOperationId => operationId != null;
 
+  /// Whether a generation identity is present.
   bool get hasGenerationId => generationId != null;
 
+  /// Whether a non-blank line identifier is present.
   bool get hasLineId => _hasText(lineId);
 
+  /// Whether a non-blank quality value is present.
   bool get hasQuality => _hasText(quality);
 
+  /// Whether a non-blank source URI is present.
   bool get hasUri => _hasText(uri);
 
+  /// Whether a non-blank platform name is present.
   bool get hasPlatform => _hasText(platform);
 
+  /// Whether a non-blank backend name is present.
   bool get hasBackend => _hasText(backend);
 
+  /// Whether a non-blank adapter name is present.
   bool get hasAdapter => _hasText(adapter);
 
+  /// Whether a non-blank description is present.
   bool get hasDescription => _hasText(description);
 
+  /// Whether a non-blank business reason is present.
   bool get hasReason => _hasText(reason);
 
+  /// Whether any operation parameters are attached.
   bool get hasParameters => parameters.isNotEmpty;
 
+  /// Whether any metadata entries are attached.
   bool get hasMetadata => metadata.isNotEmpty;
 
   /// Whether this context contains no information.
@@ -365,129 +383,174 @@ final class OperationContext extends Equatable {
   // Identity helpers
   // ---------------------------------------------------------------------------
 
+  /// Returns a copy with the named fields cleared.
+  ///
+  /// [copyWith] cannot express "no value": a null argument means "keep what is
+  /// there", which is what a caller building a context wants and is exactly what
+  /// made the `withoutX()` helpers below return an unchanged copy. Clearing is
+  /// therefore a separate question, asked field by field so that a caller names
+  /// the one it means to drop and never has to repeat the fourteen it does not.
+  OperationContext cleared({
+    bool playerId = false,
+    bool sessionId = false,
+    bool slotId = false,
+    bool sourceId = false,
+    bool requestId = false,
+    bool operationId = false,
+    bool generationId = false,
+    bool lineId = false,
+    bool quality = false,
+    bool uri = false,
+    bool platform = false,
+    bool backend = false,
+    bool adapter = false,
+    bool description = false,
+    bool reason = false,
+  }) {
+    return OperationContext(
+      playerId: playerId ? null : this.playerId,
+      sessionId: sessionId ? null : this.sessionId,
+      slotId: slotId ? null : this.slotId,
+      sourceId: sourceId ? null : this.sourceId,
+      requestId: requestId ? null : this.requestId,
+      operationId: operationId ? null : this.operationId,
+      generationId: generationId ? null : this.generationId,
+      lineId: lineId ? null : this.lineId,
+      quality: quality ? null : this.quality,
+      uri: uri ? null : this.uri,
+      platform: platform ? null : this.platform,
+      backend: backend ? null : this.backend,
+      adapter: adapter ? null : this.adapter,
+      description: description ? null : this.description,
+      reason: reason ? null : this.reason,
+      parameters: parameters,
+      metadata: metadata,
+    );
+  }
+
+  /// Returns a copy carrying [value] as the player identity.
   OperationContext withPlayerId(PlayerId value) {
     return copyWith(playerId: value);
   }
 
-  OperationContext withoutPlayerId() {
-    return copyWith(playerId: null);
-  }
+  /// Returns a copy without the player identity.
+  OperationContext withoutPlayerId() => cleared(playerId: true);
 
+  /// Returns a copy carrying [value] as the session identity.
   OperationContext withSessionId(SessionId value) {
     return copyWith(sessionId: value);
   }
 
-  OperationContext withoutSessionId() {
-    return copyWith(sessionId: null);
-  }
+  /// Returns a copy without the session identity.
+  OperationContext withoutSessionId() => cleared(sessionId: true);
 
+  /// Returns a copy carrying [value] as the slot identity.
   OperationContext withSlotId(SlotId value) {
     return copyWith(slotId: value);
   }
 
-  OperationContext withoutSlotId() {
-    return copyWith(slotId: null);
-  }
+  /// Returns a copy without the slot identity.
+  OperationContext withoutSlotId() => cleared(slotId: true);
 
+  /// Returns a copy carrying [value] as the source identity.
   OperationContext withSourceId(SourceId value) {
     return copyWith(sourceId: value);
   }
 
-  OperationContext withoutSourceId() {
-    return copyWith(sourceId: null);
-  }
+  /// Returns a copy without the source identity.
+  OperationContext withoutSourceId() => cleared(sourceId: true);
 
+  /// Returns a copy carrying [value] as the request identity.
   OperationContext withRequestId(RequestId value) {
     return copyWith(requestId: value);
   }
 
-  OperationContext withoutRequestId() {
-    return copyWith(requestId: null);
-  }
+  /// Returns a copy without the request identity.
+  OperationContext withoutRequestId() => cleared(requestId: true);
 
+  /// Returns a copy carrying [value] as the operation identity.
   OperationContext withOperationId(OperationId value) {
     return copyWith(operationId: value);
   }
 
-  OperationContext withoutOperationId() {
-    return copyWith(operationId: null);
-  }
+  /// Returns a copy without the operation identity.
+  OperationContext withoutOperationId() => cleared(operationId: true);
 
+  /// Returns a copy carrying [value] as the generation identity.
   OperationContext withGenerationId(GenerationId value) {
     return copyWith(generationId: value);
   }
 
-  OperationContext withoutGenerationId() {
-    return copyWith(generationId: null);
-  }
+  /// Returns a copy without the generation identity.
+  OperationContext withoutGenerationId() => cleared(generationId: true);
 
   // ---------------------------------------------------------------------------
   // Text helpers
   // ---------------------------------------------------------------------------
 
+  /// Returns a copy carrying [value] as the normalized source line id.
   OperationContext withLineId(String value) {
     return copyWith(lineId: _normalizeText(value));
   }
 
-  OperationContext withoutLineId() {
-    return copyWith(lineId: null);
-  }
+  /// Returns a copy without the source line id.
+  OperationContext withoutLineId() => cleared(lineId: true);
 
+  /// Returns a copy carrying [value] as the normalized requested quality.
   OperationContext withQuality(String value) {
     return copyWith(quality: _normalizeText(value));
   }
 
-  OperationContext withoutQuality() {
-    return copyWith(quality: null);
-  }
+  /// Returns a copy without the requested quality.
+  OperationContext withoutQuality() => cleared(quality: true);
 
+  /// Returns a copy carrying [value] as the normalized source URI.
   OperationContext withUri(String value) {
     return copyWith(uri: _normalizeText(value));
   }
 
-  OperationContext withoutUri() {
-    return copyWith(uri: null);
-  }
+  /// Returns a copy without the source URI.
+  OperationContext withoutUri() => cleared(uri: true);
 
+  /// Returns a copy carrying [value] as the normalized platform name.
   OperationContext withPlatform(String value) {
     return copyWith(platform: _normalizeText(value));
   }
 
-  OperationContext withoutPlatform() {
-    return copyWith(platform: null);
-  }
+  /// Returns a copy without the platform name.
+  OperationContext withoutPlatform() => cleared(platform: true);
 
+  /// Returns a copy carrying [value] as the normalized backend name.
   OperationContext withBackend(String value) {
     return copyWith(backend: _normalizeText(value));
   }
 
-  OperationContext withoutBackend() {
-    return copyWith(backend: null);
-  }
+  /// Returns a copy without the backend name.
+  OperationContext withoutBackend() => cleared(backend: true);
 
+  /// Returns a copy carrying [value] as the normalized adapter name.
   OperationContext withAdapter(String value) {
     return copyWith(adapter: _normalizeText(value));
   }
 
-  OperationContext withoutAdapter() {
-    return copyWith(adapter: null);
-  }
+  /// Returns a copy without the adapter name.
+  OperationContext withoutAdapter() => cleared(adapter: true);
 
+  /// Returns a copy carrying [value] as the normalized description.
   OperationContext withDescription(String value) {
     return copyWith(description: _normalizeText(value));
   }
 
-  OperationContext withoutDescription() {
-    return copyWith(description: null);
-  }
+  /// Returns a copy without the description.
+  OperationContext withoutDescription() => cleared(description: true);
 
+  /// Returns a copy carrying [value] as the normalized business reason.
   OperationContext withReason(String value) {
     return copyWith(reason: _normalizeText(value));
   }
 
-  OperationContext withoutReason() {
-    return copyWith(reason: null);
-  }
+  /// Returns a copy without the business reason.
+  OperationContext withoutReason() => cleared(reason: true);
 
   // ---------------------------------------------------------------------------
   // Copy

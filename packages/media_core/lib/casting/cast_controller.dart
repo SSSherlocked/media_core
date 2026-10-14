@@ -21,7 +21,7 @@ import 'package:media_core/casting/media_cast_backend.dart';
 ///   ([positionInterval], default 2s) because DLNA eventing needs a
 ///   GENA server a Flutter app should not have to run; when one poll
 ///   fails the previous position is kept and the state marked
-///   [unknown], so a transient hiccup grays the ring out rather than
+///   [CastTransportState.unknown], so a transient hiccup grays the ring out rather than
 ///   snapping it to zero;
 /// - **command honesty** — every command awaits, propagates
 ///   [CastException], and re-reads state after success, because a
@@ -50,10 +50,7 @@ final class CastController extends ChangeNotifier {
   /// [positionInterval] overrides how often the playhead is polled
   /// during playback; a backend with real push eventing can pass
   /// [Duration.zero] to disable polling and drive [refresh] itself.
-  CastController({
-    required this.backend,
-    this.positionInterval = const Duration(seconds: 2),
-  }) {
+  CastController({required this.backend, this.positionInterval = const Duration(seconds: 2)}) {
     _events = backend.events.listen(
       _onEvent,
       onError: (Object error, StackTrace stackTrace) {
@@ -70,6 +67,14 @@ final class CastController extends ChangeNotifier {
 
   late final StreamSubscription<CastEvent> _events;
   Timer? _ticker;
+
+  /// Whether a position poll from the ticker is still waiting on the device.
+  ///
+  /// `backend.position` is a network round trip to a renderer that may be slow
+  /// or wedged; an unguarded periodic ticker would stack those requests
+  /// indefinitely and let a late answer overwrite the position a newer one
+  /// already read.
+  bool _refreshInFlight = false;
 
   final List<CastDevice> _devices = <CastDevice>[];
   CastDevice? _device;
@@ -147,11 +152,7 @@ final class CastController extends ChangeNotifier {
     _ensureActive();
     final target = _requireDevice();
     await backend.seek(target, position);
-    _position = CastPosition(
-      position: position,
-      duration: _position.duration,
-      transportState: _state,
-    );
+    _position = CastPosition(position: position, duration: _position.duration, transportState: _state);
     notifyListeners();
     unawaited(refresh());
   }
@@ -193,9 +194,7 @@ final class CastController extends ChangeNotifier {
     try {
       final read = await backend.position(target);
       _position = read;
-      _state = read.transportState == CastTransportState.unknown
-          ? _state
-          : read.transportState;
+      _state = read.transportState == CastTransportState.unknown ? _state : read.transportState;
     } on CastException {
       _state = CastTransportState.unknown;
     }
@@ -284,8 +283,9 @@ final class CastController extends ChangeNotifier {
       return;
     }
     _ticker = Timer.periodic(positionInterval, (_) {
-      if (_state == CastTransportState.playing) {
-        unawaited(refresh());
+      if (_state == CastTransportState.playing && !_refreshInFlight) {
+        _refreshInFlight = true;
+        unawaited(refresh().whenComplete(() => _refreshInFlight = false));
       }
     });
   }

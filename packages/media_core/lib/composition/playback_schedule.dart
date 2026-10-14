@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:media_core/composition/library.dart' show ScheduledSegment;
 import 'package:media_core/composition/media_break.dart';
 import 'package:media_core/composition/schedule_clip.dart';
 
@@ -36,15 +37,17 @@ final class PlaybackSchedule extends Equatable {
   /// refuses at construction, before it can produce a timeline with
   /// two competing definitions of "the program".
   PlaybackSchedule({required this.program, this.breaks = const <MediaBreak>[]})
-    : assert(
-         program.kind == ClipKind.content,
-         'A schedule program must be a content clip.',
-       ),
-       assert(
-         breaks.every((b) => b.clips.every((c) => c.kind != ClipKind.content)),
-         'A break cannot contain content clips; append to a playlist instead.',
-       ) {
+    : assert(program.kind == ClipKind.content, 'A schedule program must be a content clip.'),
+      assert(
+        breaks.every((b) => b.clips.every((c) => c.kind != ClipKind.content)),
+        'A break cannot contain content clips; append to a playlist instead.',
+      ) {
     _validateAgainstProgram();
+  }
+
+  /// A schedule with no breaks: the program alone.
+  factory PlaybackSchedule.programOnly(ScheduleClip program) {
+    return PlaybackSchedule(program: program);
   }
 
   /// The program being scheduled.
@@ -65,9 +68,7 @@ final class PlaybackSchedule extends Equatable {
   List<MediaBreak> get sortedBreaks {
     final ordered = List<MediaBreak>.from(breaks)
       ..sort((a, b) {
-        final byOffset = a.position.programOffset.compareTo(
-          b.position.programOffset,
-        );
+        final byOffset = a.position.programOffset.compareTo(b.position.programOffset);
         if (byOffset != 0) {
           return byOffset;
         }
@@ -88,10 +89,7 @@ final class PlaybackSchedule extends Equatable {
   /// change. [from] is validated so a composer that drifted past the
   /// program end fails loudly here instead of placing a clip whose
   /// range does not exist.
-  ScheduleClip clipCoveringProgram({
-    required Duration from,
-    required Duration duration,
-  }) {
+  ScheduleClip clipCoveringProgram({required Duration from, required Duration duration}) {
     if (from < Duration.zero || duration <= Duration.zero) {
       throw ArgumentError.value(
         '$from + $duration',
@@ -108,11 +106,6 @@ final class PlaybackSchedule extends Equatable {
       );
     }
     return program.copyWith(duration: duration);
-  }
-
-  /// A schedule with no breaks: the program alone.
-  factory PlaybackSchedule.programOnly(ScheduleClip program) {
-    return PlaybackSchedule(program: program);
   }
 
   void _validateAgainstProgram() {

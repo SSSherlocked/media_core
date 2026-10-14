@@ -1,6 +1,5 @@
-import 'package:media_core/recording/recording_format.dart';
 import 'package:equatable/equatable.dart';
-
+import 'package:media_core/recording/recording_format.dart';
 
 /// Defines configuration for a recording session.
 ///
@@ -35,7 +34,10 @@ final class RecordingConfig extends Equatable {
     this.recordVideo = true,
     this.recordAudio = true,
     this.maxDuration,
-  }) : assert(maxDuration == null || maxDuration > Duration.zero);
+  }) : assert(
+         maxDuration == null || maxDuration > Duration.zero,
+         'maxDuration must be null or longer than Duration.zero.',
+       );
 
   /// Requested output format.
   final RecordingFormat format;

@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/core/library.dart' show PlayerCoreState, PlayerSnapshot;
 
 part 'player_info.freezed.dart';
 part 'player_info.g.dart';
@@ -72,6 +73,9 @@ abstract class PlayerInfo with _$PlayerInfo {
     /// Optional container metadata.
     @Default(<String, String>{}) Map<String, String> metadata,
   }) = _PlayerInfo;
+
+  /// Creates player information from JSON.
+  factory PlayerInfo.fromJson(Map<String, Object?> json) => _$PlayerInfoFromJson(json);
 
   const PlayerInfo._();
 
@@ -232,7 +236,4 @@ abstract class PlayerInfo with _$PlayerInfo {
   static bool _hasText(String? value) {
     return value != null && value.trim().isNotEmpty;
   }
-
-  /// Creates player information from JSON.
-  factory PlayerInfo.fromJson(Map<String, Object?> json) => _$PlayerInfoFromJson(json);
 }

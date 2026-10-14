@@ -111,15 +111,18 @@ extension PlayerHandleOperations on PlayerHandle {
   Future<T> _record<T>(OperationType type, Future<T> future) {
     beginOperation(type);
 
-    return future.then((value) {
-      completeOperation();
+    return future.then(
+      (value) {
+        completeOperation();
 
-      return value;
-    }, onError: (Object error, StackTrace stackTrace) {
-      failOperation();
+        return value;
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        failOperation();
 
-      throw Error.throwWithStackTrace(error, stackTrace);
-    });
+        throw Error.throwWithStackTrace(error, stackTrace);
+      },
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -150,8 +153,9 @@ extension PlayerHandleOperations on PlayerHandle {
 
     _activeCancelToken = null;
 
-    token.cancel(reason ?? StateError('PlayerIdentity operation was cancelled.'));
-    token.dispose();
+    token
+      ..cancel(reason ?? StateError('PlayerIdentity operation was cancelled.'))
+      ..dispose();
   }
 
   /// Creates a new cancellation token for a playback/recovery operation.
@@ -199,7 +203,10 @@ extension PlayerHandleOperations on PlayerHandle {
   /// Errors are preserved for the caller while the internal queue
   /// remains usable for subsequent operations.
   Future<T> _enqueue<T>(Future<T> Function() action, {bool allowDisposed = false}) {
-    final next = _operation.then<T>((_) async {
+    // Not `async`: `.then` flattens the returned Future anyway, so the queue
+    // ordering and the error routing are unchanged, and `_ensureNotDisposed`
+    // still reaches the caller as a rejected `next`.
+    final next = _operation.then<T>((_) {
       if (!allowDisposed) {
         _ensureNotDisposed();
       }
@@ -216,7 +223,7 @@ extension PlayerHandleOperations on PlayerHandle {
   Future<void> _drainOperations() async {
     try {
       await _operation;
-    } catch (_) {
+    } on Object catch (_) {
       // The queue itself already preserves later operations.
     }
   }

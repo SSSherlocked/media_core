@@ -38,7 +38,9 @@ class SerialExecutor {
 
     _queue.add(task);
 
-    _process();
+    // The queue drives itself; callers await the task's completer instead so a
+    // slow head-of-queue task cannot block enqueueing.
+    unawaited(_process());
 
     return task.completer.future;
   }

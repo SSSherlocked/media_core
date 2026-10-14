@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:media_core/composition/media_segment.dart';
+import 'package:media_core/composition/playback_schedule.dart' show PlaybackSchedule;
 import 'package:media_core/composition/schedule_clip.dart';
 
 /// One clip placed at an absolute position on the combined timeline.
@@ -11,15 +12,8 @@ import 'package:media_core/composition/schedule_clip.dart';
 /// auditable place.
 final class ScheduledSegment extends Equatable {
   /// Creates a placed segment.
-  const ScheduledSegment({
-    required this.clip,
-    required this.start,
-    required this.end,
-    this.programTime,
-  }) : assert(
-         end >= start,
-         'A scheduled segment cannot end before it starts.',
-       );
+  const ScheduledSegment({required this.clip, required this.start, required this.end, this.programTime})
+    : assert(end >= start, 'A scheduled segment cannot end before it starts.');
 
   /// The clip occupying this span.
   final ScheduleClip clip;
@@ -50,10 +44,7 @@ final class ScheduledSegment extends Equatable {
     start: start,
     duration: duration,
     label: clip.kind.name,
-    attributes: <String, Object?>{
-      if (clip.id != null) 'clipId': clip.id,
-      ...clip.attributes,
-    },
+    attributes: <String, Object?>{if (clip.id != null) 'clipId': clip.id, ...clip.attributes},
   );
 
   /// Whether [time] falls inside this segment, end-exclusive.
@@ -83,11 +74,7 @@ final class ScheduledSegment extends Equatable {
 /// (resume position, progress bars, DVR mapping, analytics).
 final class SchedulePosition extends Equatable {
   /// Creates a position.
-  const SchedulePosition({
-    required this.segment,
-    required this.localTime,
-    this.programTime,
-  });
+  const SchedulePosition({required this.segment, required this.localTime, this.programTime});
 
   /// The segment under the playhead.
   final ScheduledSegment segment;
@@ -130,10 +117,7 @@ final class SchedulePosition extends Equatable {
 final class ComposedSchedule extends Equatable {
   /// Creates a composed schedule from placed [segments].
   ComposedSchedule({required this.segments})
-    : assert(
-        _tilesWithoutGaps(segments),
-        'Composed segments must be ordered and gap-free.',
-      );
+    : assert(_tilesWithoutGaps(segments), 'Composed segments must be ordered and gap-free.');
 
   /// The empty schedule: no clips, no timeline.
   static final ComposedSchedule empty = ComposedSchedule(segments: const []);
@@ -179,11 +163,7 @@ final class ComposedSchedule extends Equatable {
       }
     }
     final last = segments.last;
-    return SchedulePosition(
-      segment: last,
-      localTime: last.duration,
-      programTime: last.programTimeAt(last.end),
-    );
+    return SchedulePosition(segment: last, localTime: last.duration, programTime: last.programTimeAt(last.end));
   }
 
   /// The next segment boundary at or after [time].

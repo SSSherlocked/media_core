@@ -219,22 +219,16 @@ final class MediaCapabilities extends Equatable {
   static const MediaCapabilities unknown = MediaCapabilities();
 
   /// Returns capabilities for audio-only media.
-  static const MediaCapabilities audioOnly = MediaCapabilities(hasAudio: true, hasVideo: false);
+  static const MediaCapabilities audioOnly = MediaCapabilities(hasAudio: true);
 
   /// Returns capabilities for video-only media.
-  static const MediaCapabilities videoOnly = MediaCapabilities(hasAudio: false, hasVideo: true);
+  static const MediaCapabilities videoOnly = MediaCapabilities(hasVideo: true);
 
   /// Returns capabilities for audio-video media.
   static const MediaCapabilities audioVideo = MediaCapabilities(hasAudio: true, hasVideo: true);
 
   /// Returns capabilities for a typical live stream.
-  static const MediaCapabilities live = MediaCapabilities(
-    hasAudio: true,
-    hasVideo: true,
-    supportsSeeking: false,
-    supportsDuration: false,
-    supportsLive: true,
-  );
+  static const MediaCapabilities live = MediaCapabilities(hasAudio: true, hasVideo: true, supportsLive: true);
 
   /// Returns capabilities for typical on-demand media.
   static const MediaCapabilities onDemand = MediaCapabilities(
@@ -242,7 +236,6 @@ final class MediaCapabilities extends Equatable {
     hasVideo: true,
     supportsSeeking: true,
     supportsDuration: true,
-    supportsLive: false,
   );
 
   @override

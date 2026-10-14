@@ -12,15 +12,15 @@
 /// removing or renaming files in this module.
 library;
 
+export 'package:media_core/coordinator/global_player_coordinator.dart';
+export 'package:media_core/coordinator/lifecycle_coordinator.dart';
+export 'package:media_core/coordinator/page_coordinator.dart';
+export 'package:media_core/coordinator/playback_coordinator.dart';
 // ============================================================================
 // Public exports
 // ============================================================================
 
 export 'package:media_core/coordinator/player_audio_coordinator.dart';
-export 'package:media_core/coordinator/global_player_coordinator.dart';
-export 'package:media_core/coordinator/lifecycle_coordinator.dart';
-export 'package:media_core/coordinator/page_coordinator.dart';
-export 'package:media_core/coordinator/playback_coordinator.dart';
 export 'package:media_core/coordinator/player_coordinator.dart';
 export 'package:media_core/coordinator/preload_coordinator.dart';
 export 'package:media_core/coordinator/presentation_coordinator.dart';

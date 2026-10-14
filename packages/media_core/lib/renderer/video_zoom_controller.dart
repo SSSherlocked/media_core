@@ -71,7 +71,7 @@ final class VideoZoomController extends ChangeNotifier {
        assert(snapBackTolerance >= 0, 'snapBackTolerance must not be negative');
 
   /// Scale of the natural, unzoomed picture.
-  static const double restScale = 1.0;
+  static const double restScale = 1;
 
   /// Smallest allowed scale.
   final double minScale;

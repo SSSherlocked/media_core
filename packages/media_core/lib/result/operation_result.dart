@@ -1,9 +1,9 @@
+import 'package:equatable/equatable.dart';
+import 'package:media_core/identity/generation_id.dart';
+import 'package:media_core/identity/request_id.dart';
 import 'package:media_core/result/result.dart';
 import 'package:media_core/result/result_error.dart';
 import 'package:media_core/result/result_status.dart';
-import 'package:media_core/identity/request_id.dart';
-import 'package:media_core/identity/generation_id.dart';
-import 'package:equatable/equatable.dart';
 
 /// Represents the result of a specific player operation.
 ///
@@ -184,18 +184,18 @@ final class OperationResult<T> extends Equatable {
 
   /// Executes [action] when the operation succeeds.
   ///
-  /// Returns this operation result unchanged.
-  OperationResult<T> onSuccess(void Function(T value) action) {
+  /// The operation result is immutable, so nothing is produced; callers keep
+  /// using the original value.
+  void onSuccess(void Function(T value) action) {
     result.onSuccess(action);
-    return this;
   }
 
   /// Executes [action] when the operation fails.
   ///
-  /// Returns this operation result unchanged.
-  OperationResult<T> onFailure(void Function(ResultError error) action) {
+  /// The operation result is immutable, so nothing is produced; callers keep
+  /// using the original value.
+  void onFailure(void Function(ResultError error) action) {
     result.onFailure(action);
-    return this;
   }
 
   /// Folds the underlying result into a single value.
@@ -274,13 +274,7 @@ final class OperationResult<T> extends Equatable {
 
   /// Returns a copy without an operation name.
   OperationResult<T> withoutOperation() {
-    return OperationResult<T>(
-      result: result,
-      operation: null,
-      requestId: requestId,
-      generationId: generationId,
-      duration: duration,
-    );
+    return OperationResult<T>(result: result, requestId: requestId, generationId: generationId, duration: duration);
   }
 
   /// Returns a copy with [requestId] attached.
@@ -296,13 +290,7 @@ final class OperationResult<T> extends Equatable {
 
   /// Returns a copy without a request ID.
   OperationResult<T> withoutRequestId() {
-    return OperationResult<T>(
-      result: result,
-      operation: operation,
-      requestId: null,
-      generationId: generationId,
-      duration: duration,
-    );
+    return OperationResult<T>(result: result, operation: operation, generationId: generationId, duration: duration);
   }
 
   /// Returns a copy with [generationId] attached.
@@ -318,13 +306,7 @@ final class OperationResult<T> extends Equatable {
 
   /// Returns a copy without a generation ID.
   OperationResult<T> withoutGenerationId() {
-    return OperationResult<T>(
-      result: result,
-      operation: operation,
-      requestId: requestId,
-      generationId: null,
-      duration: duration,
-    );
+    return OperationResult<T>(result: result, operation: operation, requestId: requestId, duration: duration);
   }
 
   /// Returns a copy with [duration] attached.
@@ -344,13 +326,7 @@ final class OperationResult<T> extends Equatable {
 
   /// Returns a copy without an execution duration.
   OperationResult<T> withoutDuration() {
-    return OperationResult<T>(
-      result: result,
-      operation: operation,
-      requestId: requestId,
-      generationId: generationId,
-      duration: null,
-    );
+    return OperationResult<T>(result: result, operation: operation, requestId: requestId, generationId: generationId);
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'package:media_core/core/player_core_state.dart' show PlayerCoreState;
+
 /// Semantic status of a player.
 ///
 /// [PlayerStatus] is a derived, high-level view of [PlayerCoreState].

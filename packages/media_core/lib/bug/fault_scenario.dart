@@ -1,6 +1,6 @@
-import 'package:media_core/bug/fault_type.dart';
-import 'package:media_core/bug/fault_config.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/bug/fault_config.dart';
+import 'package:media_core/bug/fault_type.dart';
 
 /// Defines a collection of fault configurations that can be executed
 /// as a single fault injection scenario.
@@ -17,6 +17,7 @@ import 'package:equatable/equatable.dart';
 ///      └── FaultScheduler
 /// ```
 final class FaultScenario extends Equatable {
+  /// Groups [faults] behind one identifiable, repeatable scenario.
   FaultScenario({
     required String id,
     required String name,

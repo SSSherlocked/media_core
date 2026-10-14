@@ -1,5 +1,5 @@
-import 'package:media_core/renderer/player_surface.dart';
 import 'package:flutter/widgets.dart';
+import 'package:media_core/renderer/player_surface.dart';
 
 /// Public widget boundary for displaying a player rendering surface.
 ///
@@ -14,6 +14,7 @@ import 'package:flutter/widgets.dart';
 ///
 /// The actual rendering surface is delegated to [PlayerSurface].
 final class PlayerView extends StatelessWidget {
+  /// Shows the backend's [child] through a [PlayerSurface] framed as asked.
   const PlayerView({
     required this.child,
     super.key,

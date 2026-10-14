@@ -31,6 +31,7 @@ import 'package:media_core/presentation/presentation_state.dart';
 /// PresentationState
 ///
 final class PresentationReducer {
+  /// Creates the stateless reducer.
   const PresentationReducer();
 
   /// Applies an event and returns next state.
@@ -48,7 +49,7 @@ final class PresentationReducer {
       //
       // Transition started.
       //
-      PresentationStarted event => state.copyWith(
+      final PresentationStarted event => state.copyWith(
         targetMode: event.mode,
         transitioning: true,
         generation: generation,
@@ -58,7 +59,7 @@ final class PresentationReducer {
       //
       // Transition completed.
       //
-      PresentationCompleted event => state.copyWith(
+      final PresentationCompleted event => state.copyWith(
         mode: event.mode,
         targetMode: null,
         transitioning: false,
@@ -69,7 +70,7 @@ final class PresentationReducer {
       //
       // Transition failed.
       //
-      PresentationFailed event => state.copyWith(
+      final PresentationFailed event => state.copyWith(
         targetMode: null,
         transitioning: false,
         generation: generation,
@@ -79,7 +80,7 @@ final class PresentationReducer {
       //
       // Platform changed state externally.
       //
-      PresentationChanged event => state.copyWith(
+      final PresentationChanged event => state.copyWith(
         mode: event.mode,
         targetMode: null,
         transitioning: false,

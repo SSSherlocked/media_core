@@ -12,14 +12,8 @@ final class AudioVolume extends Equatable {
   /// Creates a normalized audio volume.
   ///
   /// The value must be between `0.0` and `1.0`, inclusive.
-  const AudioVolume(this.value) : assert(value >= 0.0 && value <= 1.0);
-
-  /// Predefined volume levels as static constants.
-  static const AudioVolume muted = AudioVolume(0.0);
-  static const AudioVolume quiet = AudioVolume(0.25);
-  static const AudioVolume medium = AudioVolume(0.5);
-  static const AudioVolume loud = AudioVolume(0.75);
-  static const AudioVolume full = AudioVolume(1.0);
+  const AudioVolume(this.value)
+    : assert(value >= 0.0 && value <= 1.0, 'AudioVolume.value must be between 0.0 and 1.0, got $value.');
 
   /// Creates a muted volume value.
   const AudioVolume.zero() : value = 0.0;
@@ -33,6 +27,21 @@ final class AudioVolume extends Equatable {
   factory AudioVolume.percent(double percent) {
     return AudioVolume((percent / 100.0).clamp(0.0, 1.0));
   }
+
+  /// Predefined volume level representing silence.
+  static const AudioVolume muted = AudioVolume(0);
+
+  /// Predefined volume level at 25% of full scale.
+  static const AudioVolume quiet = AudioVolume(0.25);
+
+  /// Predefined volume level at 50% of full scale.
+  static const AudioVolume medium = AudioVolume(0.5);
+
+  /// Predefined volume level at 75% of full scale.
+  static const AudioVolume loud = AudioVolume(0.75);
+
+  /// Predefined volume level at full scale.
+  static const AudioVolume full = AudioVolume(1);
 
   /// Normalized volume in the range `0.0..1.0`.
   final double value;
@@ -56,7 +65,7 @@ final class AudioVolume extends Equatable {
 
   /// Creates a copy with a new normalized value.
   AudioVolume copyWith({double? value}) {
-    final double next = value ?? this.value;
+    final next = value ?? this.value;
     return AudioVolume(next.clamp(0.0, 1.0));
   }
 

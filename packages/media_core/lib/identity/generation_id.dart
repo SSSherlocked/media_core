@@ -1,5 +1,6 @@
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/identity/library.dart' show OperationId, PlayerId, RequestId, SessionId, SlotId, SourceId;
 
 /// Unique identifier of a player generation.
 ///
@@ -74,7 +75,7 @@ final class GenerationId extends Equatable implements Comparable<GenerationId> {
 
   /// Creates a new unique runtime generation identifier.
   ///
-  /// [clock.now] is intentionally used instead of [DateTime.now] so the
+  /// `clock.now()` is intentionally used instead of [DateTime.now] so the
   /// identifier can be deterministic in tests.
   factory GenerationId.generate() {
     final timestamp = clock.now().microsecondsSinceEpoch;
@@ -84,6 +85,22 @@ final class GenerationId extends Equatable implements Comparable<GenerationId> {
   }
 
   const GenerationId._(this.value);
+
+  /// Parses an existing generation identifier.
+  ///
+  /// Throws [ArgumentError] when [value] is empty.
+  factory GenerationId.parse(String value) => GenerationId(value);
+
+  /// Creates a [GenerationId] from JSON.
+  ///
+  /// The JSON representation is simply the raw string value.
+  factory GenerationId.fromJson(Object? json) {
+    if (json is! String) {
+      throw const FormatException('GenerationId JSON value must be a String.');
+    }
+
+    return GenerationId(json);
+  }
 
   static int _counter = 0;
 
@@ -101,27 +118,9 @@ final class GenerationId extends Equatable implements Comparable<GenerationId> {
   /// Returns whether this identifier is not empty.
   bool get isNotEmpty => value.isNotEmpty;
 
-  /// Parses an existing generation identifier.
-  ///
-  /// Throws [ArgumentError] when [value] is empty.
-  static GenerationId parse(String value) {
-    return GenerationId(value);
-  }
-
   /// Returns whether [value] is a valid generation identifier value.
   static bool isValid(String value) {
     return value.trim().isNotEmpty;
-  }
-
-  /// Creates a [GenerationId] from JSON.
-  ///
-  /// The JSON representation is simply the raw string value.
-  static GenerationId fromJson(Object? json) {
-    if (json is! String) {
-      throw FormatException('GenerationId JSON value must be a String.');
-    }
-
-    return GenerationId(json);
   }
 
   /// Converts this identifier to its JSON representation.

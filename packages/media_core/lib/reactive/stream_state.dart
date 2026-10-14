@@ -26,6 +26,8 @@ import 'package:rxdart/rxdart.dart';
 /// await isPlaying.close();
 /// ```
 class StreamState<T> {
+  /// Seeds the state with [initialValue] so subscribers read `.value` or join
+  /// the stream and immediately get a value instead of waiting for a change.
   StreamState(T initialValue) : _subject = BehaviorSubject<T>.seeded(initialValue);
 
   final BehaviorSubject<T> _subject;
@@ -43,17 +45,22 @@ class StreamState<T> {
   Stream<T> get stream => _subject.stream;
 
   /// Set a new state value.
+  ///
+  /// Writing is ignored once the state is closed, matching [add].
   set value(T newValue) {
+    add(newValue);
+  }
+
+  /// Publish [newValue] unless the underlying subject is already closed.
+  ///
+  /// This is where the closed-state guard lives; the [value] setter forwards
+  /// here so both entry points behave the same.
+  void add(T newValue) {
     if (_subject.isClosed) {
       return;
     }
 
     _subject.add(newValue);
-  }
-
-  /// Add a new state value.
-  void add(T newValue) {
-    value = newValue;
   }
 
   /// Update the current state using [updater].
@@ -107,5 +114,6 @@ class StreamState<T> {
 /// currentUrl.value = null;
 /// ```
 class NullableStreamState<T> extends StreamState<T?> {
+  /// Starts from [initialValue], or `null` when no seed is supplied.
   NullableStreamState([super.initialValue]);
 }

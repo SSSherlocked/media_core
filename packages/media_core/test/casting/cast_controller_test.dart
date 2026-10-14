@@ -67,9 +67,17 @@ class _FakeBackend implements MediaCastBackend {
     calls.add('seek:${device.id}:${position.inSeconds}');
   }
 
+  /// Held until the test completes it: a receiver that answers late is exactly
+  /// when an unguarded poll ticker stacks requests.
+  Completer<void>? positionGate;
+
   @override
   Future<CastPosition> position(CastDevice device) async {
     calls.add('position:${device.id}');
+    final gate = positionGate;
+    if (gate != null && !gate.isCompleted) {
+      await gate.future;
+    }
     return positionReader?.call(device) ?? nextPosition;
   }
 
@@ -94,7 +102,9 @@ void main() {
   });
 
   tearDown(() async {
-    controller.dispose();
+    // Awaited: disposal closes the controller's own subscriptions, and letting
+    // it race the sink close hides a failure that only happens on the way out.
+    await controller.dispose();
     await backend.eventSink.close();
   });
 
@@ -107,8 +117,9 @@ void main() {
     });
 
     test('a re-announced device replaces the old row, not a second one', () async {
-      backend.found(_tv);
-      backend.found(const CastDevice(id: 'uuid:tv-1', name: 'Renamed TV', backendId: 'fake'));
+      backend
+        ..found(_tv)
+        ..found(const CastDevice(id: 'uuid:tv-1', name: 'Renamed TV', backendId: 'fake'));
       await Future<void>.delayed(Duration.zero);
 
       expect(controller.devices, hasLength(1));
@@ -138,6 +149,36 @@ void main() {
 
       expect(backend.calls, ['stop:${_tv.id}', 'setMedia:${_other.id}', 'play:${_other.id}', 'position:${_other.id}']);
       expect(controller.device!.id, _other.id);
+    });
+
+    test('a slow playhead read does not stack one poll per tick', () async {
+      final ticking = CastController(backend: backend, positionInterval: const Duration(milliseconds: 50));
+      addTearDown(ticking.dispose);
+
+      await ticking.cast(_tv, _media);
+      backend.calls.clear();
+      backend.positionGate = Completer<void>();
+
+      // Five ticks due while the receiver has not answered the first one.
+      await Future<void>.delayed(const Duration(milliseconds: 260));
+
+      expect(
+        backend.calls.where((call) => call == 'position:${_tv.id}'),
+        hasLength(1),
+        reason:
+            'a wedged renderer must not accumulate a round trip per tick, '
+            'and a late answer must not overwrite a newer reading',
+      );
+
+      backend.positionGate!.complete();
+      backend.positionGate = null;
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+
+      expect(
+        backend.calls.where((call) => call == 'position:${_tv.id}').length,
+        lessThanOrEqualTo(3),
+        reason: 'polling resumes at its own cadence, not all at once',
+      );
     });
 
     test('a playhead failure marks unknown and keeps the last position', () async {
@@ -191,9 +232,7 @@ void main() {
       await controller.cast(_tv, _media);
       backend.calls.clear();
 
-      backend.eventSink.add(
-        const TransportStateChanged(deviceId: 'uuid:tv-1', state: CastTransportState.paused),
-      );
+      backend.eventSink.add(const TransportStateChanged(deviceId: 'uuid:tv-1', state: CastTransportState.paused));
       await Future<void>.delayed(Duration.zero);
 
       expect(controller.transportState, CastTransportState.paused);
@@ -203,9 +242,7 @@ void main() {
     test('an event for another device is ignored', () async {
       await controller.cast(_tv, _media);
 
-      backend.eventSink.add(
-        const TransportStateChanged(deviceId: 'other', state: CastTransportState.paused),
-      );
+      backend.eventSink.add(const TransportStateChanged(deviceId: 'other', state: CastTransportState.paused));
       await Future<void>.delayed(Duration.zero);
 
       expect(controller.transportState, CastTransportState.playing);

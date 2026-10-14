@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'package:media_core/renderer/renderer_state.dart';
-import 'package:media_core/renderer/renderer_config.dart';
+
 import 'package:clock/clock.dart';
-import 'package:rxdart/rxdart.dart';
 import 'package:media_core/renderer/renderer_capabilities.dart';
+import 'package:media_core/renderer/renderer_config.dart';
+import 'package:media_core/renderer/renderer_state.dart';
+import 'package:rxdart/rxdart.dart';
 
 /// Controls renderer lifecycle and state.
 ///
@@ -26,6 +27,11 @@ import 'package:media_core/renderer/renderer_capabilities.dart';
 /// - perform video geometry calculations
 /// - call platform APIs
 final class RendererController {
+  /// Creates a controller whose state starts at [initialState].
+  ///
+  /// The generation is taken from that state rather than starting at zero, so a
+  /// controller restored after a surface was recreated keeps rejecting reports
+  /// from the renderer instance it replaced.
   RendererController({RendererState initialState = const RendererState.initial()})
     : _stateSubject = BehaviorSubject<RendererState>.seeded(initialState),
       _generation = initialState.generation;
@@ -44,16 +50,23 @@ final class RendererController {
   /// Current renderer generation.
   int get generation => _generation;
 
+  /// What the current renderer says it can do.
   RendererCapabilities get capabilities => current.capabilities;
 
+  /// How the current renderer has been asked to present video.
   RendererConfig get config => current.config;
 
+  /// Whether the renderer has been initialized with its capabilities.
   bool get initialized => current.initialized;
 
+  /// Whether a surface exists that frames can be drawn into.
   bool get surfaceReady => current.surfaceReady;
 
+  /// Whether frames are being drawn right now.
   bool get rendering => current.rendering;
 
+  /// Whether a first frame could be displayed: initialized, surface ready,
+  /// capable and enabled all at once.
   bool get canRender => current.canRender;
 
   /// Initializes the renderer.
@@ -67,7 +80,7 @@ final class RendererController {
       _generation = generation;
     }
 
-    final RendererState next = current.initialize(
+    final next = current.initialize(
       capabilities: capabilities,
       config: config,
       generation: _generation,
@@ -85,7 +98,10 @@ final class RendererController {
   }
 
   /// Updates renderer surface readiness.
-  void setSurfaceReady(bool value) {
+  ///
+  /// Losing the surface also stops rendering: a frame drawn into a surface the
+  /// platform took back is not a frame anyone can see.
+  void setSurfaceReady({required bool value}) {
     _ensureNotDisposed();
 
     _emit(current.markSurfaceReady(value: value, generation: _generation, updatedAt: clock.now()));
@@ -112,7 +128,7 @@ final class RendererController {
   void updateCapabilities(RendererCapabilities capabilities) {
     _ensureNotDisposed();
 
-    RendererState next = current.copyWith(capabilities: capabilities, updatedAt: clock.now());
+    var next = current.copyWith(capabilities: capabilities, updatedAt: clock.now());
 
     if (!capabilities.canRender && next.rendering) {
       next = next.stopRendering(updatedAt: clock.now());

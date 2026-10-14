@@ -1,6 +1,6 @@
 import 'package:media_core/source/player_source.dart';
-import 'package:media_core/source/source_resolved.dart';
 import 'package:media_core/source/source_resolve_context.dart';
+import 'package:media_core/source/source_resolved.dart';
 
 /// Resolves a [PlayerSource] into a concrete [ResolvedSource].
 ///

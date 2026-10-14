@@ -1,6 +1,6 @@
 import 'package:media_core/error/error_context.dart';
-import 'package:media_core/error/player_failure.dart';
 import 'package:media_core/error/player_error_code.dart';
+import 'package:media_core/error/player_failure.dart';
 
 /// Base exception type used by the media player core.
 ///
@@ -11,6 +11,8 @@ import 'package:media_core/error/player_error_code.dart';
 /// Classification, policy, recovery, and formatting are handled by their
 /// respective components.
 final class PlayerException implements Exception {
+  /// Wraps [code] together with whatever diagnostics were available at the
+  /// point the operation failed.
   PlayerException({required this.code, this.message, this.cause, this.stackTrace, this.context});
 
   /// Creates a [PlayerException] from another error.

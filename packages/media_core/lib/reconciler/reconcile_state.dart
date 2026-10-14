@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 
 /// Runtime state of reconciliation process.
 final class ReconcileState extends Equatable {
+  /// Creates a reconciliation state from its phase flags and pending count.
   const ReconcileState({this.running = false, this.completed = false, this.failed = false, this.pendingActions = 0});
 
   /// Whether reconciliation is running.
@@ -16,18 +17,22 @@ final class ReconcileState extends Equatable {
   /// Number of pending actions.
   final int pendingActions;
 
+  /// Whether no reconciliation phase is active and nothing is pending.
   bool get isIdle {
     return !running && !completed && !failed && pendingActions == 0;
   }
 
+  /// Whether reconciliation is currently running.
   bool get isProcessing {
     return running;
   }
 
+  /// Whether reconciliation ended in failure.
   bool get hasFailure {
     return failed;
   }
 
+  /// Returns a copy with the given fields replaced.
   ReconcileState copyWith({bool? running, bool? completed, bool? failed, int? pendingActions}) {
     return ReconcileState(
       running: running ?? this.running,
@@ -37,16 +42,19 @@ final class ReconcileState extends Equatable {
     );
   }
 
+  /// Returns the running state with [count] actions pending.
   ReconcileState start(int count) {
-    return ReconcileState(running: true, completed: false, failed: false, pendingActions: count);
+    return ReconcileState(running: true, pendingActions: count);
   }
 
+  /// Returns the completed state.
   ReconcileState finish() {
-    return ReconcileState(running: false, completed: true, failed: false, pendingActions: 0);
+    return const ReconcileState(completed: true);
   }
 
+  /// Returns the failed state.
   ReconcileState fail() {
-    return ReconcileState(running: false, completed: false, failed: true, pendingActions: 0);
+    return const ReconcileState(failed: true);
   }
 
   @override

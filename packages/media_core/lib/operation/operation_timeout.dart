@@ -1,6 +1,7 @@
-import 'package:media_core/operation/operation.dart';
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/operation/operation.dart';
+import 'package:media_core/operation/operation_state.dart' show OperationState;
 
 /// Defines timeout behavior for an operation.
 ///
@@ -235,7 +236,7 @@ final class OperationTimeout extends Equatable {
       throw ArgumentError.value(duration, 'duration', 'Operation timeout duration must be greater than zero.');
     }
 
-    return OperationTimeout(duration: duration, enabled: true);
+    return OperationTimeout(duration: duration);
   }
 
   // ---------------------------------------------------------------------------

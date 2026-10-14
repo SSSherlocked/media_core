@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:media_core/core/player_snapshot.dart';
 import 'package:media_core/core/player_core_state.dart';
+import 'package:media_core/core/player_snapshot.dart';
 import 'package:media_core/core/player_status.dart';
 import 'package:media_core/identity/player_id.dart';
 import 'package:media_core/identity/session_id.dart';
@@ -32,10 +32,7 @@ void main() {
     test('terminal states dominate playerStatus', () {
       expect(snapshotFor(PlayerCoreState.idle.disposedState()).playerStatus, PlayerStatus.disposed);
       expect(snapshotFor(PlayerCoreState.idle.disposingState()).playerStatus, PlayerStatus.disposing);
-      expect(
-        snapshotFor(PlayerCoreState.idle.readyState().errorState()).playerStatus,
-        PlayerStatus.error,
-      );
+      expect(snapshotFor(PlayerCoreState.idle.readyState().errorState()).playerStatus, PlayerStatus.error);
     });
 
     test('ready state without source maps to ready', () {
@@ -46,10 +43,7 @@ void main() {
       final snapshot = snapshotFor(PlayerCoreState.idle.playingState());
       expect(snapshot.isPlaying, isTrue);
 
-      final withSession = PlayerSnapshot(
-        playerId: PlayerId('p1'),
-        sessionId: SessionId('s1'),
-      );
+      final withSession = PlayerSnapshot(playerId: PlayerId('p1'), sessionId: SessionId('s1'));
       expect(withSession.hasSession, isTrue);
     });
 

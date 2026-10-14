@@ -14,7 +14,14 @@ import 'package:rxdart/rxdart.dart';
 ///
 /// Platform adapters are responsible for applying
 /// floating operations.
+///
+/// Nothing in the package constructs this controller: floating window support
+/// was superseded by system picture-in-picture (`native_picture_in_picture`),
+/// so this is a logical-only controller left for a host that still drives the
+/// legacy floating path. It does nothing until a host instantiates it and feeds
+/// adapter results through [update].
 final class FloatingController {
+  /// Creates a controller seeded with the initial floating state.
   FloatingController();
 
   final BehaviorSubject<FloatingState> _stateSubject = BehaviorSubject<FloatingState>.seeded(FloatingState.initial());
@@ -102,14 +109,14 @@ final class FloatingController {
   }
 
   /// Updates platform availability.
-  void updateAvailability(bool available) {
+  void updateAvailability({required bool available}) {
     _ensureNotDisposed();
 
     _stateSubject.add(current.copyWith(available: available));
   }
 
   /// Updates user/application enable state.
-  void updateEnabled(bool enabled) {
+  void updateEnabled({required bool enabled}) {
     _ensureNotDisposed();
 
     _stateSubject.add(current.copyWith(enabled: enabled));
@@ -129,6 +136,7 @@ final class FloatingController {
     }
   }
 
+  /// Releases resources; further calls to this controller throw.
   Future<void> dispose() async {
     if (_disposed) {
       return;

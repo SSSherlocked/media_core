@@ -83,8 +83,11 @@ final class TestAssertions {
 
   /// Expects [future] to complete within [timeout].
   static Future<void> completesWithin(Future<void> future, Duration timeout) async {
-    await future.timeout(timeout, onTimeout: () {
-      throw StateError('Future did not complete within $timeout');
-    });
+    await future.timeout(
+      timeout,
+      onTimeout: () {
+        throw StateError('Future did not complete within $timeout');
+      },
+    );
   }
 }

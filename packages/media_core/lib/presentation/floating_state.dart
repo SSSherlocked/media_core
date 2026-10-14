@@ -16,6 +16,7 @@ part 'floating_state.freezed.dart';
 /// floating window operations.
 @freezed
 abstract class FloatingState with _$FloatingState {
+  /// Creates a floating state from its individual flags.
   const factory FloatingState({
     /// Whether floating mode is active.
     @Default(false) bool active,
@@ -47,7 +48,7 @@ abstract class FloatingState with _$FloatingState {
 
   /// Initial floating state.
   factory FloatingState.initial() {
-    return const FloatingState(active: false, transitioning: false, available: false, enabled: true, generation: 0);
+    return const FloatingState();
   }
 
   /// Whether floating mode is active.

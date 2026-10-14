@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'package:media_core/bug/fault_event.dart';
-import 'package:media_core/bug/fault_config.dart';
-import 'package:media_core/bug/fault_scenario.dart';
+
 import 'package:clock/clock.dart';
+import 'package:media_core/bug/fault_config.dart';
+import 'package:media_core/bug/fault_event.dart';
+import 'package:media_core/bug/fault_scenario.dart';
 
 /// Callback used by [FaultScheduler] to perform the actual fault injection.
 ///
@@ -35,6 +36,7 @@ typedef FaultInjectionCallback = FutureOr<FaultEvent> Function({required String 
 ///                BugHook
 /// ```
 final class FaultScheduler {
+  /// Creates a scheduler that hands every due fault to [onInject].
   FaultScheduler({required FaultInjectionCallback onInject}) : _onInject = onInject;
 
   final FaultInjectionCallback _onInject;
@@ -132,14 +134,14 @@ final class FaultScheduler {
       return const <FaultEvent>[];
     }
 
-    return Future.wait(futures);
+    return await Future.wait(futures);
   }
 
   /// Schedules a scenario repeatedly.
   ///
   /// A new run starts after the previous run has completed.
   ///
-  /// If [scenario.maxRuns] is `null`, the scenario repeats indefinitely
+  /// If [FaultScenario.maxRuns] is `null`, the scenario repeats indefinitely
   /// until cancellation or disposal.
   Future<List<FaultEvent>> scheduleRepeatedScenario(FaultScenario scenario) async {
     _ensureNotDisposed();
@@ -151,7 +153,7 @@ final class FaultScheduler {
     }
 
     if (!scenario.repeat) {
-      return scheduleScenario(scenario);
+      return await scheduleScenario(scenario);
     }
 
     final events = <FaultEvent>[];
@@ -324,8 +326,10 @@ final class _ScheduledFault {
 
 /// Thrown when a scheduled fault is cancelled before execution.
 final class FaultScheduleCancelledException implements Exception {
+  /// Creates the cancellation error with a default message when none is supplied.
   FaultScheduleCancelledException([this.message = 'The scheduled fault was cancelled.']);
 
+  /// Why the scheduled fault was cancelled, for display in bug-mode diagnostics.
   final String message;
 
   @override

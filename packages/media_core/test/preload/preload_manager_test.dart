@@ -54,8 +54,7 @@ void main() {
     });
 
     test('metrics are published as the ledger changes', () async {
-      final manager = PreloadManager()
-        ..add(PreloadRequest(sourceId: SourceId('a')));
+      final manager = PreloadManager()..add(PreloadRequest(sourceId: SourceId('a')));
       final published = <int>[];
       final subscription = manager.metrics.listen((m) => published.add(m.total));
 

@@ -1,6 +1,6 @@
-import 'package:media_core/source/source_request.dart';
-import 'package:media_core/source/source_location.dart';
 import 'package:media_core/source/source_descriptor.dart';
+import 'package:media_core/source/source_location.dart';
+import 'package:media_core/source/source_request.dart';
 
 /// Validates media sources.
 ///

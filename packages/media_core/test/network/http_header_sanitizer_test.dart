@@ -31,10 +31,7 @@ void main() {
 
     test('a value carrying CR, LF or NUL is refused rather than rewritten', () {
       for (final value in <String>['a\r\nX-Evil: 1', 'a\nb', 'a\u0000b']) {
-        expect(
-          () => HttpHeaderSanitizer.sanitize(<String, String>{'Cookie': value}),
-          throwsA(isA<HttpHeaderError>()),
-        );
+        expect(() => HttpHeaderSanitizer.sanitize(<String, String>{'Cookie': value}), throwsA(isA<HttpHeaderError>()));
       }
     });
 
@@ -44,30 +41,26 @@ void main() {
       // three requests later when the CDN answers 403.
       expect(
         () => HttpHeaderSanitizer.sanitize(<String, String>{'Authorization': ''}),
-        throwsA(
-          isA<HttpHeaderError>().having((e) => e.headerName, 'headerName', 'Authorization'),
-        ),
+        throwsA(isA<HttpHeaderError>().having((e) => e.headerName, 'headerName', 'Authorization')),
       );
     });
 
     test('the error names the header as the caller spelled it', () {
-      try {
-        HttpHeaderSanitizer.sanitize(<String, String>{'X-Bad\nName': 'v'});
-        fail('expected HttpHeaderError');
-      } on HttpHeaderError catch (error) {
-        expect(error.headerName, 'X-Bad\nName');
-        expect(error.toString(), contains('cannot be sent'));
-      }
+      expect(
+        () => HttpHeaderSanitizer.sanitize(<String, String>{'X-Bad\nName': 'v'}),
+        throwsA(
+          isA<HttpHeaderError>()
+              .having((e) => e.headerName, 'headerName', 'X-Bad\nName')
+              .having((e) => e.toString(), 'toString', contains('cannot be sent')),
+        ),
+      );
     });
 
     test('one bad header fails the whole set', () {
       // A partial send is the silent failure this rule exists to prevent: the
       // request goes out missing exactly the header that authorizes it.
       expect(
-        () => HttpHeaderSanitizer.sanitize(<String, String>{
-          'X-Ok': 'value',
-          'X-Bad\r\nInjected': 'value',
-        }),
+        () => HttpHeaderSanitizer.sanitize(<String, String>{'X-Ok': 'value', 'X-Bad\r\nInjected': 'value'}),
         throwsA(isA<HttpHeaderError>()),
       );
     });
@@ -75,9 +68,7 @@ void main() {
 
   group('HttpHeaderSanitizer.ffmpegBlock', () {
     test('terminates every line, including the last', () {
-      final block = HttpHeaderSanitizer.ffmpegBlock(<String, String>{
-        'referer': 'https://example.com/',
-      });
+      final block = HttpHeaderSanitizer.ffmpegBlock(<String, String>{'referer': 'https://example.com/'});
 
       expect(block, 'referer: https://example.com/\r\n');
     });
@@ -89,10 +80,9 @@ void main() {
 
   group('HttpHeaderSanitizer.mpvFields', () {
     test('builds one Name: value line per header', () {
-      expect(
-        HttpHeaderSanitizer.mpvFields(<String, String>{'referer': 'https://e.example/'}),
-        <String>['referer: https://e.example/'],
-      );
+      expect(HttpHeaderSanitizer.mpvFields(<String, String>{'referer': 'https://e.example/'}), <String>[
+        'referer: https://e.example/',
+      ]);
       expect(HttpHeaderSanitizer.mpvFields(const <String, String>{}), isEmpty);
     });
   });

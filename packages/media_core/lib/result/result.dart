@@ -1,6 +1,6 @@
+import 'package:equatable/equatable.dart';
 import 'package:media_core/result/result_error.dart';
 import 'package:media_core/result/result_status.dart';
-import 'package:equatable/equatable.dart';
 
 /// Represents the result of a completed operation.
 ///
@@ -137,24 +137,22 @@ sealed class Result<T> extends Equatable {
 
   /// Executes [action] when this result succeeds.
   ///
-  /// The original result is returned unchanged.
-  Result<T> onSuccess(void Function(T value) action) {
+  /// The result is immutable, so nothing is produced; callers keep using the
+  /// original result.
+  void onSuccess(void Function(T value) action) {
     if (this case final ResultSuccess<T> success) {
       action(success.value);
     }
-
-    return this;
   }
 
   /// Executes [action] when this result fails.
   ///
-  /// The original result is returned unchanged.
-  Result<T> onFailure(void Function(ResultError error) action) {
+  /// The result is immutable, so nothing is produced; callers keep using the
+  /// original result.
+  void onFailure(void Function(ResultError error) action) {
     if (this case final ResultFailure<T> failure) {
       action(failure.error);
     }
-
-    return this;
   }
 
   /// Converts this result to a successful [Result<void>].
@@ -183,6 +181,7 @@ sealed class Result<T> extends Equatable {
 
 /// Successful [Result] implementation.
 final class ResultSuccess<T> extends Result<T> {
+  /// Wraps [value] as the outcome of an operation that produced it.
   const ResultSuccess(this.value) : super._();
 
   /// Successful result value.
@@ -198,6 +197,7 @@ final class ResultSuccess<T> extends Result<T> {
 
 /// Failed [Result] implementation.
 final class ResultFailure<T> extends Result<T> {
+  /// Wraps [error] as the outcome of an operation that did not produce a value.
   const ResultFailure(this.error) : super._();
 
   /// Error describing why the operation failed.

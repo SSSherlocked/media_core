@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:media_core/playback/thumbnail_slice.dart';
+import 'package:media_core/source/source_headers.dart' show SourceHeaders;
 
 /// One preview frame of a scrub track.
 ///
@@ -9,12 +10,7 @@ import 'package:media_core/playback/thumbnail_slice.dart';
 /// standalone image.
 final class Thumbnail extends Equatable {
   /// Creates one cue of a thumbnail track.
-  const Thumbnail({
-    required this.start,
-    required this.end,
-    required this.imageUrl,
-    this.slice,
-  });
+  const Thumbnail({required this.start, required this.end, required this.imageUrl, this.slice});
 
   /// Media time this frame begins representing.
   final Duration start;
@@ -119,7 +115,7 @@ final class ThumbnailTrack extends Equatable {
 
       final url = Uri.parse(line);
       ThumbnailSlice? slice;
-      Uri image = url;
+      var image = url;
       final fragment = url.fragment;
       if (fragment.startsWith('xywh=')) {
         slice = ThumbnailSlice.tryParse(fragment.substring('xywh='.length));
@@ -131,14 +127,7 @@ final class ThumbnailTrack extends Equatable {
         image = Uri.parse(hash < 0 ? text : text.substring(0, hash));
       }
 
-      thumbnails.add(
-        Thumbnail(
-          start: pendingStart,
-          end: pendingEnd,
-          imageUrl: image,
-          slice: slice,
-        ),
-      );
+      thumbnails.add(Thumbnail(start: pendingStart, end: pendingEnd, imageUrl: image, slice: slice));
       pendingStart = null;
       pendingEnd = null;
     }
@@ -172,8 +161,7 @@ final class ThumbnailTrack extends Equatable {
   /// Sprite VTTs step uniformly; the first cue's span is the honest
   /// answer for "how far apart are these frames", which a renderer
   /// uses to decide preview density.
-  Duration? get cueInterval =>
-      thumbnails.isEmpty ? null : thumbnails.first.end - thumbnails.first.start;
+  Duration? get cueInterval => thumbnails.isEmpty ? null : thumbnails.first.end - thumbnails.first.start;
 
   static bool _looksLikeImageReference(String cueText) {
     // A thumbnail cue's text is one image reference; a caption cue's
@@ -225,9 +213,7 @@ final class ThumbnailTrack extends Equatable {
     if (seconds == null) {
       return null;
     }
-    final millis = dot < 0
-        ? 0
-        : int.tryParse(secondsPart.substring(dot + 1).padRight(3, '0').substring(0, 3)) ?? 0;
+    final millis = dot < 0 ? 0 : int.tryParse(secondsPart.substring(dot + 1).padRight(3, '0').substring(0, 3)) ?? 0;
 
     final minutes = int.tryParse(parts[parts.length - 2]);
     final hours = parts.length == 3 ? int.tryParse(parts[parts.length - 3]) ?? 0 : 0;
@@ -235,12 +221,7 @@ final class ThumbnailTrack extends Equatable {
       return null;
     }
 
-    return Duration(
-      hours: hours,
-      minutes: minutes,
-      seconds: seconds,
-      milliseconds: millis,
-    );
+    return Duration(hours: hours, minutes: minutes, seconds: seconds, milliseconds: millis);
   }
 
   @override

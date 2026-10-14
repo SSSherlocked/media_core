@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'package:media_core/session/session_state.dart';
+
+import 'package:media_core/identity/generation_id.dart';
 import 'package:media_core/session/player_session.dart';
 import 'package:media_core/session/session_generation.dart';
-import 'package:media_core/identity/generation_id.dart';
+import 'package:media_core/session/session_state.dart';
 
 /// Controls a player session lifecycle.
 ///
@@ -112,7 +113,7 @@ final class SessionController {
   /// was in before it - it must not *enter* buffering, which is what happened
   /// when the ended event was forwarded blindly: the session then sat in
   /// `buffering` (with `loading == true`) after the stream had recovered.
-  void setBuffering(bool buffering) {
+  void setBuffering({required bool buffering}) {
     if (buffering) {
       if (session.state.active && session.state.status != SessionStatus.disposed) {
         session.updateState(const SessionState.buffering());
@@ -135,8 +136,9 @@ final class SessionController {
 
   /// Reports session error.
   void error(String message) {
-    session.updateErrorMessage(message);
-    session.updateState(const SessionState.error());
+    session
+      ..errorMessage = message
+      ..updateState(const SessionState.error());
   }
 
   /// Clears the recorded error.
@@ -144,7 +146,7 @@ final class SessionController {
   /// Called when a new source opens: the previous failure belongs to the
   /// previous source, and keeping it would label a healthy session as failed.
   void clearError() {
-    session.updateErrorMessage(null);
+    session.errorMessage = null;
   }
 
   /// Records the playback facts the session reports in its snapshots.

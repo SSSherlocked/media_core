@@ -1,3 +1,5 @@
+import 'package:media_core/network/library.dart' show NetworkMetrics, NetworkMonitor;
+
 /// Represents network quality level.
 ///
 /// Network quality is an abstract classification

@@ -1,3 +1,6 @@
+import 'package:media_core/concurrency/exclusive_task.dart' show ExclusiveTask;
+import 'package:media_core/concurrency/mutex.dart' show Mutex;
+import 'package:media_core/concurrency/serial_executor.dart' show SerialExecutor;
 import 'package:pool/pool.dart';
 
 /// Controls the maximum number of concurrent executions.
@@ -78,9 +81,7 @@ final class ConcurrencyLimit {
       throw StateError('Cannot release unused concurrency permit');
     }
 
-    final resource = _resources.removeLast();
-
-    resource.release();
+    _resources.removeLast().release();
   }
 
   /// Executes an action while holding a permit.

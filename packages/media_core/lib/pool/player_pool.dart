@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:media_core_memory/media_core_memory.dart';
-import 'package:media_core/pool/player_pool_state.dart';
+import 'package:media_core/identity/player_id.dart';
+import 'package:media_core/identity/session_id.dart';
 import 'package:media_core/pool/player_pool_config.dart';
 import 'package:media_core/pool/player_pool_manager.dart';
 import 'package:media_core/pool/player_pool_snapshot.dart';
-import 'package:media_core/identity/player_id.dart';
-import 'package:media_core/identity/session_id.dart';
+import 'package:media_core/pool/player_pool_state.dart';
+import 'package:media_core_memory/media_core_memory.dart';
 
 /// Public player pool API.
 ///
@@ -101,7 +101,8 @@ final class PlayerPool {
   /// grows when recycling stops working.
   void _reportMemory() {
     final players = _manager.state.totalPlayers;
-    _memory.report(_memoryKey, 
+    _memory.report(
+      _memoryKey,
       items: players,
       bytes: players * MemoryEstimates.videoStream720p,
       note: '$players pooled player(s)',

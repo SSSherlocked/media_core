@@ -1,6 +1,6 @@
 import 'package:media_core/state_machine/state.dart';
-import 'package:media_core/state_machine/state_machine_event.dart';
 import 'package:media_core/state_machine/state_machine_context.dart';
+import 'package:media_core/state_machine/state_machine_event.dart';
 
 /// Defines a state transition rule.
 ///
@@ -66,11 +66,11 @@ final class StateTransition<S extends StateMachineState> {
   /// Executes transition guard.
   ///
   /// Returns `true` when transition is allowed.
-  Future<bool> canExecute(StateMachineContext context, S state, StateMachineEvent event) async {
+  Future<bool> canExecute(StateMachineContext context, S state, StateMachineEvent event) {
     final currentGuard = guard;
 
     if (currentGuard == null) {
-      return true;
+      return Future<bool>.value(true);
     }
 
     return currentGuard(context, state, event);
@@ -91,7 +91,7 @@ final class StateTransition<S extends StateMachineState> {
 
   @override
   String toString() {
-    return '$runtimeType('
+    return 'StateTransition('
         'from=${from.id}, '
         'to=${to.id}, '
         'event=$eventId, '

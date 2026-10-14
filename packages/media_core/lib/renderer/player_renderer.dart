@@ -1,6 +1,6 @@
+import 'package:flutter/widgets.dart';
 import 'package:media_core/renderer/player_overlay.dart';
 import 'package:media_core/renderer/player_surface.dart';
-import 'package:flutter/widgets.dart';
 
 /// Root composition widget for the renderer.
 ///
@@ -23,6 +23,10 @@ import 'package:flutter/widgets.dart';
 /// - manage renderer state
 /// - calculate video geometry
 final class PlayerRenderer extends StatelessWidget {
+  /// Stacks [overlay] above the surface that renders [child].
+  ///
+  /// The overlay is optional so a host that composes its own controls above the
+  /// renderer pays nothing for a second layer.
   const PlayerRenderer({
     required this.child,
     super.key,

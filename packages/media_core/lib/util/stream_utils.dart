@@ -66,7 +66,7 @@ abstract final class StreamUtils {
   static Future<T?> firstOrNull<T>(Stream<T> stream) async {
     try {
       return await stream.first;
-    } catch (_) {
+    } on Object catch (_) {
       return null;
     }
   }
@@ -75,7 +75,7 @@ abstract final class StreamUtils {
   static Future<T?> lastOrNull<T>(Stream<T> stream) async {
     try {
       return await stream.last;
-    } catch (_) {
+    } on Object catch (_) {
       return null;
     }
   }
@@ -134,7 +134,10 @@ abstract final class StreamUtils {
           onError: controller.addError,
           onDone: () {
             timer?.cancel();
-            controller.close();
+            // Nothing awaits the close here: the `onDone` callback is `void`,
+            // and downstream subscribers observe completion via the returned
+            // controller stream itself.
+            unawaited(controller.close());
           },
         );
       },

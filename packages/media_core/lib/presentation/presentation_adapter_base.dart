@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'package:media_core/presentation/presentation_event.dart';
+
 import 'package:media_core/presentation/presentation_adapter.dart';
 import 'package:media_core/presentation/presentation_capabilities.dart';
+import 'package:media_core/presentation/presentation_event.dart';
 
 /// Base implementation of PresentationAdapter.
 ///
@@ -17,6 +18,7 @@ import 'package:media_core/presentation/presentation_capabilities.dart';
 /// - create events automatically
 /// - manage presentation state
 abstract class PresentationAdapterBase implements PresentationAdapter {
+  /// Creates the adapter infrastructure with [initialCapabilities].
   PresentationAdapterBase({PresentationCapabilities initialCapabilities = const PresentationCapabilities()})
     : _capabilities = initialCapabilities;
 
@@ -38,6 +40,10 @@ abstract class PresentationAdapterBase implements PresentationAdapter {
   @override
   Stream<PresentationCapabilities> get capabilityChanges => _capabilityController.stream;
 
+  /// Replaces the reported capabilities and publishes them on [capabilityChanges].
+  ///
+  /// Throws once the adapter has been disposed, so a late platform callback
+  /// cannot resurrect capability reporting after teardown.
   void updateCapabilities(PresentationCapabilities value) {
     _ensureNotDisposed();
 

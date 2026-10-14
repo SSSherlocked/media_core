@@ -1,5 +1,5 @@
-import 'package:media_core/bug/fault_type.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/bug/fault_type.dart';
 
 /// Configuration for a single fault injection.
 ///
@@ -14,6 +14,7 @@ import 'package:equatable/equatable.dart';
 /// FaultInjector / FaultScheduler
 /// ```
 final class FaultConfig extends Equatable {
+  /// Describes one fault to inject, including when it fires and how often it may repeat.
   const FaultConfig({
     required this.type,
     this.enabled = true,
@@ -38,7 +39,7 @@ final class FaultConfig extends Equatable {
   }) : this(
          type: type,
          enabled: enabled,
-         probability: 1.0,
+         probability: 1,
          delay: delay,
          duration: duration,
          maxOccurrences: maxOccurrences,

@@ -1,6 +1,6 @@
+import 'package:equatable/equatable.dart';
 import 'package:media_core/state_machine/state.dart';
 import 'package:media_core/state_machine/state_machine_event.dart';
-import 'package:equatable/equatable.dart';
 
 /// Result returned after executing a state transition.
 ///
@@ -145,7 +145,7 @@ final class StateTransitionResult<S extends StateMachineState> extends Equatable
 
   @override
   String toString() {
-    return '$runtimeType('
+    return 'StateTransitionResult('
         'status=$status, '
         'previous=$previous, '
         'current=$current, '

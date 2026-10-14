@@ -1,8 +1,8 @@
-import 'package:media_core/cache/cache_key.dart';
-import 'package:media_core_memory/media_core_memory.dart';
 import 'package:media_core/cache/cache_entry.dart';
-import 'package:media_core/cache/cache_storage.dart';
 import 'package:media_core/cache/cache_eviction.dart';
+import 'package:media_core/cache/cache_key.dart';
+import 'package:media_core/cache/cache_storage.dart';
+import 'package:media_core_memory/media_core_memory.dart';
 
 /// In-memory cache storage.
 ///
@@ -11,13 +11,20 @@ import 'package:media_core/cache/cache_eviction.dart';
 ///
 /// It does not persist data across process restarts.
 final class MemoryCache<T> implements CacheStorage<T> {
+  /// Creates a process-local cache bounded by [maxEntries] and [maxBytes].
+  ///
+  /// A zero limit means the corresponding dimension is unbounded. When no
+  /// [eviction] policy is given, least-recently-used eviction is applied.
   MemoryCache({this.maxEntries = 0, this.maxBytes = 0, CacheEviction<T>? eviction})
     : eviction = eviction ?? LruCacheEviction<T>();
 
+  /// Maximum number of entries kept before eviction runs; zero is unbounded.
   final int maxEntries;
 
+  /// Maximum total size in bytes kept before eviction runs; zero is unbounded.
   final int maxBytes;
 
+  /// Policy deciding which entries are removed when the limits are exceeded.
   final CacheEviction<T> eviction;
 
   final Map<CacheKey, CacheEntry<T>> _entries = <CacheKey, CacheEntry<T>>{};
@@ -46,7 +53,7 @@ final class MemoryCache<T> implements CacheStorage<T> {
   Future<CacheEntry<T>?> read(CacheKey key) async {
     _ensureReady();
 
-    final CacheEntry<T>? entry = _entries[key];
+    final entry = _entries[key];
 
     if (entry == null) {
       return null;
@@ -58,7 +65,7 @@ final class MemoryCache<T> implements CacheStorage<T> {
       return null;
     }
 
-    final CacheEntry<T> touched = entry.touch();
+    final touched = entry.touch();
     _entries[key] = touched;
 
     return touched;
@@ -77,7 +84,7 @@ final class MemoryCache<T> implements CacheStorage<T> {
   Future<bool> remove(CacheKey key) async {
     _ensureReady();
 
-    final bool removed = _entries.remove(key) != null;
+    final removed = _entries.remove(key) != null;
     _reportMemory();
 
     return removed;
@@ -95,7 +102,7 @@ final class MemoryCache<T> implements CacheStorage<T> {
   Future<bool> contains(CacheKey key) async {
     _ensureReady();
 
-    final CacheEntry<T>? entry = _entries[key];
+    final entry = _entries[key];
 
     if (entry == null) {
       return false;
@@ -113,11 +120,11 @@ final class MemoryCache<T> implements CacheStorage<T> {
   Future<List<CacheEntry<T>>> entries() async {
     _ensureReady();
 
-    final List<CacheEntry<T>> result = <CacheEntry<T>>[];
+    final result = <CacheEntry<T>>[];
 
-    final List<CacheKey> expired = <CacheKey>[];
+    final expired = <CacheKey>[];
 
-    for (final MapEntry<CacheKey, CacheEntry<T>> item in _entries.entries) {
+    for (final item in _entries.entries) {
       if (item.value.isExpired) {
         expired.add(item.key);
       } else {
@@ -125,9 +132,7 @@ final class MemoryCache<T> implements CacheStorage<T> {
       }
     }
 
-    for (final CacheKey key in expired) {
-      _entries.remove(key);
-    }
+    expired.forEach(_entries.remove);
 
     return List<CacheEntry<T>>.unmodifiable(result);
   }
@@ -136,26 +141,29 @@ final class MemoryCache<T> implements CacheStorage<T> {
   List<CacheEntry<T>> evict() {
     _ensureReady();
 
-    final List<CacheEntry<T>> current = _entries.values.toList(growable: false);
+    final current = _entries.values.toList(growable: false);
 
-    final List<CacheEntry<T>> selected = eviction.select(current, maxEntries: maxEntries, maxBytes: maxBytes);
+    final selected = eviction.select(current, maxEntries: maxEntries, maxBytes: maxBytes);
 
-    for (final CacheEntry<T> entry in selected) {
+    for (final entry in selected) {
       _entries.remove(entry.key);
     }
 
     return List<CacheEntry<T>>.unmodifiable(selected);
   }
 
+  /// Number of entries currently held in memory.
   int get length => _entries.length;
 
+  /// Total size in bytes of the entries currently held in memory.
   int get sizeBytes {
-    return _entries.values.fold<int>(0, (int total, CacheEntry<T> entry) => total + entry.sizeBytes);
+    return _entries.values.fold<int>(0, (total, entry) => total + entry.sizeBytes);
   }
 
   /// Reports the entries and their measured size.
   void _reportMemory() {
-    _memory.report(_memoryKey, 
+    _memory.report(
+      _memoryKey,
       items: _entries.length,
       bytes: sizeBytes,
       note: '${_entries.length} entr(y|ies)${maxBytes == 0 ? '' : ', limit ${maxBytes ~/ 1024}KB'}',
@@ -174,11 +182,11 @@ final class MemoryCache<T> implements CacheStorage<T> {
   }
 
   void _evictIfNeeded() {
-    final List<CacheEntry<T>> current = _entries.values.toList(growable: false);
+    final current = _entries.values.toList(growable: false);
 
-    final List<CacheEntry<T>> selected = eviction.select(current, maxEntries: maxEntries, maxBytes: maxBytes);
+    final selected = eviction.select(current, maxEntries: maxEntries, maxBytes: maxBytes);
 
-    for (final CacheEntry<T> entry in selected) {
+    for (final entry in selected) {
       _entries.remove(entry.key);
     }
   }

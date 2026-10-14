@@ -14,7 +14,8 @@ import 'dart:collection';
 /// });
 /// ```
 class AsyncSemaphore {
-  AsyncSemaphore(this.maxPermits) : assert(maxPermits > 0);
+  /// Creates a semaphore that hands out at most [maxPermits] permits.
+  AsyncSemaphore(this.maxPermits) : assert(maxPermits > 0, 'maxPermits must be positive');
 
   /// Maximum number of simultaneous holders.
   final int maxPermits;

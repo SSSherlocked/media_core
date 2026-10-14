@@ -1,8 +1,9 @@
-import 'package:media_core/identity/source_id.dart';
-import 'package:media_core/identity/request_id.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:media_core/identity/generation_id.dart';
 import 'package:media_core/identity/identity_json_converters.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/identity/request_id.dart';
+import 'package:media_core/identity/source_id.dart';
+import 'package:media_core/task/player_task.dart' show PlayerTask;
 
 part 'task_context.freezed.dart';
 part 'task_context.g.dart';
@@ -23,8 +24,6 @@ part 'task_context.g.dart';
 /// [TaskContext] is immutable. Updating any field creates a new instance.
 @freezed
 abstract class TaskContext with _$TaskContext {
-  const TaskContext._();
-
   /// Creates a task context.
   const factory TaskContext({
     /// Optional task metadata.
@@ -68,6 +67,14 @@ abstract class TaskContext with _$TaskContext {
     /// A `null` value means unlimited retries.
     int? maxRetries,
   }) = _TaskContext;
+
+  // ---------------------------------------------------------------------------
+  // JSON
+  // ---------------------------------------------------------------------------
+
+  /// Creates a [TaskContext] from JSON.
+  factory TaskContext.fromJson(Map<String, dynamic> json) => _$TaskContextFromJson(json);
+  const TaskContext._();
 
   /// Creates an empty task context.
   static const TaskContext empty = TaskContext();
@@ -218,9 +225,7 @@ abstract class TaskContext with _$TaskContext {
       return this;
     }
 
-    final updated = <String, Object?>{...metadata};
-
-    updated.remove(key);
+    final updated = <String, Object?>{...metadata}..remove(key);
 
     return copyWith(metadata: updated);
   }
@@ -260,11 +265,4 @@ abstract class TaskContext with _$TaskContext {
 
     return copyWith(retryCount: 0);
   }
-
-  // ---------------------------------------------------------------------------
-  // JSON
-  // ---------------------------------------------------------------------------
-
-  /// Creates a [TaskContext] from JSON.
-  factory TaskContext.fromJson(Map<String, dynamic> json) => _$TaskContextFromJson(json);
 }

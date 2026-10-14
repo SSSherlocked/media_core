@@ -15,7 +15,20 @@ import 'package:equatable/equatable.dart';
 /// - control player backend
 /// - change playback state
 final class PlaybackRate extends Equatable {
+  /// Creates a speed multiplier of [value].
+  ///
+  /// The value is kept as given even outside [min] to [max]; [normalized] is
+  /// where clamping happens, so [isValid] can still report that a caller asked
+  /// for a speed the transport will not honor.
   const PlaybackRate({required this.value});
+
+  /// Reads a rate written by [toMap].
+  ///
+  /// A missing `value` means normal speed: a rate that could not be read must
+  /// not quietly change the pace of the video.
+  factory PlaybackRate.fromMap(Map<String, dynamic> map) {
+    return PlaybackRate(value: map['value'] as double? ?? 1.0);
+  }
 
   /// Normal playback speed.
   const PlaybackRate.normal() : value = 1.0;
@@ -38,7 +51,7 @@ final class PlaybackRate extends Equatable {
   static const double min = 0.25;
 
   /// Maximum supported rate.
-  static const double max = 4.0;
+  static const double max = 4;
 
   /// Whether rate is valid.
   bool get isValid {
@@ -78,12 +91,9 @@ final class PlaybackRate extends Equatable {
     return PlaybackRate(value: value);
   }
 
+  /// The `fromMap()` form: the multiplier as a plain double.
   Map<String, dynamic> toMap() {
     return {'value': value};
-  }
-
-  factory PlaybackRate.fromMap(Map<String, dynamic> map) {
-    return PlaybackRate(value: map['value'] as double? ?? 1.0);
   }
 
   @override

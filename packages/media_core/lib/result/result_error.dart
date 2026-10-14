@@ -1,8 +1,9 @@
-import 'package:media_core/error/error_context.dart';
-import 'package:media_core/error/player_failure.dart';
-import 'package:media_core/error/player_error_code.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/error/error_context.dart';
 import 'package:media_core/error/player_error_category.dart';
+import 'package:media_core/error/player_error_code.dart';
+import 'package:media_core/error/player_failure.dart';
+import 'package:media_core/result/result.dart' show Result;
 
 /// Represents an error contained by a [Result].
 ///
@@ -47,7 +48,7 @@ final class ResultError extends Equatable {
   /// Creates a [ResultError] from an arbitrary error.
   ///
   /// When [error] is already a [PlayerFailure], it is preserved directly
-  /// through [fromFailure].
+  /// through [ResultError.fromFailure].
   factory ResultError.fromError(
     Object error, {
     PlayerErrorCode code = PlayerErrorCode.unknown,
@@ -211,7 +212,6 @@ final class ResultError extends Equatable {
       cause: cause,
       stackTrace: stackTrace,
       context: context,
-      category: null,
       failure: failure,
     );
   }
@@ -236,7 +236,6 @@ final class ResultError extends Equatable {
       message: message,
       cause: cause,
       stackTrace: stackTrace,
-      context: null,
       category: category,
       failure: failure,
     );

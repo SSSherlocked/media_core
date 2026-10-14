@@ -1,9 +1,8 @@
-import 'package:media_core/session/session_state.dart';
 import 'package:clock/clock.dart';
-import 'package:media_core/identity/source_id.dart';
-import 'package:media_core/identity/session_id.dart';
 import 'package:equatable/equatable.dart';
-
+import 'package:media_core/identity/session_id.dart';
+import 'package:media_core/identity/source_id.dart';
+import 'package:media_core/session/session_state.dart';
 
 /// Represents an event emitted by a player session.
 ///
@@ -31,29 +30,11 @@ final class SessionEvent extends Equatable {
   const SessionEvent({
     required this.sessionId,
     required this.type,
+    required this.timestamp,
     this.state,
     this.sourceId,
     this.message,
-    required this.timestamp,
   });
-
-  /// Session identity.
-  final SessionId sessionId;
-
-  /// Event type.
-  final SessionEventType type;
-
-  /// Related session state.
-  final SessionState? state;
-
-  /// Related source.
-  final SourceId? sourceId;
-
-  /// Optional message.
-  final String? message;
-
-  /// Event timestamp.
-  final DateTime timestamp;
 
   /// Creates session created event.
   factory SessionEvent.created(SessionId sessionId) {
@@ -89,6 +70,24 @@ final class SessionEvent extends Equatable {
   factory SessionEvent.disposed(SessionId sessionId) {
     return SessionEvent(sessionId: sessionId, type: SessionEventType.disposed, timestamp: clock.now());
   }
+
+  /// Session identity.
+  final SessionId sessionId;
+
+  /// Event type.
+  final SessionEventType type;
+
+  /// Related session state.
+  final SessionState? state;
+
+  /// Related source.
+  final SourceId? sourceId;
+
+  /// Optional message.
+  final String? message;
+
+  /// Event timestamp.
+  final DateTime timestamp;
 
   @override
   List<Object?> get props => [sessionId, type, state, sourceId, message, timestamp];

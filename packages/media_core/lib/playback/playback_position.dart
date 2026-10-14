@@ -10,7 +10,16 @@ import 'package:equatable/equatable.dart';
 /// - control player backend
 /// - update playback state
 final class PlaybackPosition extends Equatable {
+  /// Creates the media time the engine reports having reached.
   const PlaybackPosition({required this.value});
+
+  /// Reads a position written by [toMap].
+  ///
+  /// A missing `milliseconds` becomes the very start of the media, the same
+  /// value [isZero] reports before anything has played.
+  factory PlaybackPosition.fromMap(Map<String, dynamic> map) {
+    return PlaybackPosition.fromMilliseconds(map['milliseconds'] as int? ?? 0);
+  }
 
   /// Creates zero position.
   const PlaybackPosition.zero() : value = Duration.zero;
@@ -52,17 +61,15 @@ final class PlaybackPosition extends Equatable {
     return value < other.value;
   }
 
+  /// Whether this position is later than [other].
   bool operator >(PlaybackPosition other) {
     return value > other.value;
   }
 
-  /// Convert map.
+  /// The `fromMap()` form: position as whole milliseconds, so any sub-millisecond
+  /// remainder is dropped.
   Map<String, dynamic> toMap() {
     return {'milliseconds': milliseconds};
-  }
-
-  factory PlaybackPosition.fromMap(Map<String, dynamic> map) {
-    return PlaybackPosition.fromMilliseconds(map['milliseconds'] as int? ?? 0);
   }
 
   @override

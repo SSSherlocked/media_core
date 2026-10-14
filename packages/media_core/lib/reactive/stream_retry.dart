@@ -3,6 +3,10 @@ import 'dart:math' as math;
 
 /// Configuration for retry behavior.
 class StreamRetryOptions {
+  /// Builds a retry policy: [maxAttempts] total tries starting with [delay],
+  /// grown by [backoffFactor] per failure, capped at [maxDelay], with up to
+  /// [jitter] of random extra wait; [shouldRetry] decides per failure and
+  /// [onRetry] observes each scheduled retry.
   const StreamRetryOptions({
     this.maxAttempts = 3,
     this.delay = const Duration(seconds: 1),
@@ -11,8 +15,8 @@ class StreamRetryOptions {
     this.jitter = Duration.zero,
     this.shouldRetry,
     this.onRetry,
-  }) : assert(maxAttempts >= 1),
-       assert(backoffFactor >= 1.0);
+  }) : assert(maxAttempts >= 1, 'maxAttempts must count the first attempt'),
+       assert(backoffFactor >= 1.0, 'backoffFactor below 1.0 would shrink the delay on every retry');
 
   /// Total number of attempts, including the first attempt.
   ///
@@ -49,7 +53,7 @@ class StreamRetryOptions {
 
   /// Determines whether a failed attempt should be retried.
   ///
-  /// [attempt] starts at 1.
+  /// `attempt` starts at 1.
   final bool Function(Object error, StackTrace stackTrace, int attempt)? shouldRetry;
 
   /// Called before waiting for the next retry.
@@ -63,7 +67,7 @@ class StreamRetryOptions {
 abstract final class StreamRetry {
   /// Executes [action] and retries when it fails.
   ///
-  /// [maxAttempts] is controlled through [options].
+  /// The attempt budget comes from `options.maxAttempts`.
   ///
   /// The final error is rethrown with its original stack trace.
   static Future<T> run<T>(
@@ -121,7 +125,7 @@ abstract final class StreamRetry {
       options: StreamRetryOptions(
         maxAttempts: maxAttempts,
         delay: delay,
-        backoffFactor: 1.0,
+        backoffFactor: 1,
         shouldRetry: shouldRetry,
         onRetry: onRetry,
       ),
@@ -198,8 +202,10 @@ abstract final class StreamRetry {
 /// Future. It prevents the retry chain from continuing after the current
 /// operation/wait finishes.
 class StreamRetryController {
+  /// Creates a controller that retries with [options] by default.
   StreamRetryController({this.options = const StreamRetryOptions()});
 
+  /// Policy this controller applies to the operations it runs.
   final StreamRetryOptions options;
 
   bool _disposed = false;
@@ -306,7 +312,7 @@ abstract final class StreamRetryPredicates {
     return false;
   }
 
-  /// Retry only while [attempt] is less than [maxRetryAttempt].
+  /// Retry only while the attempt number is less than [maxRetryAttempt].
   static bool Function(Object error, StackTrace stackTrace, int attempt) until(int maxRetryAttempt) {
     return (Object error, StackTrace stackTrace, int attempt) {
       return attempt < maxRetryAttempt;

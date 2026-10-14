@@ -415,9 +415,7 @@ abstract final class EnumUtils {
 
   /// Sorts enum values by their index order.
   static List<T> sort<T extends Enum>(Iterable<T> values) {
-    final list = values.toList(growable: false);
-    list.sort((a, b) => a.index.compareTo(b.index));
-    return list;
+    return values.toList(growable: false)..sort((a, b) => a.index.compareTo(b.index));
   }
 
   /// Returns a map of enum values grouped by some property.

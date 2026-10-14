@@ -1,6 +1,5 @@
-import 'package:media_core/identity/source_id.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-
+import 'package:media_core/identity/source_id.dart';
 
 part 'source_identity.freezed.dart';
 
@@ -67,15 +66,12 @@ abstract class SourceIdentity with _$SourceIdentity {
     String? namespace,
 
     /// Additional identity attributes.
-    @Default({})
-    Map<String, Object?> attributes,
+    @Default({}) Map<String, Object?> attributes,
   }) = _SourceIdentity;
 
   /// Creates an unknown identity.
   factory SourceIdentity.unknown() {
-    return SourceIdentity(
-      id: SourceId.unknown(),
-    );
+    return SourceIdentity(id: SourceId.unknown());
   }
 }
 
@@ -88,26 +84,16 @@ extension SourceIdentityExtension on SourceIdentity {
 
   /// Whether external identity exists.
   bool get hasExternalId {
-    return externalId != null &&
-        externalId!.isNotEmpty;
+    return externalId != null && externalId!.isNotEmpty;
   }
 
   /// Whether provider exists.
   bool get hasProvider {
-    return provider != null &&
-        provider!.isNotEmpty;
+    return provider != null && provider!.isNotEmpty;
   }
 
   /// Creates identity with attribute.
-  SourceIdentity putAttribute(
-    String key,
-    Object? value,
-  ) {
-    return copyWith(
-      attributes: {
-        ...attributes,
-        key: value,
-      },
-    );
+  SourceIdentity putAttribute(String key, Object? value) {
+    return copyWith(attributes: {...attributes, key: value});
   }
 }

@@ -12,6 +12,11 @@ import 'package:equatable/equatable.dart';
 /// - create rendering surfaces
 /// - call platform APIs
 final class RendererCapabilities extends Equatable {
+  /// Declares what a renderer can do, assuming a full-featured engine.
+  ///
+  /// [lowLatency] is the one flag that starts false: rendering with less
+  /// buffering is a trade the engine has to opt into, never an assumption a
+  /// consumer can make on its behalf.
   const RendererCapabilities({
     this.video = true,
     this.overlay = true,
@@ -20,6 +25,18 @@ final class RendererCapabilities extends Equatable {
     this.hardwareAcceleration = true,
     this.lowLatency = false,
   });
+
+  /// Creates capabilities from a map.
+  factory RendererCapabilities.fromMap(Map<String, dynamic> map) {
+    return RendererCapabilities(
+      video: map['video'] as bool? ?? true,
+      overlay: map['overlay'] as bool? ?? true,
+      mirror: map['mirror'] as bool? ?? true,
+      rotation: map['rotation'] as bool? ?? true,
+      hardwareAcceleration: map['hardwareAcceleration'] as bool? ?? true,
+      lowLatency: map['lowLatency'] as bool? ?? false,
+    );
+  }
 
   /// Renderer with no supported capabilities.
   const RendererCapabilities.none()
@@ -116,18 +133,6 @@ final class RendererCapabilities extends Equatable {
       'hardwareAcceleration': hardwareAcceleration,
       'lowLatency': lowLatency,
     };
-  }
-
-  /// Creates capabilities from a map.
-  factory RendererCapabilities.fromMap(Map<String, dynamic> map) {
-    return RendererCapabilities(
-      video: map['video'] as bool? ?? true,
-      overlay: map['overlay'] as bool? ?? true,
-      mirror: map['mirror'] as bool? ?? true,
-      rotation: map['rotation'] as bool? ?? true,
-      hardwareAcceleration: map['hardwareAcceleration'] as bool? ?? true,
-      lowLatency: map['lowLatency'] as bool? ?? false,
-    );
   }
 
   @override

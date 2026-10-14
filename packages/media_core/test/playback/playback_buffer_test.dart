@@ -40,13 +40,9 @@ void main() {
 
   group('PlaybackBuffer.normalize', () {
     test('merges overlapping and adjacent stretches and drops empties', () {
-      final buffer = PlaybackBuffer(ranges: [
-        _range(20, 30),
-        _range(0, 10),
-        _range(10, 20),
-        _range(25, 26),
-        _range(5, 5),
-      ]);
+      final buffer = PlaybackBuffer(
+        ranges: [_range(20, 30), _range(0, 10), _range(10, 20), _range(25, 26), _range(5, 5)],
+      );
 
       final canonical = buffer.normalize();
 
@@ -60,7 +56,12 @@ void main() {
     });
 
     test('an all-empty buffer normalizes to empty', () {
-      expect(PlaybackBuffer(ranges: const [BufferRange(start: Duration(seconds: 3), end: Duration(seconds: 3))]).normalize().ranges, isEmpty);
+      expect(
+        const PlaybackBuffer(
+          ranges: [BufferRange(start: Duration(seconds: 3), end: Duration(seconds: 3))],
+        ).normalize().ranges,
+        isEmpty,
+      );
     });
   });
 

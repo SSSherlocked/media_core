@@ -1,13 +1,14 @@
 import 'dart:async';
-import 'package:media_core/presentation/pip_controller.dart';
-import 'package:media_core/presentation/presentation_mode.dart';
-import 'package:media_core/presentation/presentation_state.dart';
-import 'package:media_core/presentation/floating_controller.dart';
-import 'package:media_core/presentation/presentation_request.dart';
-import 'package:media_core/presentation/fullscreen_controller.dart';
-import 'package:media_core/presentation/presentation_snapshot.dart';
+
 import 'package:media_core/geometry/video_orientation.dart';
+import 'package:media_core/presentation/floating_controller.dart';
+import 'package:media_core/presentation/fullscreen_controller.dart';
+import 'package:media_core/presentation/pip_controller.dart';
 import 'package:media_core/presentation/presentation_controller.dart';
+import 'package:media_core/presentation/presentation_mode.dart';
+import 'package:media_core/presentation/presentation_request.dart';
+import 'package:media_core/presentation/presentation_snapshot.dart';
+import 'package:media_core/presentation/presentation_state.dart';
 
 /// High level presentation manager.
 ///
@@ -25,7 +26,12 @@ import 'package:media_core/presentation/presentation_controller.dart';
 /// - call native APIs
 /// - manage windows
 /// - render UI
+///
+/// Nothing in the package constructs this manager; it is a host-facing facade
+/// over a host-supplied [PresentationController]. It stays inert until a host
+/// wires one in.
 final class PresentationManager {
+  /// Wraps [controller], optionally exposing the per-mode controllers alongside it.
   PresentationManager({
     required PresentationController controller,
     FullscreenController? fullscreenController,
@@ -72,6 +78,7 @@ final class PresentationManager {
     );
   }
 
+  /// Whether this manager has been disposed.
   bool get isDisposed => _disposed;
 
   /// Current active mode.

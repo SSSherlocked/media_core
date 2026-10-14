@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:media_core/adapter/player_adapter.dart' show PlayerAdapter;
 
 /// Provides video rendering for a [PlayerAdapter].
 ///

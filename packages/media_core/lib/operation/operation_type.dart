@@ -1,3 +1,6 @@
+import 'package:media_core/operation/operation_state.dart' show OperationState;
+import 'package:meta/meta.dart';
+
 /// Describes the type of an operation.
 ///
 /// [OperationType] is an immutable value object rather than a Dart enum.
@@ -15,7 +18,36 @@
 ///
 /// Those responsibilities belong to [OperationState], task management,
 /// and policy layers.
+@immutable
 final class OperationType {
+  /// Creates an operation type from JSON.
+  factory OperationType.fromJson(Object? json) {
+    if (json is! String) {
+      throw const FormatException('OperationType JSON value must be a String.');
+    }
+
+    return OperationType.fromValue(json);
+  }
+
+  /// Creates an operation type from a stable value.
+  ///
+  /// Built-in values return their canonical built-in instance.
+  /// Unknown values become custom operation types.
+  factory OperationType.fromValue(String value) {
+    final normalized = value.trim();
+
+    if (normalized.isEmpty) {
+      throw ArgumentError.value(value, 'value', 'Operation type cannot be empty.');
+    }
+
+    for (final type in values) {
+      if (type.value == normalized) {
+        return type;
+      }
+    }
+
+    return OperationType.custom(normalized);
+  }
   const OperationType._(this.value, this.name);
 
   /// Creates a custom operation type.
@@ -29,60 +61,87 @@ final class OperationType {
     return OperationType._(normalized, normalized);
   }
 
+  /// Parses an operation type from a string.
+  factory OperationType.parse(String value) = OperationType.fromValue;
+
   // ---------------------------------------------------------------------------
   // Built-in operation types
   // ---------------------------------------------------------------------------
 
+  /// Opens a media source into the player.
   static const OperationType open = OperationType._('open', 'Open');
 
+  /// Starts or resumes playback.
   static const OperationType play = OperationType._('play', 'Play');
 
+  /// Pauses playback.
   static const OperationType pause = OperationType._('pause', 'Pause');
 
+  /// Stops playback and releases the current source.
   static const OperationType stop = OperationType._('stop', 'Stop');
 
+  /// Moves the playback position.
   static const OperationType seek = OperationType._('seek', 'Seek');
 
+  /// Closes the player and discards the current source.
   static const OperationType close = OperationType._('close', 'Close');
 
+  /// Initializes the playback engine.
   static const OperationType initialize = OperationType._('initialize', 'Initialize');
 
+  /// Disposes the playback engine and its resources.
   static const OperationType dispose = OperationType._('dispose', 'Dispose');
 
+  /// Prepares the current source for playback.
   static const OperationType prepare = OperationType._('prepare', 'Prepare');
 
+  /// Loads a source into the player without starting it.
   static const OperationType load = OperationType._('load', 'Load');
 
+  /// Reloads the current source from scratch.
   static const OperationType reload = OperationType._('reload', 'Reload');
 
+  /// Changes the playback speed.
   static const OperationType setPlaybackRate = OperationType._('set_playback_rate', 'Set Playback Rate');
 
+  /// Changes the output volume.
   static const OperationType setVolume = OperationType._('set_volume', 'Set Volume');
 
+  /// Changes the mute state.
   static const OperationType setMute = OperationType._('set_mute', 'Set Mute');
 
+  /// Enters fullscreen presentation.
   static const OperationType enterFullscreen = OperationType._('enter_fullscreen', 'Enter Fullscreen');
 
+  /// Leaves fullscreen presentation.
   static const OperationType exitFullscreen = OperationType._('exit_fullscreen', 'Exit Fullscreen');
 
+  /// Enters picture-in-picture presentation.
   static const OperationType enterPip = OperationType._('enter_pip', 'Enter PiP');
 
+  /// Leaves picture-in-picture presentation.
   static const OperationType exitPip = OperationType._('exit_pip', 'Exit PiP');
 
+  /// Starts recording the current playback.
   static const OperationType startRecording = OperationType._('start_recording', 'Start Recording');
 
+  /// Captures a still frame from the current playback.
   static const OperationType captureScreenshot = OperationType._('capture_screenshot', 'Capture Screenshot');
 
+  /// Stops the active recording.
   static const OperationType stopRecording = OperationType._('stop_recording', 'Stop Recording');
 
+  /// Recovers the player after a failure.
   static const OperationType recover = OperationType._('recover', 'Recover');
 
+  /// Switches to an alternative engine or source after a failure.
   static const OperationType fallback = OperationType._('fallback', 'Fallback');
 
+  /// Re-executes a failed operation.
   static const OperationType retry = OperationType._('retry', 'Retry');
-  static const OperationType applyEngineOptions =
-      OperationType._('apply_engine_options', 'Apply Engine Options');
 
+  /// Applies runtime options to the playback engine.
+  static const OperationType applyEngineOptions = OperationType._('apply_engine_options', 'Apply Engine Options');
 
   // ---------------------------------------------------------------------------
   // Built-in values
@@ -165,50 +224,73 @@ final class OperationType {
   // Predicates
   // ---------------------------------------------------------------------------
 
+  /// Whether this is the [OperationType.open] operation.
   bool get isOpen => value == open.value;
 
+  /// Whether this is the [OperationType.play] operation.
   bool get isPlay => value == play.value;
 
+  /// Whether this is the [OperationType.pause] operation.
   bool get isPause => value == pause.value;
 
+  /// Whether this is the [OperationType.stop] operation.
   bool get isStop => value == stop.value;
 
+  /// Whether this is the [OperationType.seek] operation.
   bool get isSeek => value == seek.value;
 
+  /// Whether this is the [OperationType.close] operation.
   bool get isClose => value == close.value;
 
+  /// Whether this is the [OperationType.initialize] operation.
   bool get isInitialize => value == initialize.value;
 
+  /// Whether this is the [OperationType.dispose] operation.
   bool get isDispose => value == dispose.value;
 
+  /// Whether this is the [OperationType.prepare] operation.
   bool get isPrepare => value == prepare.value;
 
+  /// Whether this is the [OperationType.load] operation.
   bool get isLoad => value == load.value;
 
+  /// Whether this is the [OperationType.reload] operation.
   bool get isReload => value == reload.value;
 
+  /// Whether this is the [OperationType.setPlaybackRate] operation.
   bool get isSetPlaybackRate => value == setPlaybackRate.value;
 
+  /// Whether this is the [OperationType.setVolume] operation.
   bool get isSetVolume => value == setVolume.value;
 
+  /// Whether this is the [OperationType.setMute] operation.
   bool get isSetMute => value == setMute.value;
 
+  /// Whether this is the [OperationType.enterFullscreen] operation.
   bool get isEnterFullscreen => value == enterFullscreen.value;
 
+  /// Whether this is the [OperationType.exitFullscreen] operation.
   bool get isExitFullscreen => value == exitFullscreen.value;
 
+  /// Whether this is the [OperationType.enterPip] operation.
   bool get isEnterPip => value == enterPip.value;
 
+  /// Whether this is the [OperationType.exitPip] operation.
   bool get isExitPip => value == exitPip.value;
 
+  /// Whether this is the [OperationType.startRecording] operation.
   bool get isStartRecording => value == startRecording.value;
 
+  /// Whether this is the [OperationType.stopRecording] operation.
   bool get isStopRecording => value == stopRecording.value;
 
+  /// Whether this is the [OperationType.recover] operation.
   bool get isRecover => value == recover.value;
 
+  /// Whether this is the [OperationType.fallback] operation.
   bool get isFallback => value == fallback.value;
 
+  /// Whether this is the [OperationType.retry] operation.
   bool get isRetry => value == retry.value;
 
   // ---------------------------------------------------------------------------
@@ -255,40 +337,6 @@ final class OperationType {
   /// Returns the stable operation type value for JSON serialization.
   String toJson() => value;
 
-  /// Creates an operation type from JSON.
-  factory OperationType.fromJson(Object? json) {
-    if (json is! String) {
-      throw FormatException('OperationType JSON value must be a String.');
-    }
-
-    return OperationType.fromValue(json);
-  }
-
-  /// Creates an operation type from a stable value.
-  ///
-  /// Built-in values return their canonical built-in instance.
-  /// Unknown values become custom operation types.
-  factory OperationType.fromValue(String value) {
-    final normalized = value.trim();
-
-    if (normalized.isEmpty) {
-      throw ArgumentError.value(value, 'value', 'Operation type cannot be empty.');
-    }
-
-    for (final type in values) {
-      if (type.value == normalized) {
-        return type;
-      }
-    }
-
-    return OperationType.custom(normalized);
-  }
-
-  /// Parses an operation type from a string.
-  static OperationType parse(String value) {
-    return OperationType.fromValue(value);
-  }
-
   /// Returns whether [value] is a valid operation type.
   static bool isValid(String value) {
     return value.trim().isNotEmpty;
@@ -318,7 +366,7 @@ final class OperationType {
 
   /// Creates a new operation type with a different value.
   ///
-  /// The returned value is canonicalized through [custom].
+  /// The returned value is canonicalized through [OperationType.custom].
   OperationType copyWith(String value) {
     return OperationType.custom(value);
   }

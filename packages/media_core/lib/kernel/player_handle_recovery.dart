@@ -1,26 +1,16 @@
 part of 'player_handle.dart';
 
 /// Recovery-facing surface: the knobs a playback owner sets before
-/// reporting failures, [PlayerHandle.reportFailure] itself, and the
-/// physical step implementations behind the [RecoveryTarget] overrides.
+/// reporting failures, [reportFailure] itself, and the physical step
+/// implementations behind the [RecoveryTarget] overrides.
 ///
 /// The ladder decides; everything in this extension performs.
+///
+/// Recovery toggles and the declared play intent are public fields on
+/// [PlayerHandle] (`recoveryEnabled`, `engineFallbackEnabled`,
+/// `playIntent`), not methods here, because extensions cannot own
+/// storage.
 extension PlayerHandleRecovery on PlayerHandle {
-  /// Enables or disables this handle's recovery ladder.
-  void setRecoveryEnabled(bool enabled) {
-    _recoveryEnabled = enabled;
-  }
-
-  /// Declares whether recovery may escalate to another engine.
-  ///
-  /// See [_engineFallbackEnabled] for the semantics.
-  void setEngineFallbackEnabled(bool enabled) {
-    _engineFallbackEnabled = enabled;
-  }
-
-  /// Whether engine escalation is currently allowed.
-  bool get engineFallbackEnabled => _engineFallbackEnabled;
-
   /// Declares the alternative sources recovery may fall back to.
   ///
   /// The caller owns this list — for live playback it is the line list of
@@ -30,25 +20,6 @@ extension PlayerHandleRecovery on PlayerHandle {
     _sourceCandidates = List<PlayerSource>.unmodifiable(candidates);
   }
 
-  /// Declares whether the caller wants playback running.
-  ///
-  /// Recovery honours this value when it restores the session after a
-  /// step: `true` resumes playback, `false` leaves it paused. Declaring
-  /// an intent is not the same as commanding playback — [play] and
-  /// [pause] both declare their intent as a side effect, but a caller
-  /// whose engine autoplays (a live stream that starts as soon as it is
-  /// opened) must declare it explicitly, because nothing else in the
-  /// framework knows the stream is meant to be running.
-  ///
-  /// Pass `null` to stop declaring, falling back to the observed
-  /// playback state.
-  void declarePlayIntent(bool? playing) {
-    _playIntent = playing;
-  }
-
-  /// The declared play intent, if any.
-  bool? get playIntent => _playIntent;
-
   /// Restricts playback to the audio track on whichever adapter is
   /// attached.
   ///
@@ -56,7 +27,7 @@ extension PlayerHandleRecovery on PlayerHandle {
   /// another adapter without the caller being involved, and a fresh
   /// engine must not silently restore video. Applied again by [open] and
   /// after every backend swap.
-  Future<void> setAudioOnly(bool audioOnly) {
+  Future<void> setAudioOnly({required bool audioOnly}) {
     _ensureNotDisposed();
 
     _audioOnly = audioOnly;
@@ -76,7 +47,7 @@ extension PlayerHandleRecovery on PlayerHandle {
   bool reportFailure(RecoveryFailure failure, {RecoveryFailureSource source = RecoveryFailureSource.unknown}) {
     _ensureNotDisposed();
 
-    if (!_recoveryEnabled) {
+    if (!recoveryEnabled) {
       return false;
     }
 
@@ -95,7 +66,7 @@ extension PlayerHandleRecovery on PlayerHandle {
       accepted ? LogLevel.info : LogLevel.debug,
       LogCategory.recovery,
       'failure reported by ${report.source.name}: ${report.code.value} '
-          '(${report.effectiveReason})${accepted ? ' -> recovery started' : ' -> no recovery (see preceding reason)'}',
+      '(${report.effectiveReason})${accepted ? ' -> recovery started' : ' -> no recovery (see preceding reason)'}',
       fields: <String, Object?>{
         'message': report.message,
         'backend': report.backendId,
@@ -114,6 +85,23 @@ extension PlayerHandleRecovery on PlayerHandle {
     });
 
     return accepted;
+  }
+
+  /// How long the ladder waits before attempt [attempt] of a sweep.
+  ///
+  /// The two numbers are the host's `KernelOptions.retryBaseDelay` and
+  /// `retryMaxDelay`, which were documented as the recovery backoff and read by
+  /// nothing: the sweep ran its rungs back to back, so an engine that had just
+  /// refused an open was asked again in the same millisecond, and a dead CDN was
+  /// hammered for as long as rungs were left. Attempt 1 stays immediate — the
+  /// failure that opened the sweep already cost the viewer the time one retry is
+  /// worth.
+  Duration _retryDelayForAttempt(int attempt) {
+    if (attempt <= 1) {
+      return Duration.zero;
+    }
+
+    return RetryUtils.backoff(attempt - 1, base: _options.retryBaseDelay, max: _options.retryMaxDelay);
   }
 
   // ---------------------------------------------------------------------------
@@ -189,7 +177,7 @@ extension PlayerHandleRecovery on PlayerHandle {
 
     throw StateError(
       'Recovery step ${step.label} opened ${session.source?.uri} on ${_registration.id} '
-          'but playback did not progress within ${grace.inSeconds}s.',
+      'but playback did not progress within ${grace.inSeconds}s.',
     );
   }
 
@@ -237,7 +225,7 @@ extension PlayerHandleRecovery on PlayerHandle {
       MediaCoreLog.info(
         LogCategory.recovery,
         'reopen on ${_registration.id}: ${source.uri}'
-            '${changedSource ? ' (new source)' : ' (same source)'}',
+        '${changedSource ? ' (new source)' : ' (same source)'}',
         fields: <String, Object?>{
           'step': step.label,
           'wasPlaying': session.wasPlaying,
@@ -251,7 +239,7 @@ extension PlayerHandleRecovery on PlayerHandle {
         // that is still holding the broken stream.
         try {
           await _runtime.adapter.close();
-        } catch (_) {
+        } on Object catch (_) {
           // Releasing an already released backend is not a reason to abort.
         }
 
@@ -284,12 +272,7 @@ extension PlayerHandleRecovery on PlayerHandle {
         // Not done until playback is real: see [_verifyPlayback].
         await _verifyPlayback(step, session, operationGeneration: operationGeneration);
 
-        _emitTargetEvent(
-          RecoveryTargetEventKind.stepSucceeded,
-          step,
-          sourceId: source.id,
-          position: session.position,
-        );
+        _emitTargetEvent(RecoveryTargetEventKind.stepSucceeded, step, sourceId: source.id, position: session.position);
 
         _publish(PlayerEventType.recovery, <String, Object?>{
           'action': 'reopened',
@@ -344,7 +327,7 @@ extension PlayerHandleRecovery on PlayerHandle {
       MediaCoreLog.warning(
         LogCategory.fallback,
         'switching backend: $previousId -> ${registration.id}'
-            '${source == null ? ' (no source open)' : ' for ${source.uri}'}',
+        '${source == null ? ' (no source open)' : ' for ${source.uri}'}',
         fields: <String, Object?>{
           'step': step.label,
           'reason': session.failure.code.value,
@@ -357,7 +340,7 @@ extension PlayerHandleRecovery on PlayerHandle {
 
       final nextAdapter = registration.factory.create(registration.id);
 
-      bool committed = false;
+      var committed = false;
 
       try {
         await nextAdapter.initialize(_adapterContext);
@@ -419,13 +402,13 @@ extension PlayerHandleRecovery on PlayerHandle {
           'from': previousId,
           'to': registration.id,
         });
-      } catch (error, stackTrace) {
+      } on Object catch (error, stackTrace) {
         if (!committed) {
           // The previous backend is still attached and still owns its
           // subscription: there is nothing to roll back.
           try {
             await nextAdapter.dispose();
-          } catch (_) {
+          } on Object catch (_) {
             // Best-effort cleanup of the failed replacement adapter.
           }
         }
@@ -451,11 +434,7 @@ extension PlayerHandleRecovery on PlayerHandle {
   /// position is a moment in a broadcast that no longer exists, and
   /// seeking a live stream to it either fails or lands the viewer
   /// behind the edge.
-  Future<void> _prepareStagedAdapter(
-    PlayerAdapter adapter,
-    RecoverySession session,
-    PlayerSource source,
-  ) async {
+  Future<void> _prepareStagedAdapter(PlayerAdapter adapter, RecoverySession session, PlayerSource source) async {
     await _applyAudioOnly(adapter);
 
     if (session.volume != 1.0) {
@@ -553,7 +532,7 @@ extension PlayerHandleRecovery on PlayerHandle {
     }
 
     switch (event) {
-      case RecoveryLadderStarted(failure: final failure, plan: final plan):
+      case RecoveryLadderStarted(failure: final failure, :final plan):
         _publish(PlayerEventType.recovery, <String, Object?>{
           'action': 'started',
           'code': failure?.code.value,
@@ -613,7 +592,7 @@ extension PlayerHandleRecovery on PlayerHandle {
     MediaCoreLog.error(
       LogCategory.recovery,
       'recovery exhausted: playback is terminal'
-          '${failure == null ? '' : ' (${failure.code.value}: ${failure.message})'}',
+      '${failure == null ? '' : ' (${failure.code.value}: ${failure.message})'}',
       fields: <String, Object?>{'backend': _registration.id, 'uri': _currentSource?.uri.toString()},
     );
 

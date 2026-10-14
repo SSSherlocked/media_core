@@ -67,11 +67,11 @@ void main() {
     });
 
     test('equality is value based', () {
-      final a = PlayerError(code: PlayerErrorCode.timeout, message: 't');
-      final b = PlayerError(code: PlayerErrorCode.timeout, message: 't');
+      const a = PlayerError(code: PlayerErrorCode.timeout, message: 't');
+      const b = PlayerError(code: PlayerErrorCode.timeout, message: 't');
       expect(a, b);
 
-      final c = PlayerError(code: PlayerErrorCode.timeout, message: 'other');
+      const c = PlayerError(code: PlayerErrorCode.timeout, message: 'other');
       expect(a, isNot(c));
     });
   });

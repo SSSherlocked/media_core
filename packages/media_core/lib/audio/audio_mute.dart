@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:media_core/audio/audio_volume.dart' show AudioVolume;
 
 /// Immutable value object describing whether audio output is muted.
 ///
@@ -7,7 +8,7 @@ import 'package:equatable/equatable.dart';
 /// previous volume to be restored when mute is disabled.
 final class AudioMute extends Equatable {
   /// Creates a mute value.
-  const AudioMute(this.value);
+  const AudioMute({required this.value});
 
   /// Creates an unmuted value.
   const AudioMute.unmuted() : value = false;
@@ -31,11 +32,11 @@ final class AudioMute extends Equatable {
   AudioMute unmute() => const AudioMute.unmuted();
 
   /// Toggles the current mute state.
-  AudioMute toggle() => AudioMute(!value);
+  AudioMute toggle() => AudioMute(value: !value);
 
   /// Creates a copy with an optional new mute value.
   AudioMute copyWith({bool? value}) {
-    return AudioMute(value ?? this.value);
+    return AudioMute(value: value ?? this.value);
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'package:media_core/media_core.dart' show PlayerInfo, SourceFormat, SourceProtocol, SourceType;
+
 /// Describes the general media content type of a source.
 ///
 /// [SourceMediaType] describes what kind of media content a source

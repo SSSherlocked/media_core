@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:clock/clock.dart';
 
-
 /// A lightweight in-memory cache with optional TTL.
 ///
 /// This cache is intentionally independent from Hive or other persistent
@@ -30,6 +29,8 @@ import 'package:clock/clock.dart';
 /// cache.clear();
 /// ```
 class StreamCache<T> {
+  /// Creates a cache whose entries expire after `defaultTtl` unless an explicit
+  /// TTL is given to `set`; a `null` `defaultTtl` keeps entries forever.
   StreamCache({Duration? defaultTtl}) : _defaultTtl = defaultTtl;
 
   final Duration? _defaultTtl;
@@ -97,7 +98,7 @@ class StreamCache<T> {
 
   /// Store [value] under [key].
   ///
-  /// When [ttl] is omitted, [defaultTtl] is used.
+  /// When [ttl] is omitted, the cache's `defaultTtl` is used.
   ///
   /// A `null` TTL means the entry never expires.
   void set(String key, T value, {Duration? ttl}) {
@@ -158,17 +159,7 @@ class StreamCache<T> {
   }
 
   void _removeExpired() {
-    final expiredKeys = <String>[];
-
-    for (final entry in _entries.entries) {
-      if (entry.value.isExpired) {
-        expiredKeys.add(entry.key);
-      }
-    }
-
-    for (final key in expiredKeys) {
-      _entries.remove(key);
-    }
+    _entries.removeWhere((_, entry) => entry.isExpired);
   }
 }
 

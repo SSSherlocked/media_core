@@ -1,16 +1,16 @@
 import 'dart:async';
-import 'package:media_core/resource/resource_state.dart';
-import 'package:media_core_memory/media_core_memory.dart';
-import 'package:media_core/resource/decoder_manager.dart';
-import 'package:media_core/resource/thermal_manager.dart';
-import 'package:media_core/resource/resource_metrics.dart';
-import 'package:media_core/resource/resource_snapshot.dart';
-import 'package:media_core/resource/memory_pressure_bridge.dart';
-import 'package:media_core/resource/resource_pressure.dart';
-import 'package:media_core/resource/bandwidth_manager.dart';
+
 import 'package:clock/clock.dart';
 import 'package:media_core/policy/resource_policy.dart';
-
+import 'package:media_core/resource/bandwidth_manager.dart';
+import 'package:media_core/resource/decoder_manager.dart';
+import 'package:media_core/resource/memory_pressure_bridge.dart';
+import 'package:media_core/resource/resource_metrics.dart';
+import 'package:media_core/resource/resource_pressure.dart';
+import 'package:media_core/resource/resource_snapshot.dart';
+import 'package:media_core/resource/resource_state.dart';
+import 'package:media_core/resource/thermal_manager.dart';
+import 'package:media_core_memory/media_core_memory.dart';
 
 /// Coordinates runtime resource management.
 ///

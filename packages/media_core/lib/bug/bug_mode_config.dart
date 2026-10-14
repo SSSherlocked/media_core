@@ -1,8 +1,9 @@
-import 'package:media_core/bug/bug_mode.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/bug/bug_mode.dart';
 
 /// Defines the configuration used by the bug injection system.
 final class BugModeConfig extends Equatable {
+  /// Creates a configuration; every field defaults to a switched-off bug mode.
   const BugModeConfig({
     this.mode = BugMode.disabled,
     this.enabled = false,
@@ -19,40 +20,23 @@ final class BugModeConfig extends Equatable {
   static const BugModeConfig disabled = BugModeConfig();
 
   /// Enables safe deterministic fault injection.
-  static const BugModeConfig safe = BugModeConfig(
-    mode: BugMode.safe,
-    enabled: true,
-    allowDeterministicFaults: true,
-    allowRandomFaults: false,
-    allowDisruptiveFaults: false,
-    allowStressFaults: false,
-    allowChaosFaults: false,
-    maxConcurrentFaults: 1,
-    maxScheduledFaults: 100,
-  );
+  static const BugModeConfig safe = BugModeConfig(mode: BugMode.safe, enabled: true);
 
   /// Enables normal fault injection.
   static const BugModeConfig normal = BugModeConfig(
     mode: BugMode.normal,
     enabled: true,
-    allowDeterministicFaults: true,
     allowRandomFaults: true,
-    allowDisruptiveFaults: false,
-    allowStressFaults: false,
-    allowChaosFaults: false,
     maxConcurrentFaults: 2,
-    maxScheduledFaults: 100,
   );
 
   /// Enables aggressive fault injection.
   static const BugModeConfig aggressive = BugModeConfig(
     mode: BugMode.aggressive,
     enabled: true,
-    allowDeterministicFaults: true,
     allowRandomFaults: true,
     allowDisruptiveFaults: true,
     allowStressFaults: true,
-    allowChaosFaults: false,
     maxConcurrentFaults: 4,
     maxScheduledFaults: 500,
   );
@@ -61,7 +45,6 @@ final class BugModeConfig extends Equatable {
   static const BugModeConfig chaos = BugModeConfig(
     mode: BugMode.chaos,
     enabled: true,
-    allowDeterministicFaults: true,
     allowRandomFaults: true,
     allowDisruptiveFaults: true,
     allowStressFaults: true,

@@ -1,15 +1,16 @@
 import 'dart:async';
+
+import 'package:clock/clock.dart';
 import 'package:media_core/lifecycle/lifecycle_event.dart';
-import 'package:media_core/lifecycle/lifecycle_state.dart';
-import 'package:media_core/lifecycle/player_lifecycle.dart';
 import 'package:media_core/lifecycle/lifecycle_observer.dart';
 import 'package:media_core/lifecycle/lifecycle_snapshot.dart';
-import 'package:clock/clock.dart';
+import 'package:media_core/lifecycle/lifecycle_state.dart';
+import 'package:media_core/lifecycle/player_lifecycle.dart';
 import 'package:rxdart/rxdart.dart';
-
 
 /// Controls player lifecycle.
 final class LifecycleController implements PlayerLifecycle {
+  /// Creates a controller seeded in the initial (not-yet-created) lifecycle state.
   LifecycleController();
 
   LifecycleState _state = const LifecycleState();
@@ -30,14 +31,21 @@ final class LifecycleController implements PlayerLifecycle {
     return _eventSubject.stream;
   }
 
+  /// Continuous stream of lifecycle snapshots, newest last.
+  ///
+  /// Unlike [snapshot], which reports only the latest value on demand, this
+  /// emits every transition; subscribers that must react to state changes
+  /// rather than poll for them listen here.
   Stream<LifecycleSnapshot> get snapshots {
     return _snapshotSubject.stream;
   }
 
+  /// Registers [observer] to receive future lifecycle events.
   void addObserver(LifecycleObserver observer) {
     _observers.add(observer);
   }
 
+  /// Unregisters [observer]; safe to call for an observer that was never added.
   void removeObserver(LifecycleObserver observer) {
     _observers.remove(observer);
   }

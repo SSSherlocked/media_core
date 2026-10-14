@@ -17,12 +17,12 @@ library;
 // ============================================================================
 
 export 'package:media_core/adapter/composite_support.dart';
+export 'package:media_core/adapter/engine_option.dart';
 export 'package:media_core/adapter/player_adapter.dart';
 export 'package:media_core/adapter/player_adapter_base.dart';
 export 'package:media_core/adapter/player_adapter_capabilities.dart';
 export 'package:media_core/adapter/player_adapter_config.dart';
 export 'package:media_core/adapter/player_adapter_context.dart';
-export 'package:media_core/adapter/engine_option.dart';
 export 'package:media_core/adapter/player_adapter_error.dart';
 export 'package:media_core/adapter/player_adapter_event.dart';
 export 'package:media_core/adapter/player_adapter_exception.dart';

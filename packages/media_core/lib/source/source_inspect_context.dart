@@ -1,11 +1,15 @@
-import 'package:media_core/source/source_headers.dart';
 import 'package:media_core/identity/request_id.dart';
+import 'package:media_core/source/source_headers.dart';
 
 /// Context used when inspecting a resolved media source.
 ///
 /// [SourceInspectContext] contains request-scoped information required by
 /// source inspection. It does not contain player state or backend state.
 class SourceInspectContext {
+  /// Creates an inspection context.
+  ///
+  /// Every field is optional: an inspector that needs no request
+  /// identity, headers or metadata can use [SourceInspectContext.empty].
   const SourceInspectContext({this.requestId, this.headers, this.metadata = const <String, Object?>{}});
 
   /// Optional identifier of the inspection request.

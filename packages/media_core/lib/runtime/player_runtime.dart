@@ -1,17 +1,17 @@
 import 'dart:async';
 
-import 'package:media_core/runtime/player_geometry_binding.dart';
-import 'package:media_core/runtime/player_playback_binding.dart';
 import 'package:media_core/adapter/player_adapter.dart';
-import 'package:media_core_logging/media_core_logging.dart';
-import 'package:media_core/screenshot/screenshot_config.dart';
-import 'package:media_core/screenshot/screenshot_manager.dart';
-import 'package:media_core/session/player_session.dart';
-import 'package:media_core/session/session_controller.dart';
 import 'package:media_core/geometry/geometry_controller.dart';
 import 'package:media_core/playback/playback_command.dart';
 import 'package:media_core/playback/playback_controller.dart';
 import 'package:media_core/playback/player_transport_state.dart';
+import 'package:media_core/runtime/player_geometry_binding.dart';
+import 'package:media_core/runtime/player_playback_binding.dart';
+import 'package:media_core/screenshot/screenshot_config.dart';
+import 'package:media_core/screenshot/screenshot_manager.dart';
+import 'package:media_core/session/player_session.dart';
+import 'package:media_core/session/session_controller.dart';
+import 'package:media_core_logging/media_core_logging.dart';
 
 /// Runtime container for one logical player.
 ///
@@ -75,11 +75,7 @@ final class PlayerRuntime {
     // does not own them; the playback mirror is the owner, and this is the one
     // place both are in scope.
     _sessionSubscription = _playback.state.listen((state) {
-      _sessionController.updateTimeline(
-        position: state.position,
-        duration: state.duration,
-        buffering: state.buffering,
-      );
+      _sessionController.updateTimeline(position: state.position, duration: state.duration, buffering: state.buffering);
     }, onError: (Object _) {});
   }
 
@@ -152,10 +148,7 @@ final class PlayerRuntime {
       return;
     }
 
-    MediaCoreLog.info(
-      LogCategory.fallback,
-      'runtime adapter swap: ${_adapter.id} -> ${nextAdapter.id}',
-    );
+    MediaCoreLog.info(LogCategory.fallback, 'runtime adapter swap: ${_adapter.id} -> ${nextAdapter.id}');
 
     // Detach old bindings first so no further events from the old
     // adapter reach the controllers.

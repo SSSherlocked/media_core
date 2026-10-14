@@ -27,32 +27,28 @@ _PlayerInfo _$PlayerInfoFromJson(Map<String, dynamic> json) => _PlayerInfo(
   audioLanguage: json['audioLanguage'] as String?,
   subtitleLanguage: json['subtitleLanguage'] as String?,
   metadata:
-      (json['metadata'] as Map<String, dynamic>?)?.map(
-        (k, e) => MapEntry(k, e as String),
-      ) ??
-      const <String, String>{},
+      (json['metadata'] as Map<String, dynamic>?)?.map((k, e) => MapEntry(k, e as String)) ?? const <String, String>{},
 );
 
-Map<String, dynamic> _$PlayerInfoToJson(_PlayerInfo instance) =>
-    <String, dynamic>{
-      'title': instance.title,
-      'description': instance.description,
-      'author': instance.author,
-      'album': instance.album,
-      'artist': instance.artist,
-      'artworkUrl': instance.artworkUrl,
-      'thumbnailUrl': instance.thumbnailUrl,
-      'durationMs': instance.durationMs,
-      'width': instance.width,
-      'height': instance.height,
-      'frameRate': instance.frameRate,
-      'videoBitrate': instance.videoBitrate,
-      'audioBitrate': instance.audioBitrate,
-      'format': instance.format,
-      'videoCodec': instance.videoCodec,
-      'audioCodec': instance.audioCodec,
-      'subtitleCodec': instance.subtitleCodec,
-      'audioLanguage': instance.audioLanguage,
-      'subtitleLanguage': instance.subtitleLanguage,
-      'metadata': instance.metadata,
-    };
+Map<String, dynamic> _$PlayerInfoToJson(_PlayerInfo instance) => <String, dynamic>{
+  'title': instance.title,
+  'description': instance.description,
+  'author': instance.author,
+  'album': instance.album,
+  'artist': instance.artist,
+  'artworkUrl': instance.artworkUrl,
+  'thumbnailUrl': instance.thumbnailUrl,
+  'durationMs': instance.durationMs,
+  'width': instance.width,
+  'height': instance.height,
+  'frameRate': instance.frameRate,
+  'videoBitrate': instance.videoBitrate,
+  'audioBitrate': instance.audioBitrate,
+  'format': instance.format,
+  'videoCodec': instance.videoCodec,
+  'audioCodec': instance.audioCodec,
+  'subtitleCodec': instance.subtitleCodec,
+  'audioLanguage': instance.audioLanguage,
+  'subtitleLanguage': instance.subtitleLanguage,
+  'metadata': instance.metadata,
+};

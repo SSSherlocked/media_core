@@ -1,23 +1,23 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:media_core/adapter/player_adapter.dart';
-import 'package:media_core/core/player_error.dart';
-import 'package:media_core/core/player_core_state.dart';
-import 'package:media_core/adapter/player_adapter_event.dart';
-import 'package:media_core/adapter/player_adapter_context.dart';
-import 'package:media_core/adapter/player_adapter_metrics.dart';
-import 'package:media_core/source/player_source.dart';
-import 'package:media_core/screenshot/screenshot_request.dart';
-import 'package:media_core/adapter/player_adapter_exception.dart';
-import 'package:media_core/error/player_error_code.dart';
-import 'package:media_core/adapter/player_adapter_capabilities.dart';
+import 'package:flutter/foundation.dart' show protected;
 import 'package:media_core/adapter/composite_support.dart';
+import 'package:media_core/adapter/engine_option.dart';
+import 'package:media_core/adapter/player_adapter.dart';
+import 'package:media_core/adapter/player_adapter_capabilities.dart';
+import 'package:media_core/adapter/player_adapter_context.dart';
+import 'package:media_core/adapter/player_adapter_event.dart';
+import 'package:media_core/adapter/player_adapter_exception.dart';
+import 'package:media_core/adapter/player_adapter_metrics.dart';
+import 'package:media_core/core/player_core_state.dart';
+import 'package:media_core/core/player_error.dart';
+import 'package:media_core/error/player_error_code.dart';
+import 'package:media_core/playback/buffer_range.dart';
+import 'package:media_core/screenshot/screenshot_request.dart';
 import 'package:media_core/source/media_source.dart';
 import 'package:media_core/source/media_source_bridge.dart';
-import 'package:flutter/foundation.dart' show protected;
-import 'package:media_core/adapter/engine_option.dart';
-import 'package:media_core/playback/buffer_range.dart';
+import 'package:media_core/source/player_source.dart';
 
 /// Template-method base for [PlayerAdapter] implementations.
 ///
@@ -236,7 +236,7 @@ abstract base class PlayerAdapterBase implements PlayerAdapter {
         throw PlayerAdapterOpenException(deferred);
       }
 
-      _state = _state.openingState().withSource(true).readyState();
+      _state = _state.openingState().withSource(value: true).readyState();
 
       _addEvent(PlayerAdapterEvent.opened(source: source.id.value));
 
@@ -283,7 +283,7 @@ abstract base class PlayerAdapterBase implements PlayerAdapter {
     _position = Duration.zero;
     _duration = null;
 
-    _state = _state.stoppedState().withSource(false);
+    _state = _state.stoppedState().withSource(value: false);
 
     _addEvent(const PlayerAdapterEvent.stopped());
   }
@@ -328,7 +328,7 @@ abstract base class PlayerAdapterBase implements PlayerAdapter {
   /// The setting is remembered in [audioOnly] for the whole adapter
   /// lifetime, so [onAfterOpen] can re-apply it after a recovery replay.
   @override
-  Future<void> setAudioOnly(bool audioOnly) async {
+  Future<void> setAudioOnly({required bool audioOnly}) async {
     requireReady();
 
     assert(
@@ -342,7 +342,7 @@ abstract base class PlayerAdapterBase implements PlayerAdapter {
 
     _audioOnly = audioOnly;
 
-    await onSetAudioOnly(audioOnly);
+    await onSetAudioOnly(audioOnly: audioOnly);
   }
 
   /// Engine options received before [onInitialize] built the engine.
@@ -368,16 +368,21 @@ abstract base class PlayerAdapterBase implements PlayerAdapter {
     );
 
     if (!_capabilities.supportsEngineOptions) {
-      return List<EngineOptionOutcome>.filled(options.length, EngineOptionOutcome.unsupported, growable: false);
+      return List<EngineOptionOutcome>.filled(options.length, EngineOptionOutcome.unsupported);
     }
 
     if (!initialized) {
       _stashedEngineOptions = <EngineOption>[..._stashedEngineOptions, ...options];
 
-      return List<EngineOptionOutcome>.filled(options.length, EngineOptionOutcome.stagedForNextOpen, growable: false);
+      return List<EngineOptionOutcome>.filled(options.length, EngineOptionOutcome.stagedForNextOpen);
     }
 
-    return onApplyEngineOptions(options);
+    // Awaited instead of returned directly: staying `async` is what turns a
+    // synchronously throwing engine hook into an error on the returned
+    // Future, which is what every caller of an adapter awaits.
+    final outcomes = await onApplyEngineOptions(options);
+
+    return outcomes;
   }
 
   /// Engine-specific application of raw options.
@@ -389,7 +394,7 @@ abstract base class PlayerAdapterBase implements PlayerAdapter {
   /// runtime key/value surface.
   @protected
   Future<List<EngineOptionOutcome>> onApplyEngineOptions(List<EngineOption> options) async {
-    return List<EngineOptionOutcome>.filled(options.length, EngineOptionOutcome.unsupported, growable: false);
+    return List<EngineOptionOutcome>.filled(options.length, EngineOptionOutcome.unsupported);
   }
 
   /// Takes the options stashed before the engine existed, if any.
@@ -420,7 +425,12 @@ abstract base class PlayerAdapterBase implements PlayerAdapter {
       return null;
     }
 
-    return onCaptureFrame(request);
+    // Awaited instead of returned directly, so a synchronously throwing
+    // capture hook still reaches the caller as an error on the Future rather
+    // than as a throw out of `captureFrame` itself.
+    final bytes = await onCaptureFrame(request);
+
+    return bytes;
   }
 
   @override
@@ -434,7 +444,7 @@ abstract base class PlayerAdapterBase implements PlayerAdapter {
     _position = Duration.zero;
     _duration = null;
 
-    _state = _state.stoppedState().withSource(false);
+    _state = _state.stoppedState().withSource(value: false);
 
     _addEvent(const PlayerAdapterEvent.stopped());
   }
@@ -482,21 +492,48 @@ abstract base class PlayerAdapterBase implements PlayerAdapter {
   @protected
   Future<void> onAfterOpen(PlayerSource source) async {}
 
+  /// Starts playback on the engine.
+  ///
+  /// Called by [play] after the lifecycle guard. The transition itself is
+  /// reported by the engine callback through [emitPlaying], never here, so a
+  /// command the engine has not acted on yet must not fake the state.
   @protected
   Future<void> onPlay();
 
+  /// Pauses playback on the engine.
+  ///
+  /// Called by [pause]; [emitPaused] is what publishes the transition, so an
+  /// engine that pauses asynchronously reports it when it happens.
   @protected
   Future<void> onPause();
 
+  /// Stops playback on the engine.
+  ///
+  /// Called by [stop] while the source event gate is already closed and
+  /// before the position, duration and state are reset. Stopping is not
+  /// releasing: [onClose] owns detaching the source.
   @protected
   Future<void> onStop();
 
+  /// Moves the engine to [position].
+  ///
+  /// Called by [seek]. Returning only means the engine accepted the command —
+  /// where playback actually landed is the engine's answer, published through
+  /// [emitPositionChanged].
   @protected
   Future<void> onSeek(Duration position);
 
+  /// Applies [volume] (0.0–1.0) to the engine.
+  ///
+  /// Called by [setVolume]; the value the engine ended up with comes back as
+  /// [emitVolumeChanged].
   @protected
   Future<void> onSetVolume(double volume);
 
+  /// Applies [rate] to the engine.
+  ///
+  /// Called by [setRate]; the applied rate is reported by the engine callback
+  /// as a `rateChanged` event rather than asserted here.
   @protected
   Future<void> onSetRate(double rate);
 
@@ -504,7 +541,7 @@ abstract base class PlayerAdapterBase implements PlayerAdapter {
   ///
   /// Only called when the capability is declared and the value changed.
   @protected
-  Future<void> onSetAudioOnly(bool audioOnly) async {}
+  Future<void> onSetAudioOnly({required bool audioOnly}) async {}
 
   /// Captures a frame with the engine.
   ///
@@ -518,9 +555,20 @@ abstract base class PlayerAdapterBase implements PlayerAdapter {
   @protected
   Future<Uint8List?> onCaptureFrame(ScreenshotRequest request) async => null;
 
+  /// Detaches the current source from the engine.
+  ///
+  /// Called by [close] (and only when the adapter is initialized and alive)
+  /// with the source event gate already closed, before the position and
+  /// duration are reset. The engine stays initialized, so a later [open] runs
+  /// the full template again.
   @protected
   Future<void> onClose();
 
+  /// Releases the engine and everything bound to it.
+  ///
+  /// Called by [dispose]; the event stream is closed as soon as it returns, so
+  /// listeners bound in [onInitialize] and any native player they own have to
+  /// be released here — nothing else runs afterwards.
   @protected
   Future<void> onDispose();
 
@@ -614,10 +662,12 @@ abstract base class PlayerAdapterBase implements PlayerAdapter {
   /// because a backend that cannot measure the cache must not appear
   /// to report a ratio.
   @protected
-  void emitBuffering(bool buffering, {bool? resumePlaying, double? progress}) {
+  void emitBuffering({required bool buffering, bool? resumePlaying, double? progress}) {
     if (!acceptsEngineEvents) return;
 
-    if (progress != null) {
+    var forwardedProgress = progress;
+
+    if (forwardedProgress != null) {
       assert(
         _capabilities.supportsBufferingProgress,
         '$runtimeType emitted buffering progress but '
@@ -625,7 +675,7 @@ abstract base class PlayerAdapterBase implements PlayerAdapter {
       );
 
       if (!_capabilities.supportsBufferingProgress) {
-        progress = null;
+        forwardedProgress = null;
       }
     }
 
@@ -635,7 +685,7 @@ abstract base class PlayerAdapterBase implements PlayerAdapter {
       _state = resumePlaying ? _state.playingState() : _state.pausedState();
     }
 
-    _addEvent(PlayerAdapterEvent.buffering(buffering: buffering, progress: progress));
+    _addEvent(PlayerAdapterEvent.buffering(buffering: buffering, progress: forwardedProgress));
   }
 
   /// Reports the stretches of media the engine can play without waiting.
@@ -693,7 +743,7 @@ abstract base class PlayerAdapterBase implements PlayerAdapter {
     // The source has video. That is a fact about the engine, applied
     // whether or not the adapter promised to report the geometry, so the
     // state never depends on the signal declaration.
-    _state = _state.withVideoEnabled(true);
+    _state = _state.withVideoEnabled(value: true);
 
     assert(
       _capabilities.supportsVideoSizeChanged,

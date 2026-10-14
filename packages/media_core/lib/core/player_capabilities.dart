@@ -8,6 +8,8 @@ import 'package:equatable/equatable.dart';
 /// This is a static capability description and must not contain runtime
 /// playback state.
 final class PlayerCapabilities extends Equatable {
+  /// Creates a capability set, defaulting to the operations every player is
+  /// expected to support.
   const PlayerCapabilities({
     this.play = true,
     this.pause = true,

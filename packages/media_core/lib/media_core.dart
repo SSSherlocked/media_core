@@ -32,17 +32,17 @@ export 'package:media_core/audio/library.dart';
 /// Debugging and fault-injection infrastructure..
 export 'package:media_core/bug/library.dart';
 
-/// Protocol-neutral casting: render devices, transport state, controller..
-export 'package:media_core/casting/library.dart';
-
 /// Memory, disk and cache storage abstractions..
 export 'package:media_core/cache/library.dart';
 
-/// Mutex, semaphore, locking and concurrency control primitives..
-export 'package:media_core/concurrency/library.dart';
+/// Protocol-neutral casting: render devices, transport state, controller..
+export 'package:media_core/casting/library.dart';
 
 /// Composition layer: presentation timeline, segments and cues..
 export 'package:media_core/composition/library.dart';
+
+/// Mutex, semaphore, locking and concurrency control primitives..
+export 'package:media_core/concurrency/library.dart';
 
 /// Cross-module player and playback coordination..
 export 'package:media_core/coordinator/library.dart';
@@ -71,6 +71,9 @@ export 'package:media_core/geometry/library.dart';
 /// Stable cross-module identity and identifier value objects..
 export 'package:media_core/identity/library.dart';
 
+/// Background-job outcomes and the reporter slot a notification layer registers into..
+export 'package:media_core/job/library.dart';
+
 /// PlayerIdentity kernel: orchestration root wiring source, adapter, session, playback, recovery, fallback, pool and events..
 export 'package:media_core/kernel/library.dart';
 
@@ -83,6 +86,9 @@ export 'package:media_core/network/library.dart';
 /// High-level asynchronous and business operations..
 export 'package:media_core/operation/library.dart';
 
+/// Media source planning: plans, planner contract and defaults..
+export 'package:media_core/planning/library.dart';
+
 /// Platform capabilities and platform-specific abstractions..
 export 'package:media_core/platform/library.dart';
 
@@ -92,12 +98,6 @@ export 'package:media_core/playback/library.dart';
 /// Centralized cross-module player policies..
 export 'package:media_core/policy/library.dart';
 
-/// Media source planning: plans, planner contract and defaults..
-export 'package:media_core/planning/library.dart';
-
-/// Quality candidates and live switching continuity..
-export 'package:media_core/quality/library.dart';
-
 /// PlayerIdentity instance pooling, allocation and recycling..
 export 'package:media_core/pool/library.dart';
 
@@ -106,6 +106,9 @@ export 'package:media_core/preload/library.dart';
 
 /// Fullscreen, picture-in-picture and floating presentation..
 export 'package:media_core/presentation/library.dart';
+
+/// Quality candidates and live switching continuity..
+export 'package:media_core/quality/library.dart';
 
 /// Reactive abstractions and stream utilities..
 export 'package:media_core/reactive/library.dart';
@@ -127,6 +130,8 @@ export 'package:media_core/resource/library.dart';
 
 /// Unified result and asynchronous result abstractions..
 export 'package:media_core/result/library.dart';
+// Composition root: owns adapter + session + per-session controllers.
+export 'package:media_core/runtime/library.dart';
 
 /// Frame capture: engine capture, surface capture, captured-frame value, file writing..
 export 'package:media_core/screenshot/library.dart';
@@ -151,6 +156,3 @@ export 'package:media_core/util/library.dart';
 
 /// PlayerIdentity visibility observation, state and management..
 export 'package:media_core/visibility/library.dart';
-
-// Composition root: owns adapter + session + per-session controllers.
-export 'package:media_core/runtime/library.dart';

@@ -15,7 +15,18 @@ import 'package:equatable/equatable.dart';
 /// - manage audio focus
 /// - change playback state
 final class PlaybackVolume extends Equatable {
+  /// Creates a level of [value], muted or not as stated.
+  ///
+  /// [value] and [muted] stay independent on purpose: silence encoded as
+  /// `value: 0` could not be unmuted back to where the listener was.
   const PlaybackVolume({required this.value, this.muted = false});
+
+  /// Reads a volume written by [toMap].
+  ///
+  /// Missing keys mean full volume, unmuted — the level a player starts at.
+  factory PlaybackVolume.fromMap(Map<String, dynamic> map) {
+    return PlaybackVolume(value: map['value'] as double? ?? 1.0, muted: map['muted'] as bool? ?? false);
+  }
 
   /// Default volume.
   const PlaybackVolume.defaultValue() : value = 1.0, muted = false;
@@ -42,10 +53,10 @@ final class PlaybackVolume extends Equatable {
   final bool muted;
 
   /// Minimum volume.
-  static const double min = 0.0;
+  static const double min = 0;
 
   /// Maximum volume.
-  static const double max = 1.0;
+  static const double max = 1;
 
   /// Whether value is valid.
   bool get isValid {
@@ -57,7 +68,7 @@ final class PlaybackVolume extends Equatable {
   /// Returns zero when muted.
   double get effectiveValue {
     if (muted) {
-      return 0.0;
+      return 0;
     }
 
     return normalized;
@@ -93,7 +104,7 @@ final class PlaybackVolume extends Equatable {
 
   /// Creates unmuted volume.
   PlaybackVolume unmute() {
-    return PlaybackVolume(value: value, muted: false);
+    return PlaybackVolume(value: value);
   }
 
   /// Creates copy.
@@ -101,12 +112,10 @@ final class PlaybackVolume extends Equatable {
     return PlaybackVolume(value: value ?? this.value, muted: muted ?? this.muted);
   }
 
+  /// The `fromMap()` form: level and mute flag stored apart, so a saved muted
+  /// volume restores the level it was muted at.
   Map<String, dynamic> toMap() {
     return {'value': value, 'muted': muted};
-  }
-
-  factory PlaybackVolume.fromMap(Map<String, dynamic> map) {
-    return PlaybackVolume(value: map['value'] as double? ?? 1.0, muted: map['muted'] as bool? ?? false);
   }
 
   @override

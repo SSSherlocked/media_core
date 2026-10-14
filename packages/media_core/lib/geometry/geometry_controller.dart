@@ -1,13 +1,13 @@
 import 'dart:async';
-import 'package:media_core/geometry/video_size.dart';
+
 import 'package:media_core/geometry/display_size.dart';
 import 'package:media_core/geometry/geometry_event.dart';
+import 'package:media_core/geometry/geometry_snapshot.dart';
 import 'package:media_core/geometry/geometry_state.dart';
 import 'package:media_core/geometry/video_geometry.dart';
 import 'package:media_core/geometry/video_rotation.dart';
-import 'package:media_core/geometry/geometry_snapshot.dart';
+import 'package:media_core/geometry/video_size.dart';
 import 'package:rxdart/rxdart.dart';
-
 
 /// Controls video geometry lifecycle.
 ///
@@ -26,6 +26,7 @@ import 'package:rxdart/rxdart.dart';
 /// - control renderer
 /// - call platform APIs
 final class GeometryController {
+  /// Creates a controller publishing [initialState] as its first state.
   GeometryController({GeometryState initialState = const GeometryState.initial()})
     : _stateSubject = BehaviorSubject<GeometryState>.seeded(initialState) {
     // The counter follows the restored state: starting from zero would make
@@ -156,9 +157,7 @@ final class GeometryController {
   int _advanceGeneration() {
     final stateGeneration = current.generation;
 
-    _generation = (_generation > stateGeneration ? _generation : stateGeneration) + 1;
-
-    return _generation;
+    return _generation = (_generation > stateGeneration ? _generation : stateGeneration) + 1;
   }
 
   void _ensureNotDisposed() {

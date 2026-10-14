@@ -1,17 +1,17 @@
 import 'dart:async';
 
-import 'package:media_core/recovery/recovery_step.dart';
 import 'package:clock/clock.dart';
-import 'package:media_core/recovery/recovery_state.dart';
+import 'package:media_core/error/player_error_code.dart';
 import 'package:media_core/recovery/recovery_action.dart';
-import 'package:media_core/recovery/recovery_target.dart';
-import 'package:media_core/recovery/recovery_session.dart';
+import 'package:media_core/recovery/recovery_candidate_provider.dart';
 import 'package:media_core/recovery/recovery_context.dart';
 import 'package:media_core/recovery/recovery_failure.dart';
-import 'package:media_core/recovery/recovery_snapshot.dart';
 import 'package:media_core/recovery/recovery_ladder_event.dart';
-import 'package:media_core/recovery/recovery_candidate_provider.dart';
-import 'package:media_core/error/player_error_code.dart';
+import 'package:media_core/recovery/recovery_session.dart';
+import 'package:media_core/recovery/recovery_snapshot.dart';
+import 'package:media_core/recovery/recovery_state.dart';
+import 'package:media_core/recovery/recovery_step.dart';
+import 'package:media_core/recovery/recovery_target.dart';
 import 'package:media_core_logging/media_core_logging.dart';
 
 /// Lifecycle of the ladder.
@@ -68,7 +68,13 @@ enum RecoveryLadderStatus {
 /// adapter, a registry or a session controller.
 final class RecoveryLadder {
   /// Creates a ladder.
-  RecoveryLadder({required this.target, required this.candidates}) {
+  ///
+  /// [retryDelay] answers "how long before attempt number N", and is what makes
+  /// `KernelOptions.retryBaseDelay` mean something: without it a sweep runs its
+  /// rungs back to back, so an engine that just refused an open is asked again in
+  /// the same millisecond, and a dead source is hammered for as long as the sweep
+  /// has rungs left. Null keeps the old immediate escalation.
+  RecoveryLadder({required this.target, required this.candidates, this.retryDelay}) {
     _targetEvents = target.executionEvents.listen(_onTargetEvent, onError: (Object _) {});
   }
 
@@ -77,6 +83,9 @@ final class RecoveryLadder {
 
   /// Source of alternative sources and backends.
   final RecoveryCandidateProvider candidates;
+
+  /// How long to wait before each attempt of a sweep, by attempt number.
+  final Duration Function(int attempt)? retryDelay;
 
   final StreamController<RecoveryLadderEvent> _events = StreamController<RecoveryLadderEvent>.broadcast();
 
@@ -267,11 +276,7 @@ final class RecoveryLadder {
       // signed live URLs cannot even succeed — the token is spent). The
       // sweep starts at the next line instead.
       final reopenAllowed = !failure.effectiveReason.isSource;
-      final planLabel = <String>[
-        if (reopenAllowed) 'reopen',
-        'nextLine',
-        'nextBackend',
-      ].join(' -> ');
+      final planLabel = <String>[if (reopenAllowed) 'reopen', 'nextLine', 'nextBackend'].join(' -> ');
 
       _emit(RecoveryLadderStarted(failure: failure, plan: _planOf(reopenAllowed)));
 
@@ -355,12 +360,12 @@ final class RecoveryLadder {
           generation,
           failure,
           'Every allowed source has been tried'
-              '${triedBackends.length > 1 ? ' on every available engine' : ''}.',
+          '${triedBackends.length > 1 ? ' on every available engine' : ''}.',
         );
 
         return;
       }
-    } catch (error) {
+    } on Object catch (error) {
       // A failure inside the sweep itself (a throwing provider) must still
       // end the run: leaving the status at `running` would block every
       // later report.
@@ -420,6 +425,12 @@ final class RecoveryLadder {
       return false;
     }
 
+    if (!await _awaitRetryDelay(generation)) {
+      // Superseded or disposed while waiting: the run's loop ends on its
+      // generation check, and [_abort] has already landed the status.
+      return false;
+    }
+
     _attempts++;
 
     _emit(RecoveryLadderStepStarted(step: step, attempt: _attempts, failure: _failure));
@@ -438,7 +449,7 @@ final class RecoveryLadder {
       }
 
       return true;
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       final stepFailure = RecoveryFailure.fromMessage(
         '${step.label} failed: $error',
         error: error,
@@ -473,6 +484,31 @@ final class RecoveryLadder {
     }
   }
 
+  /// Waits the delay [retryDelay] asks for the attempt that is about to run.
+  ///
+  /// The first attempt of a sweep never waits: the failure that opened the sweep
+  /// already cost the viewer the time one retry is worth. Reporting whether the
+  /// run may continue is the point of the return value — a wait is the first
+  /// moment a sweep can be overtaken by a new open or a close, and executing the
+  /// step anyway would reopen something the viewer has already left.
+  Future<bool> _awaitRetryDelay(int generation) async {
+    final attempt = _attempts + 1;
+
+    if (attempt <= 1) {
+      return _isCurrent(generation);
+    }
+
+    final delay = retryDelay?.call(attempt) ?? Duration.zero;
+
+    if (delay <= Duration.zero) {
+      return _isCurrent(generation);
+    }
+
+    await Future<void>.delayed(delay);
+
+    return _isCurrent(generation) && !_disposed;
+  }
+
   // ---------------------------------------------------------------------------
   // Terminal transitions
   // ---------------------------------------------------------------------------
@@ -505,11 +541,7 @@ final class RecoveryLadder {
     MediaCoreLog.error(
       LogCategory.recovery,
       'sweep exhausted after $_attempts attempt(s): $message',
-      fields: <String, Object?>{
-        'code': failure.code.value,
-        'message': failure.message,
-        'backend': failure.backendId,
-      },
+      fields: <String, Object?>{'code': failure.code.value, 'message': failure.message, 'backend': failure.backendId},
     );
 
     _emit(RecoveryLadderExhausted(attempt: _attempts, message: message, failure: failure));

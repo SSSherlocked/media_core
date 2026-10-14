@@ -1,10 +1,11 @@
 import 'dart:async';
-import 'package:media_core/slot/player_slot.dart';
-import 'package:media_core/slot/player_slot_state.dart';
-import 'package:media_core/identity/slot_id.dart';
-import 'package:rxdart/rxdart.dart';
+
 import 'package:media_core/identity/player_id.dart';
 import 'package:media_core/identity/session_id.dart';
+import 'package:media_core/identity/slot_id.dart';
+import 'package:media_core/slot/player_slot.dart';
+import 'package:media_core/slot/player_slot_state.dart';
+import 'package:rxdart/rxdart.dart';
 
 /// Manages player slots.
 ///

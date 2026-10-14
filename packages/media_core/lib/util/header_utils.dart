@@ -5,7 +5,7 @@ abstract final class HeaderUtils {
   /// Parses header lines into a map.
   ///
   /// Example:
-  /// ```
+  /// ```text
   /// Content-Type: application/json
   /// Authorization: Bearer xxx
   ///
@@ -94,9 +94,9 @@ abstract final class HeaderUtils {
       return result;
     }
 
-    result.addAll(headers);
-
-    result.removeWhere((key, _) => normalizeName(key) == normalizeName(name));
+    result
+      ..addAll(headers)
+      ..removeWhere((key, _) => normalizeName(key) == normalizeName(name));
 
     return result;
   }

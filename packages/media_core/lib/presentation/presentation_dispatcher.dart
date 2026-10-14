@@ -1,8 +1,8 @@
+import 'package:media_core/presentation/floating_controller.dart';
+import 'package:media_core/presentation/fullscreen_controller.dart';
 import 'package:media_core/presentation/pip_controller.dart';
 import 'package:media_core/presentation/presentation_mode.dart';
-import 'package:media_core/presentation/floating_controller.dart';
 import 'package:media_core/presentation/presentation_request.dart';
-import 'package:media_core/presentation/fullscreen_controller.dart';
 
 /// Dispatches presentation requests.
 ///
@@ -24,13 +24,22 @@ import 'package:media_core/presentation/fullscreen_controller.dart';
 /// - FullscreenController
 /// - PipController
 /// - FloatingController
+///
+/// Nothing in the package constructs this dispatcher; it is a host-facing
+/// helper that routes requests to the three logical controllers above. Those
+/// controllers are likewise built by the host, so the whole path is inert until
+/// a host wires it.
 final class PresentationDispatcher {
+  /// Creates a dispatcher over the controllers it routes to.
   const PresentationDispatcher({this.fullscreenController, this.pipController, this.floatingController});
 
+  /// Fullscreen controller, or `null` when fullscreen is not wired.
   final FullscreenController? fullscreenController;
 
+  /// PiP controller, or `null` when PiP is not wired.
   final PipController? pipController;
 
+  /// Floating controller, or `null` when floating is not wired.
   final FloatingController? floatingController;
 
   /// Dispatch request.
@@ -39,8 +48,6 @@ final class PresentationDispatcher {
       case PresentationMode.normal:
         await exit();
 
-        break;
-
       case PresentationMode.fullscreen:
       case PresentationMode.windowFullscreen:
         // Both variants serialize through the fullscreen controller; which one
@@ -48,17 +55,11 @@ final class PresentationDispatcher {
         // and reaches the platform driver through the request.
         await enterFullscreen();
 
-        break;
-
       case PresentationMode.pip:
         await enterPip();
 
-        break;
-
       case PresentationMode.floating:
         await enterFloating();
-
-        break;
     }
   }
 

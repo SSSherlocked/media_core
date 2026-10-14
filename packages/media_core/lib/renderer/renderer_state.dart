@@ -1,7 +1,7 @@
-import 'package:media_core/renderer/renderer_config.dart';
 import 'package:clock/clock.dart';
-import 'package:media_core/renderer/renderer_capabilities.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/renderer/renderer_capabilities.dart';
+import 'package:media_core/renderer/renderer_config.dart';
 
 /// Current renderer state.
 ///
@@ -16,6 +16,11 @@ import 'package:equatable/equatable.dart';
 /// - calculate video geometry
 /// - perform platform-specific rendering
 final class RendererState extends Equatable {
+  /// Creates the renderer state from its fields.
+  ///
+  /// Nothing is derived here — [canRender] is where initialization, surface
+  /// readiness, capability and configuration meet, and [initialize] is what
+  /// normally produces a state worth storing.
   const RendererState({
     required this.config,
     required this.capabilities,
@@ -26,6 +31,32 @@ final class RendererState extends Equatable {
     required this.updatedAt,
   });
 
+  /// Reads a state written by [toMap].
+  ///
+  /// An absent or malformed `config` becomes the default configuration, and an
+  /// absent `capabilities` the empty set: a half-restored renderer starts out
+  /// unable to render rather than claiming a surface it never had.
+  factory RendererState.fromMap(Map<String, dynamic> map) {
+    final Object? configValue = map['config'];
+    final Object? capabilitiesValue = map['capabilities'];
+
+    return RendererState(
+      config: configValue is Map
+          ? RendererConfig.fromMap(Map<String, dynamic>.from(configValue))
+          : const RendererConfig.defaults(),
+      capabilities: capabilitiesValue is Map
+          ? RendererCapabilities.fromMap(Map<String, dynamic>.from(capabilitiesValue))
+          : const RendererCapabilities.none(),
+      initialized: map['initialized'] as bool? ?? false,
+      rendering: map['rendering'] as bool? ?? false,
+      surfaceReady: map['surfaceReady'] as bool? ?? false,
+      generation: (map['generation'] as num?)?.toInt() ?? 0,
+      updatedAt: _parseDateTime(map['updatedAt']),
+    );
+  }
+
+  /// The state of a renderer that has never been initialized: no capabilities,
+  /// nothing ready, nothing rendering, generation zero.
   const RendererState.initial()
     : config = const RendererConfig.defaults(),
       capabilities = const RendererCapabilities.none(),
@@ -119,7 +150,7 @@ final class RendererState extends Equatable {
       config: config,
       capabilities: capabilities,
       initialized: initialized,
-      rendering: value ? rendering : false,
+      rendering: value && rendering,
       surfaceReady: value,
       generation: generation ?? this.generation,
       updatedAt: updatedAt ?? clock.now(),
@@ -186,6 +217,11 @@ final class RendererState extends Equatable {
     );
   }
 
+  /// The `fromMap()` form.
+  ///
+  /// The generation is part of it on purpose: a restored state has to carry on
+  /// the same renderer lifecycle, or reports from the surface it came back for
+  /// would be rejected as stale.
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'config': config.toMap(),
@@ -196,25 +232,6 @@ final class RendererState extends Equatable {
       'generation': generation,
       'updatedAt': updatedAt?.toIso8601String(),
     };
-  }
-
-  factory RendererState.fromMap(Map<String, dynamic> map) {
-    final Object? configValue = map['config'];
-    final Object? capabilitiesValue = map['capabilities'];
-
-    return RendererState(
-      config: configValue is Map
-          ? RendererConfig.fromMap(Map<String, dynamic>.from(configValue))
-          : const RendererConfig.defaults(),
-      capabilities: capabilitiesValue is Map
-          ? RendererCapabilities.fromMap(Map<String, dynamic>.from(capabilitiesValue))
-          : const RendererCapabilities.none(),
-      initialized: map['initialized'] as bool? ?? false,
-      rendering: map['rendering'] as bool? ?? false,
-      surfaceReady: map['surfaceReady'] as bool? ?? false,
-      generation: (map['generation'] as num?)?.toInt() ?? 0,
-      updatedAt: _parseDateTime(map['updatedAt']),
-    );
   }
 
   static DateTime? _parseDateTime(Object? value) {

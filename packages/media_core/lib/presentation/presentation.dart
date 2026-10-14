@@ -1,11 +1,9 @@
-library;
-
-export 'package:media_core/presentation/presentation_mode.dart';
-export 'package:media_core/presentation/presentation_request.dart';
-export 'package:media_core/presentation/presentation_event.dart';
-export 'package:media_core/presentation/presentation_state.dart';
-export 'package:media_core/presentation/presentation_snapshot.dart';
+export 'package:media_core/presentation/presentation_adapter.dart';
 export 'package:media_core/presentation/presentation_capabilities.dart';
 export 'package:media_core/presentation/presentation_controller.dart';
+export 'package:media_core/presentation/presentation_event.dart';
+export 'package:media_core/presentation/presentation_mode.dart';
 export 'package:media_core/presentation/presentation_reducer.dart';
-export 'package:media_core/presentation/presentation_adapter.dart';
+export 'package:media_core/presentation/presentation_request.dart';
+export 'package:media_core/presentation/presentation_snapshot.dart';
+export 'package:media_core/presentation/presentation_state.dart';

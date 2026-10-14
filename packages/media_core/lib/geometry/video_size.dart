@@ -18,7 +18,13 @@ import 'package:equatable/equatable.dart';
 /// - Renderer
 /// - PlayerIdentity snapshot
 final class VideoSize extends Equatable {
+  /// Creates a size from explicit pixel dimensions.
   const VideoSize({required this.width, required this.height});
+
+  /// Restores a size from a map produced by [toMap].
+  factory VideoSize.fromMap(Map<String, dynamic> map) {
+    return VideoSize(width: map['width'] as int? ?? 0, height: map['height'] as int? ?? 0);
+  }
 
   /// Empty size.
   const VideoSize.zero() : width = 0, height = 0;
@@ -146,12 +152,9 @@ final class VideoSize extends Equatable {
     return VideoSize(width: height, height: width);
   }
 
+  /// Converts to a simple map.
   Map<String, dynamic> toMap() {
     return {'width': width, 'height': height};
-  }
-
-  factory VideoSize.fromMap(Map<String, dynamic> map) {
-    return VideoSize(width: map['width'] as int? ?? 0, height: map['height'] as int? ?? 0);
   }
 
   @override

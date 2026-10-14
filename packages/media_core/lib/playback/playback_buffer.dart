@@ -43,8 +43,7 @@ final class PlaybackBuffer extends Equatable {
   /// a renderer that drew them separately would look identical, but
   /// a hit test against the list would miss the seam.
   PlaybackBuffer normalize() {
-    final meaningful = ranges.where((range) => !range.isEmpty).toList()
-      ..sort((a, b) => a.start.compareTo(b.start));
+    final meaningful = ranges.where((range) => !range.isEmpty).toList()..sort((a, b) => a.start.compareTo(b.start));
 
     if (meaningful.isEmpty) {
       return const PlaybackBuffer.empty();

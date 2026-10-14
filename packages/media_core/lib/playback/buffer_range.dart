@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:media_core/playback/library.dart' show PlaybackBuffer, PlayerTransportState;
 
 /// One contiguous stretch of media the engine can play without waiting.
 ///
@@ -57,10 +58,7 @@ final class BufferRange extends Equatable {
 
   /// The union of this and [other], which must touch.
   BufferRange unite(BufferRange other) {
-    return BufferRange(
-      start: start < other.start ? start : other.start,
-      end: end > other.end ? end : other.end,
-    );
+    return BufferRange(start: start < other.start ? start : other.start, end: end > other.end ? end : other.end);
   }
 
   @override

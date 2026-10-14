@@ -10,12 +10,7 @@ import 'package:equatable/equatable.dart';
 /// renderer.
 final class ThumbnailSlice extends Equatable {
   /// Creates a slice at ([x], [y]) of size [width] by [height].
-  const ThumbnailSlice({
-    required this.x,
-    required this.y,
-    required this.width,
-    required this.height,
-  });
+  const ThumbnailSlice({required this.x, required this.y, required this.width, required this.height});
 
   /// Parses the value of an `xywh` URI fragment, e.g. `160,0,160,90`.
   ///
@@ -37,12 +32,7 @@ final class ThumbnailSlice extends Equatable {
       }
       values.add(value);
     }
-    return ThumbnailSlice(
-      x: values[0],
-      y: values[1],
-      width: values[2],
-      height: values[3],
-    );
+    return ThumbnailSlice(x: values[0], y: values[1], width: values[2], height: values[3]);
   }
 
   /// Horizontal offset inside the sprite, in pixels.

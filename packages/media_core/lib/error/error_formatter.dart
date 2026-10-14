@@ -1,7 +1,7 @@
 import 'package:media_core/error/error_context.dart';
-import 'package:media_core/error/player_failure.dart';
-import 'package:media_core/error/player_error_code.dart';
 import 'package:media_core/error/player_error_category.dart';
+import 'package:media_core/error/player_error_code.dart';
+import 'package:media_core/error/player_failure.dart';
 
 /// Formats player errors into human-readable or diagnostic strings.
 ///
@@ -14,6 +14,8 @@ import 'package:media_core/error/player_error_category.dart';
 /// - perform recovery;
 /// - inspect backend state.
 final class ErrorFormatter {
+  /// Formatting rules are static, so instances exist only to satisfy
+  /// dependency injection of a formatter.
   const ErrorFormatter();
 
   /// Formats a failure for normal user-facing messages.

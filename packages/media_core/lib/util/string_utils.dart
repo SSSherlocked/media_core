@@ -61,7 +61,7 @@ abstract final class StringUtils {
   /// Converts string to snake_case.
   static String snakeCase(String value) {
     return value
-        .replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (match) {
+        .replaceAllMapped(RegExp('([a-z])([A-Z])'), (match) {
           return '${match.group(1)}_${match.group(2)}';
         })
         .replaceAll(' ', '_')

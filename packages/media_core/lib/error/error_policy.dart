@@ -1,7 +1,7 @@
-import 'package:media_core/error/player_failure.dart';
 import 'package:media_core/error/error_classifier.dart';
-import 'package:media_core/error/player_error_code.dart';
 import 'package:media_core/error/player_error_category.dart';
+import 'package:media_core/error/player_error_code.dart';
+import 'package:media_core/error/player_failure.dart';
 
 /// Defines how player failures should be handled.
 ///
@@ -16,6 +16,8 @@ import 'package:media_core/error/player_error_category.dart';
 /// This class only makes policy decisions. It does not perform retry,
 /// recovery, or fallback itself.
 final class ErrorPolicy {
+  /// Builds a policy from explicit retryable and non-retryable code sets and
+  /// the handling switches each feature honours.
   ErrorPolicy({
     Set<PlayerErrorCode> retryable = const <PlayerErrorCode>{},
     Set<PlayerErrorCode> nonRetryable = const <PlayerErrorCode>{},
@@ -24,7 +26,7 @@ final class ErrorPolicy {
     this.enableRetry = true,
     this.enableFallback = true,
     this.enableRecovery = true,
-  }) : assert(maxRetries >= 0),
+  }) : assert(maxRetries >= 0, 'maxRetries must not be negative.'),
        retryable = Set<PlayerErrorCode>.unmodifiable(retryable),
        nonRetryable = Set<PlayerErrorCode>.unmodifiable(nonRetryable);
 
@@ -74,11 +76,6 @@ final class ErrorPolicy {
         PlayerErrorCode.cacheEntryInvalid,
         PlayerErrorCode.disposed,
       },
-      maxRetries: 3,
-      retryDelay: const Duration(seconds: 1),
-      enableRetry: true,
-      enableFallback: true,
-      enableRecovery: true,
     );
   }
 

@@ -2,8 +2,10 @@ import 'dart:async';
 
 /// Exception thrown when an asynchronous operation is cancelled.
 class StreamCancelledException implements Exception {
+  /// Creates the cancellation failure with [message] for diagnostics.
   const StreamCancelledException([this.message = 'Operation was cancelled.']);
 
+  /// Human readable reason reported to the caller that awaited the operation.
   final String message;
 
   @override
@@ -18,6 +20,8 @@ class StreamCancelledException implements Exception {
 /// cooperative cancellation: asynchronous code can check [isCancelled] or
 /// call [throwIfCancelled].
 class StreamCancellationToken {
+  /// Creates a token in the active state; the owner of [StreamCancellationSource]
+  /// requests cancellation through it.
   StreamCancellationToken();
 
   bool _cancelled = false;
@@ -75,12 +79,14 @@ class StreamCancellationToken {
 
 /// Internal cancellation listener.
 class StreamCancellationSubscription {
+  /// Wraps `onCancel`, the callback a cancellation owner invokes on cancel.
   StreamCancellationSubscription(this._onCancel);
 
   final void Function() _onCancel;
 
   bool _disposed = false;
 
+  /// Invokes the cancellation callback unless already [dispose]d.
   void notify() {
     if (_disposed) {
       return;
@@ -89,6 +95,7 @@ class StreamCancellationSubscription {
     _onCancel();
   }
 
+  /// Stops the listener so a later cancellation does not resume the future.
   void dispose() {
     _disposed = true;
   }
@@ -98,10 +105,13 @@ class StreamCancellationSubscription {
 ///
 /// Use the source to cancel an operation and pass the token to the operation.
 class StreamCancellationSource {
+  /// Creates a source with a fresh [token].
   StreamCancellationSource();
 
+  /// The token handed to the operation that this source cancels.
   final StreamCancellationToken token = StreamCancellationToken();
 
+  /// Whether [cancel] was already requested.
   bool get isCancelled => token.isCancelled;
 
   /// Cancel the associated operation.
@@ -124,9 +134,7 @@ abstract final class StreamCancellable {
     Future<T> Function(StreamCancellationToken token) action, {
     StreamCancellationToken? token,
   }) async {
-    final cancellationToken = token ?? StreamCancellationToken();
-
-    cancellationToken.throwIfCancelled();
+    final cancellationToken = (token ?? StreamCancellationToken())..throwIfCancelled();
 
     final result = await action(cancellationToken);
 
@@ -145,7 +153,7 @@ abstract final class StreamCancellable {
 
     try {
       await Future.any<void>([timerFuture, token.whenCancelled]);
-    } catch (_) {
+    } on Object catch (_) {
       return false;
     }
 
@@ -157,21 +165,26 @@ abstract final class StreamCancellable {
 ///
 /// Cancelling the group cancels all registered tokens.
 class StreamCancellationGroup {
+  /// Creates an empty group that is not yet [dispose]d.
   StreamCancellationGroup();
 
   final Set<StreamCancellationSource> _sources = <StreamCancellationSource>{};
 
   bool _cancelled = false;
 
+  /// Whether the group is closed; after [dispose] new sources arrive cancelled.
   bool get isCancelled => _cancelled;
 
+  /// Number of sources still registered in the group.
   int get length => _sources.length;
 
   /// Create and register a new cancellation source.
+  ///
+  /// When the group is already disposed the returned source is cancelled so a
+  /// late operation cannot start against a closed group.
   StreamCancellationSource create() {
     if (_cancelled) {
-      final source = StreamCancellationSource();
-      source.cancel();
+      final source = StreamCancellationSource()..cancel();
       return source;
     }
 

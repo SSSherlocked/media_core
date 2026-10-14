@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:media_core/recording/recording_backend.dart' show RecordingBackend;
 
 /// Defines the container and encoding format used for a recording.
 ///

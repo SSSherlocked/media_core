@@ -5,7 +5,7 @@ import 'package:media_core/result/async_result.dart';
 import 'package:media_core/result/operation_result.dart';
 import 'package:media_core/result/result_error.dart';
 
-ResultError sampleError() => ResultError(code: PlayerErrorCode.unknown, message: 'boom');
+ResultError sampleError() => const ResultError(code: PlayerErrorCode.unknown, message: 'boom');
 
 void main() {
   group('AsyncResult', () {

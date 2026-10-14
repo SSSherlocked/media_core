@@ -80,21 +80,21 @@ extension PureLiveStreamExtensions<T> on Stream<T> {
 
   /// Emits [fallback] when an error occurs.
   Stream<T> onErrorReturnValue(T fallback) {
-    return onErrorResume((Object error, StackTrace stackTrace) {
+    return onErrorResume((error, stackTrace) {
       return Stream<T>.value(fallback);
     });
   }
 
   /// Emits a value generated from the error.
   Stream<T> onErrorReturnWithValue(T Function(Object error) mapper) {
-    return onErrorResume((Object error, StackTrace stackTrace) {
+    return onErrorResume((error, stackTrace) {
       return Stream<T>.value(mapper(error));
     });
   }
 
   /// Ignores errors from this stream.
   Stream<T> ignoreErrors() {
-    return onErrorResume((Object error, StackTrace stackTrace) {
+    return onErrorResume((error, stackTrace) {
       return Stream<T>.empty();
     });
   }
@@ -129,7 +129,9 @@ extension PureLiveStreamExtensions<T> on Stream<T> {
   BehaviorSubject<T> toBehaviorSubject() {
     final subject = BehaviorSubject<T>();
 
-    subject.addStream(this);
+    // addStream returns the subject's done future, which only completes once
+    // the caller closes the subject, so nothing here may await it.
+    unawaited(subject.addStream(this));
 
     return subject;
   }
@@ -146,7 +148,9 @@ extension PureLiveStreamExtensions<T> on Stream<T> {
 
     final subject = ReplaySubject<T>(maxSize: maxSize);
 
-    subject.addStream(this);
+    // Same as toBehaviorSubject: the done future only completes when the
+    // caller closes the subject and must not be awaited here.
+    unawaited(subject.addStream(this));
 
     return subject;
   }

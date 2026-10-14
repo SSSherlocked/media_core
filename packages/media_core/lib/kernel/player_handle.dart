@@ -1,67 +1,73 @@
 import 'dart:async';
-import 'package:media_core/core/player_identity.dart';
-import 'package:media_core/kernel/kernel_options.dart';
-import 'package:media_core/core/player_core_state.dart';
-import 'package:rxdart/rxdart.dart';
-import 'package:media_core/core/player_config.dart';
-import 'package:media_core/event/player_event.dart';
-import 'package:media_core/identity/player_id.dart';
-import 'package:media_core/event/event_context.dart';
-import 'package:media_core/identity/source_id.dart';
-import 'package:media_core/identity/session_id.dart';
-import 'package:media_core/event/event_priority.dart';
-import 'package:media_core/policy/player_policy.dart';
-import 'package:media_core/source/player_source.dart';
-import 'package:media_core/planning/default_media_source_planner.dart';
-import 'package:media_core/source/media_source.dart';
-import 'package:media_core/source/media_source_bridge.dart';
-import 'package:media_core/planning/media_source_plan.dart';
-import 'package:media_core/planning/media_source_planner.dart';
-import 'package:media_core/session/session_state.dart';
-import 'package:media_core/runtime/player_runtime.dart';
+
+import 'package:media_core/adapter/engine_option.dart';
 import 'package:media_core/adapter/player_adapter.dart';
-import 'package:media_core/composition/media_timeline.dart';
-import 'package:media_core/event/player_event_bus.dart';
-import 'package:media_core/identity/generation_id.dart';
-import 'package:media_core/session/player_session.dart';
-import 'package:media_core/event/player_event_type.dart';
-import 'package:media_core/playback/playback_buffer.dart';
-import 'package:media_core/playback/player_transport_state.dart';
-import 'package:media_core/session/session_context.dart';
-import 'package:media_core/recovery/recovery_step.dart';
-import 'package:media_core/session/session_snapshot.dart';
-import 'package:media_core/playback/playback_command.dart';
-import 'package:media_core/recovery/recovery_target.dart';
-import 'package:media_core/recovery/recovery_failure.dart';
-import 'package:media_core/recovery/recovery_ladder.dart';
-import 'package:media_core/recovery/recovery_session.dart';
-import 'package:media_core/recovery/recovery_snapshot.dart';
-import 'package:media_core/session/session_controller.dart';
-import 'package:media_core/geometry/geometry_controller.dart';
-import 'package:media_core/adapter/player_adapter_event.dart';
-import 'package:media_core/lifecycle/lifecycle_snapshot.dart';
-import 'package:media_core/playback/playback_controller.dart';
+import 'package:media_core/adapter/player_adapter_capabilities.dart';
 import 'package:media_core/adapter/player_adapter_context.dart';
+import 'package:media_core/adapter/player_adapter_event.dart';
 import 'package:media_core/adapter/player_adapter_metrics.dart';
-import 'package:media_core/lifecycle/lifecycle_controller.dart';
 import 'package:media_core/adapter/player_adapter_registry.dart';
-import 'package:media_core/operation/operation_cancel_token.dart';
-import 'package:media_core/operation/operation.dart';
+import 'package:media_core/adapter/player_adapter_selector.dart';
+import 'package:media_core/composition/media_timeline.dart';
+import 'package:media_core/core/player_config.dart';
+import 'package:media_core/core/player_core_state.dart';
+import 'package:media_core/core/player_identity.dart';
+import 'package:media_core/event/event_context.dart';
+import 'package:media_core/event/event_priority.dart';
+import 'package:media_core/event/player_event.dart';
+import 'package:media_core/event/player_event_bus.dart';
+import 'package:media_core/event/player_event_type.dart';
+import 'package:media_core/geometry/geometry_controller.dart';
+import 'package:media_core/identity/generation_id.dart';
 import 'package:media_core/identity/operation_id.dart';
+import 'package:media_core/identity/player_id.dart';
+import 'package:media_core/identity/session_id.dart';
+import 'package:media_core/identity/source_id.dart';
+import 'package:media_core/kernel/kernel_options.dart';
+import 'package:media_core/kernel/player_handle_snapshot.dart';
+import 'package:media_core/lifecycle/lifecycle_controller.dart';
+import 'package:media_core/lifecycle/lifecycle_snapshot.dart';
+import 'package:media_core/media_core.dart' show MediaPlayerView, PlayerKernel;
+import 'package:media_core/operation/operation.dart';
+import 'package:media_core/operation/operation_cancel_token.dart';
 import 'package:media_core/operation/operation_registry.dart';
 import 'package:media_core/operation/operation_tracker.dart';
 import 'package:media_core/operation/operation_type.dart';
+import 'package:media_core/planning/default_media_source_planner.dart';
+import 'package:media_core/planning/media_source_plan.dart';
+import 'package:media_core/planning/media_source_planner.dart';
+import 'package:media_core/playback/playback_buffer.dart';
+import 'package:media_core/playback/playback_command.dart';
+import 'package:media_core/playback/playback_controller.dart';
+import 'package:media_core/playback/player_transport_state.dart';
+import 'package:media_core/policy/player_policy.dart';
+import 'package:media_core/recovery/recovery_candidate_provider.dart';
+import 'package:media_core/recovery/recovery_failure.dart';
+import 'package:media_core/recovery/recovery_ladder.dart';
+import 'package:media_core/recovery/recovery_ladder_event.dart';
+import 'package:media_core/recovery/recovery_session.dart';
+import 'package:media_core/recovery/recovery_snapshot.dart';
+import 'package:media_core/recovery/recovery_step.dart';
+import 'package:media_core/recovery/recovery_target.dart';
+import 'package:media_core/runtime/player_runtime.dart';
 import 'package:media_core/screenshot/player_screenshot.dart';
 import 'package:media_core/screenshot/screenshot_options.dart';
 import 'package:media_core/screenshot/screenshot_surface.dart';
+import 'package:media_core/session/player_session.dart';
+import 'package:media_core/session/session_context.dart';
+import 'package:media_core/session/session_controller.dart';
+import 'package:media_core/session/session_snapshot.dart';
+import 'package:media_core/session/session_state.dart';
+import 'package:media_core/source/media_source.dart';
+import 'package:media_core/source/media_source_bridge.dart';
+import 'package:media_core/source/player_source.dart';
+import 'package:media_core/util/retry_utils.dart';
 import 'package:media_core_logging/media_core_logging.dart';
-import 'package:media_core/adapter/player_adapter_capabilities.dart';
-import 'package:media_core/recovery/recovery_ladder_event.dart';
-import 'package:media_core/recovery/recovery_candidate_provider.dart';
-import 'package:media_core/adapter/player_adapter_selector.dart';
-import 'package:media_core/kernel/player_handle_snapshot.dart';
-import 'package:media_core/adapter/engine_option.dart';
+import 'package:rxdart/rxdart.dart';
 
+part 'player_handle_adapter.dart';
+part 'player_handle_engine_options.dart';
+part 'player_handle_lifecycle.dart';
 // The implementation of [PlayerHandle] is split by concern across `part`
 // files next to this one:
 //
@@ -77,9 +83,7 @@ import 'package:media_core/adapter/engine_option.dart';
 
 part 'player_handle_operations.dart';
 part 'player_handle_playback.dart';
-part 'player_handle_lifecycle.dart';
 part 'player_handle_recovery.dart';
-part 'player_handle_adapter.dart';part 'player_handle_engine_options.dart';
 
 /// Describes the backend a handle just switched to.
 ///
@@ -133,7 +137,7 @@ final class PlayerBackendChange {
 /// - own the adapter, session or per-runtime controllers
 ///   (those belong to [PlayerRuntime])
 /// - decide when to reopen, switch source or switch backend
-///   (that belongs to [RecoveryLadder] and [RecoveryLadderPolicy])
+///   (that belongs to [RecoveryLadder] and [RecoveryCandidateProvider])
 /// - select or create adapters
 ///
 /// Those belong to:
@@ -197,7 +201,11 @@ final class PlayerHandle implements RecoveryTarget {
            ),
          ),
        ) {
-    _ladder = RecoveryLadder(target: this, candidates: _HandleRecoveryCandidates(this));
+    _ladder = RecoveryLadder(
+      target: this,
+      candidates: _HandleRecoveryCandidates(this),
+      retryDelay: _retryDelayForAttempt,
+    );
 
     _ladderEvents = _ladder.events.listen(_onLadderEvent);
 
@@ -257,22 +265,28 @@ final class PlayerHandle implements RecoveryTarget {
   ///
   /// `null` means the caller never declared an intent, in which case the
   /// playback mirror is the best available answer.
-  bool? _playIntent;
+  ///
+  /// Declaring is not commanding: [play] and [pause] set this as a side
+  /// effect, and writing it only changes what recovery restores to — a
+  /// caller whose engine starts on its own has to declare `true` here
+  /// because nothing else in the framework knows the stream is meant to
+  /// be running.
+  bool? playIntent;
 
   /// Whether output is currently muted.
   ///
   /// Mute is implemented by the handle, not the adapter: every engine
   /// understands volume, so muting stores the previous volume and drives
   /// the adapter to 0. A fresh adapter attached by recovery is re-muted
-  /// by [_applyTrackPreferences] instead of coming back audible.
+  /// by `_applyMute` instead of coming back audible.
   bool _muted = false;
 
   /// Volume to restore on unmute.
-  double _unmutedVolume = 1.0;
+  double _unmutedVolume = 1;
 
   /// Whether playback restarts after completion.
   ///
-  /// Mutable at runtime; [config.loop] only seeds the initial value.
+  /// Mutable at runtime; [PlayerConfig.loop] only seeds the initial value.
   bool _loop;
 
   // ---------------------------------------------------------------------------
@@ -288,6 +302,7 @@ final class PlayerHandle implements RecoveryTarget {
   final OperationRegistry _operationRegistry = OperationRegistry();
   final OperationTracker _operationTracker = OperationTracker();
   Operation? _currentOperation;
+
   /// Track preference applied to whichever adapter is attached.
   ///
   /// Preserved by the handle for the same reason volume and rate are:
@@ -348,6 +363,20 @@ final class PlayerHandle implements RecoveryTarget {
   ///
   /// See [_pendingVolume].
   double? _pendingRate;
+
+  /// Count of volume requests, newest last.
+  ///
+  /// A slider is one request per frame of the drag, and only the value the
+  /// viewer stopped on is a thing they asked for: a queued set whose number is
+  /// no longer the newest is an intermediate and never reaches the engine.
+  /// This coalescing stands in for the shared cancellation slot, which a
+  /// volume request must not take — that slot belongs to the play/seek that
+  /// may be running, and grabbing it used to cancel that operation outright.
+  int _volumeRequest = 0;
+
+  /// See [_volumeRequest].
+  int _rateRequest = 0;
+
   /// Whether this handle's own recovery ladder reacts to failures.
   ///
   /// On by default. A playback owner that runs its own recovery loop (the
@@ -355,7 +384,8 @@ final class PlayerHandle implements RecoveryTarget {
   /// are reported as events only and there is exactly one recovery path
   /// for the player. Without this, two loops would race — the exact
   /// multiply-driven recovery this framework once suffered from.
-  bool _recoveryEnabled = true;
+  bool recoveryEnabled = true;
+
   /// Whether recovery may attach another engine when every line failed.
   ///
   /// Enabled by default. The caller turns it off for the "single line,
@@ -363,7 +393,8 @@ final class PlayerHandle implements RecoveryTarget {
   /// candidate list simply contains no backends, so once the line rungs
   /// are spent the run terminates and the failure is reported instead of
   /// being answered by a silent engine swap.
-  bool _engineFallbackEnabled = true;
+  bool engineFallbackEnabled = true;
+
   /// Engine options applied through engine-option configuration.
   ///
   /// Keyed by (domain, key) so a later value for the same option replaces
@@ -583,7 +614,6 @@ final class PlayerHandle implements RecoveryTarget {
   /// the conventional name consumers reach for first.
   ValueStream<PlayerTransportState> get stateChanges => _runtime.playback.state;
 
-
   // ---------------------------------------------------------------------------
   // Recovery execution (RecoveryTarget)
   //
@@ -612,14 +642,17 @@ final class PlayerHandle implements RecoveryTarget {
       sourceCandidates: candidates.sources,
       backendCandidates: candidates.backends,
       position: current.position,
-      // The caller's intent wins over the adapter mirror. See [_playIntent].
+      // The caller's intent wins over the adapter mirror. See [playIntent].
       //
       // The mirror is the fallback only when the caller never declared an
       // intent, and it is read from the session rather than from
       // `current.isPlaying`: a buffering notification replaces the transport
       // command in the mirror, so a stalled stream can read as "not playing"
       // and would then skip verification entirely.
-      wasPlaying: _playIntent ?? _runtime.session.state.status == SessionStatus.playing || _runtime.session.state.status == SessionStatus.buffering,
+      wasPlaying:
+          playIntent ??
+          _runtime.session.state.status == SessionStatus.playing ||
+              _runtime.session.state.status == SessionStatus.buffering,
       volume: current.volume,
       rate: current.rate,
       backendId: _registration.id,
@@ -675,12 +708,9 @@ final class PlayerHandle implements RecoveryTarget {
 
     _currentSource = null;
     _backendReady = false;
-    _playIntent = null;
+    playIntent = null;
 
-    MediaCoreLog.debug(
-      LogCategory.player,
-      'disposing player ${_player.id.value} (backend ${_registration.id})',
-    );
+    MediaCoreLog.debug(LogCategory.player, 'disposing player ${_player.id.value} (backend ${_registration.id})');
 
     _cancelActiveOperation(StateError('PlayerHandle for ${_player.id} is being disposed.'));
 
@@ -693,33 +723,36 @@ final class PlayerHandle implements RecoveryTarget {
 
     _lifecycle.detach();
 
-    await _record(OperationType.dispose, _enqueue(() async {
-      // Runtime owns the adapter, session controller, playback
-      // controller, geometry controller and both bindings.
-      try {
-        await _runtime.dispose();
-      } catch (_) {
-        // Disposal continues even when the backend refuses.
-      }
+    await _record(
+      OperationType.dispose,
+      _enqueue(() async {
+        // Runtime owns the adapter, session controller, playback
+        // controller, geometry controller and both bindings.
+        try {
+          await _runtime.dispose();
+        } on Object catch (_) {
+          // Disposal continues even when the backend refuses.
+        }
 
-      // Handle-scoped modules.
-      await _ladderEvents.cancel();
-      await _ladder.dispose();
-      await _backendChanges.close();
-      await _sourceChanges.close();
-      await _adapterEvents.close();
+        // Handle-scoped modules.
+        await _ladderEvents.cancel();
+        await _ladder.dispose();
+        await _backendChanges.close();
+        await _sourceChanges.close();
+        await _adapterEvents.close();
 
-      // The recovery-target channel and the operation records are handle
-      // scoped as well: leaving their controllers open means `executionEvents`
-      // and `onOperation` never complete, and a subscriber keeps the handle
-      // (and its whole operation history) alive after disposal.
-      await _targetEvents.close();
+        // The recovery-target channel and the operation records are handle
+        // scoped as well: leaving their controllers open means `executionEvents`
+        // and `onOperation` never complete, and a subscriber keeps the handle
+        // (and its whole operation history) alive after disposal.
+        await _targetEvents.close();
 
-      _operationTracker.dispose();
-      _operationRegistry.dispose();
+        _operationTracker.dispose();
+        _operationRegistry.dispose();
 
-      _lifecycle.dispose();
-    }, allowDisposed: true));
+        _lifecycle.dispose();
+      }, allowDisposed: true),
+    );
 
     await _drainOperations();
   }
@@ -753,7 +786,7 @@ final class _HandleRecoveryCandidates implements RecoveryCandidateProvider {
       return RecoveryCandidates(sources: sources);
     }
 
-    if (!_handle._engineFallbackEnabled) {
+    if (!_handle.engineFallbackEnabled) {
       return RecoveryCandidates(sources: sources);
     }
 
@@ -773,8 +806,7 @@ final class _HandleRecoveryCandidates implements RecoveryCandidateProvider {
         .candidatesFor(source ?? PlayerSource.unknown())
         .where((registration) => registration.id != currentBackendId)
         .where((registration) => registration.enabled)
-        .where((registration) =>
-            !needsComposite || registration.capabilities.supportsComposite)
+        .where((registration) => !needsComposite || registration.capabilities.supportsComposite)
         .toList(growable: false);
 
     return RecoveryCandidates(sources: sources, backends: backends);

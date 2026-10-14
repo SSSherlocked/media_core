@@ -1,8 +1,9 @@
-import 'package:media_core/core/player_media_type.dart';
-import 'package:media_core/core/player_constants.dart';
-import 'package:media_core/core/media_capabilities.dart';
-import 'package:media_core/identity/source_id.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/core/library.dart' show PlayerCapabilities, PlayerCoreState;
+import 'package:media_core/core/media_capabilities.dart';
+import 'package:media_core/core/player_constants.dart';
+import 'package:media_core/core/player_media_type.dart';
+import 'package:media_core/identity/source_id.dart';
 
 /// Defines the immutable configuration of a player.
 ///
@@ -30,6 +31,7 @@ final class PlayerConfig extends Equatable {
     this.playbackRate = PlayerConstants.defaultPlaybackRate,
     this.preload = true,
     this.keepAlive = true,
+    this.pauseWhenBackgrounded,
     this.preferHardwareDecoding = true,
     this.enableAudio = true,
     this.enableVideo = true,
@@ -51,6 +53,14 @@ final class PlayerConfig extends Equatable {
        ),
        assert(maxRecoveryAttempts >= 0, 'Max recovery attempts must not be negative.'),
        assert(maxFallbackAttempts >= 0, 'Max fallback attempts must not be negative.');
+
+  /// Whether leaving the app pauses this player.
+  ///
+  /// Null defers to `KernelOptions.pauseWhenBackgrounded` (which is on). This is
+  /// the per-player exception: a feed page and the wall players next to it should
+  /// stop with the app, while the one narration track the viewer is listening to
+  /// keeps going — and only the playback owner knows which is which.
+  final bool? pauseWhenBackgrounded;
 
   /// Optional human-readable player name.
   final String? name;
@@ -268,6 +278,7 @@ final class PlayerConfig extends Equatable {
     double? playbackRate,
     bool? preload,
     bool? keepAlive,
+    bool? pauseWhenBackgrounded,
     bool? preferHardwareDecoding,
     bool? enableAudio,
     bool? enableVideo,
@@ -293,6 +304,7 @@ final class PlayerConfig extends Equatable {
       playbackRate: playbackRate ?? this.playbackRate,
       preload: preload ?? this.preload,
       keepAlive: keepAlive ?? this.keepAlive,
+      pauseWhenBackgrounded: pauseWhenBackgrounded ?? this.pauseWhenBackgrounded,
       preferHardwareDecoding: preferHardwareDecoding ?? this.preferHardwareDecoding,
       enableAudio: enableAudio ?? this.enableAudio,
       enableVideo: enableVideo ?? this.enableVideo,
@@ -333,7 +345,6 @@ final class PlayerConfig extends Equatable {
       name: name,
       mediaType: mediaType,
       mediaCapabilities: mediaCapabilities,
-      sourceId: null,
       autoInitialize: autoInitialize,
       autoPlay: autoPlay,
       loop: loop,
@@ -357,22 +368,22 @@ final class PlayerConfig extends Equatable {
   }
 
   /// Returns a configuration with automatic initialization changed.
-  PlayerConfig withAutoInitialize(bool value) {
+  PlayerConfig withAutoInitialize({required bool value}) {
     return copyWith(autoInitialize: value);
   }
 
   /// Returns a configuration with automatic playback changed.
-  PlayerConfig withAutoPlay(bool value) {
+  PlayerConfig withAutoPlay({required bool value}) {
     return copyWith(autoPlay: value);
   }
 
   /// Returns a configuration with looping changed.
-  PlayerConfig withLoop(bool value) {
+  PlayerConfig withLoop({required bool value}) {
     return copyWith(loop: value);
   }
 
   /// Returns a configuration with mute state changed.
-  PlayerConfig withMuted(bool value) {
+  PlayerConfig withMuted({required bool value}) {
     return copyWith(muted: value);
   }
 
@@ -387,57 +398,57 @@ final class PlayerConfig extends Equatable {
   }
 
   /// Returns a configuration with preloading changed.
-  PlayerConfig withPreload(bool value) {
+  PlayerConfig withPreload({required bool value}) {
     return copyWith(preload: value);
   }
 
   /// Returns a configuration with keep-alive behavior changed.
-  PlayerConfig withKeepAlive(bool value) {
+  PlayerConfig withKeepAlive({required bool value}) {
     return copyWith(keepAlive: value);
   }
 
   /// Returns a configuration with hardware decoding preference changed.
-  PlayerConfig withHardwareDecoding(bool value) {
+  PlayerConfig withHardwareDecoding({required bool value}) {
     return copyWith(preferHardwareDecoding: value);
   }
 
   /// Returns a configuration with audio output changed.
-  PlayerConfig withAudio(bool value) {
+  PlayerConfig withAudio({required bool value}) {
     return copyWith(enableAudio: value);
   }
 
   /// Returns a configuration with video output changed.
-  PlayerConfig withVideo(bool value) {
+  PlayerConfig withVideo({required bool value}) {
     return copyWith(enableVideo: value);
   }
 
   /// Returns a configuration with subtitle processing changed.
-  PlayerConfig withSubtitles(bool value) {
+  PlayerConfig withSubtitles({required bool value}) {
     return copyWith(enableSubtitles: value);
   }
 
   /// Returns a configuration with buffering changed.
-  PlayerConfig withBuffering(bool value) {
+  PlayerConfig withBuffering({required bool value}) {
     return copyWith(enableBuffering: value);
   }
 
   /// Returns a configuration with recovery changed.
-  PlayerConfig withRecovery(bool value) {
+  PlayerConfig withRecovery({required bool value}) {
     return copyWith(enableRecovery: value);
   }
 
   /// Returns a configuration with fallback changed.
-  PlayerConfig withFallback(bool value) {
+  PlayerConfig withFallback({required bool value}) {
     return copyWith(enableFallback: value);
   }
 
   /// Returns a configuration with metrics collection changed.
-  PlayerConfig withMetrics(bool value) {
+  PlayerConfig withMetrics({required bool value}) {
     return copyWith(enableMetrics: value);
   }
 
   /// Returns a configuration with diagnostics changed.
-  PlayerConfig withDiagnostics(bool value) {
+  PlayerConfig withDiagnostics({required bool value}) {
     return copyWith(enableDiagnostics: value);
   }
 
@@ -477,23 +488,12 @@ final class PlayerConfig extends Equatable {
 
   /// Minimal player configuration.
   static const PlayerConfig minimal = PlayerConfig(
-    autoInitialize: true,
-    autoPlay: false,
-    loop: false,
-    muted: false,
-    volume: 1.0,
-    playbackRate: 1.0,
     preload: false,
     keepAlive: false,
-    preferHardwareDecoding: true,
-    enableAudio: true,
-    enableVideo: true,
     enableSubtitles: false,
-    enableBuffering: true,
     enableRecovery: false,
     enableFallback: false,
     enableMetrics: false,
-    enableDiagnostics: false,
     maxRecoveryAttempts: 0,
     maxFallbackAttempts: 0,
   );
@@ -502,7 +502,6 @@ final class PlayerConfig extends Equatable {
   static const PlayerConfig audioOnly = PlayerConfig(
     mediaType: PlayerMediaType.audio,
     mediaCapabilities: MediaCapabilities.audioOnly,
-    enableAudio: true,
     enableVideo: false,
     enableSubtitles: false,
   );
@@ -512,15 +511,12 @@ final class PlayerConfig extends Equatable {
     mediaType: PlayerMediaType.video,
     mediaCapabilities: MediaCapabilities.videoOnly,
     enableAudio: false,
-    enableVideo: true,
   );
 
   /// Audio-video player configuration.
   static const PlayerConfig audioVideo = PlayerConfig(
     mediaType: PlayerMediaType.audioVideo,
     mediaCapabilities: MediaCapabilities.audioVideo,
-    enableAudio: true,
-    enableVideo: true,
   );
 
   /// Returns whether two configurations describe the same media mode.

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:media_core/task/player_task.dart' show PlayerTask;
 
 /// Describes the kind of work represented by a [PlayerTask].
 ///
@@ -8,7 +9,128 @@ import 'package:equatable/equatable.dart';
 ///
 /// Equality is determined by [value].
 final class TaskType extends Equatable {
+  /// Creates a task type from [value].
+  ///
+  /// Leading and trailing whitespace is removed.
+  ///
+  /// Throws [ArgumentError] when the value is empty.
+  factory TaskType(String value) {
+    final normalized = value.trim();
+
+    if (normalized.isEmpty) {
+      throw ArgumentError.value(value, 'value', 'Task type cannot be empty.');
+    }
+
+    return TaskType.fromString(normalized);
+  }
+
+  /// Creates a task type from a string value.
+  factory TaskType.fromValue(String value) {
+    return TaskType(value);
+  }
+
+  /// Creates a custom task type.
+  ///
+  /// Use this when a task does not match one of the built-in types.
+  factory TaskType.custom(String value) {
+    return TaskType(value);
+  }
   const TaskType._(this.value);
+
+  /// Creates a task type from [value].
+  ///
+  /// Built-in values return their canonical instances.
+  /// Unknown values become custom task types.
+  factory TaskType.fromString(String value) {
+    final normalized = value.trim();
+
+    if (normalized.isEmpty) {
+      throw ArgumentError.value(value, 'value', 'Task type cannot be empty.');
+    }
+
+    switch (normalized) {
+      case 'initialize':
+        return initialize;
+
+      case 'dispose':
+        return dispose;
+
+      case 'open':
+        return open;
+
+      case 'prepare':
+        return prepare;
+
+      case 'load':
+        return load;
+
+      case 'reload':
+        return reload;
+
+      case 'play':
+        return play;
+
+      case 'pause':
+        return pause;
+
+      case 'stop':
+        return stop;
+
+      case 'seek':
+        return seek;
+
+      case 'close':
+        return close;
+
+      case 'set_playback_rate':
+        return setPlaybackRate;
+
+      case 'set_volume':
+        return setVolume;
+
+      case 'set_mute':
+        return setMute;
+
+      case 'enter_fullscreen':
+        return enterFullscreen;
+
+      case 'exit_fullscreen':
+        return exitFullscreen;
+
+      case 'enter_pip':
+        return enterPip;
+
+      case 'exit_pip':
+        return exitPip;
+
+      case 'start_recording':
+        return startRecording;
+
+      case 'stop_recording':
+        return stopRecording;
+
+      case 'recover':
+        return recover;
+
+      case 'fallback':
+        return fallback;
+
+      case 'retry':
+        return retry;
+
+      default:
+        return TaskType._(normalized);
+    }
+  }
+
+  /// Creates a task type from a JSON value.
+  factory TaskType.fromJson(Object? json) {
+    if (json is! String) {
+      throw ArgumentError.value(json, 'json', 'Task type must be a string.');
+    }
+
+    return TaskType.fromString(json);
+  }
 
   // ---------------------------------------------------------------------------
   // Built-in task types
@@ -110,33 +232,6 @@ final class TaskType extends Equatable {
     retry,
   ];
 
-  /// Creates a task type from [value].
-  ///
-  /// Leading and trailing whitespace is removed.
-  ///
-  /// Throws [ArgumentError] when the value is empty.
-  factory TaskType(String value) {
-    final normalized = value.trim();
-
-    if (normalized.isEmpty) {
-      throw ArgumentError.value(value, 'value', 'Task type cannot be empty.');
-    }
-
-    return TaskType.fromString(normalized);
-  }
-
-  /// Creates a task type from a string value.
-  factory TaskType.fromValue(String value) {
-    return TaskType(value);
-  }
-
-  /// Creates a custom task type.
-  ///
-  /// Use this when a task does not match one of the built-in types.
-  factory TaskType.custom(String value) {
-    return TaskType(value);
-  }
-
   /// String representation of this task type.
   final String value;
 
@@ -153,50 +248,73 @@ final class TaskType extends Equatable {
   /// Whether this is a custom task type.
   bool get isCustom => !isBuiltIn;
 
+  /// Whether this is the [TaskType.initialize] task.
   bool get isInitialize => value == initialize.value;
 
+  /// Whether this is the [TaskType.dispose] task.
   bool get isDispose => value == dispose.value;
 
+  /// Whether this is the [TaskType.open] task.
   bool get isOpen => value == open.value;
 
+  /// Whether this is the [TaskType.prepare] task.
   bool get isPrepare => value == prepare.value;
 
+  /// Whether this is the [TaskType.load] task.
   bool get isLoad => value == load.value;
 
+  /// Whether this is the [TaskType.reload] task.
   bool get isReload => value == reload.value;
 
+  /// Whether this is the [TaskType.play] task.
   bool get isPlay => value == play.value;
 
+  /// Whether this is the [TaskType.pause] task.
   bool get isPause => value == pause.value;
 
+  /// Whether this is the [TaskType.stop] task.
   bool get isStop => value == stop.value;
 
+  /// Whether this is the [TaskType.seek] task.
   bool get isSeek => value == seek.value;
 
+  /// Whether this is the [TaskType.close] task.
   bool get isClose => value == close.value;
 
+  /// Whether this is the [TaskType.setPlaybackRate] task.
   bool get isSetPlaybackRate => value == setPlaybackRate.value;
 
+  /// Whether this is the [TaskType.setVolume] task.
   bool get isSetVolume => value == setVolume.value;
 
+  /// Whether this is the [TaskType.setMute] task.
   bool get isSetMute => value == setMute.value;
 
+  /// Whether this is the [TaskType.enterFullscreen] task.
   bool get isEnterFullscreen => value == enterFullscreen.value;
 
+  /// Whether this is the [TaskType.exitFullscreen] task.
   bool get isExitFullscreen => value == exitFullscreen.value;
 
+  /// Whether this is the [TaskType.enterPip] task.
   bool get isEnterPip => value == enterPip.value;
 
+  /// Whether this is the [TaskType.exitPip] task.
   bool get isExitPip => value == exitPip.value;
 
+  /// Whether this is the [TaskType.startRecording] task.
   bool get isStartRecording => value == startRecording.value;
 
+  /// Whether this is the [TaskType.stopRecording] task.
   bool get isStopRecording => value == stopRecording.value;
 
+  /// Whether this is the [TaskType.recover] task.
   bool get isRecover => value == recover.value;
 
+  /// Whether this is the [TaskType.fallback] task.
   bool get isFallback => value == fallback.value;
 
+  /// Whether this is the [TaskType.retry] task.
   bool get isRetry => value == retry.value;
 
   // ---------------------------------------------------------------------------
@@ -232,101 +350,6 @@ final class TaskType extends Equatable {
   /// Whether [value] represents a built-in task type.
   static bool isBuiltInValue(String value) {
     return _builtInValues.contains(value.trim());
-  }
-
-  /// Creates a task type from [value].
-  ///
-  /// Built-in values return their canonical instances.
-  /// Unknown values become custom task types.
-  static TaskType fromString(String value) {
-    final normalized = value.trim();
-
-    if (normalized.isEmpty) {
-      throw ArgumentError.value(value, 'value', 'Task type cannot be empty.');
-    }
-
-    switch (normalized) {
-      case 'initialize':
-        return initialize;
-
-      case 'dispose':
-        return dispose;
-
-      case 'open':
-        return open;
-
-      case 'prepare':
-        return prepare;
-
-      case 'load':
-        return load;
-
-      case 'reload':
-        return reload;
-
-      case 'play':
-        return play;
-
-      case 'pause':
-        return pause;
-
-      case 'stop':
-        return stop;
-
-      case 'seek':
-        return seek;
-
-      case 'close':
-        return close;
-
-      case 'set_playback_rate':
-        return setPlaybackRate;
-
-      case 'set_volume':
-        return setVolume;
-
-      case 'set_mute':
-        return setMute;
-
-      case 'enter_fullscreen':
-        return enterFullscreen;
-
-      case 'exit_fullscreen':
-        return exitFullscreen;
-
-      case 'enter_pip':
-        return enterPip;
-
-      case 'exit_pip':
-        return exitPip;
-
-      case 'start_recording':
-        return startRecording;
-
-      case 'stop_recording':
-        return stopRecording;
-
-      case 'recover':
-        return recover;
-
-      case 'fallback':
-        return fallback;
-
-      case 'retry':
-        return retry;
-
-      default:
-        return TaskType._(normalized);
-    }
-  }
-
-  /// Creates a task type from a JSON value.
-  static TaskType fromJson(Object? json) {
-    if (json is! String) {
-      throw ArgumentError.value(json, 'json', 'Task type must be a string.');
-    }
-
-    return fromString(json);
   }
 
   /// Serializes this task type.

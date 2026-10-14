@@ -21,6 +21,8 @@ import 'package:flutter/widgets.dart';
 /// - calculate video geometry
 /// - manage renderer lifecycle
 final class PlayerSurface extends StatelessWidget {
+  /// Wraps the backend's [child] in the surface framing: fit, alignment,
+  /// optional mirroring and a background for the time before frames arrive.
   const PlayerSurface({
     required this.child,
     super.key,
@@ -54,7 +56,7 @@ final class PlayerSurface extends StatelessWidget {
     if (mirror) {
       content = Transform(
         alignment: Alignment.center,
-        transform: Matrix4.identity()..scaleByDouble(-1.0, 1.0, 1.0, 1.0),
+        transform: Matrix4.identity()..scaleByDouble(-1, 1, 1, 1),
         child: content,
       );
     }

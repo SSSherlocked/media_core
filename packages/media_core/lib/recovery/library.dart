@@ -22,6 +22,12 @@
 /// removing or renaming files in this module.
 library;
 
+// Diagnostics. Not part of the decision path.
+export 'package:media_core/recovery/recovery_action.dart';
+// What the ladder decides with.
+export 'package:media_core/recovery/recovery_candidate_provider.dart';
+export 'package:media_core/recovery/recovery_context.dart';
+export 'package:media_core/recovery/recovery_failure.dart';
 // ============================================================================
 // Public exports
 // ============================================================================
@@ -29,19 +35,10 @@ library;
 // The ladder: one decision point per failure.
 export 'package:media_core/recovery/recovery_ladder.dart';
 export 'package:media_core/recovery/recovery_ladder_event.dart';
-
-// What the ladder decides with.
-export 'package:media_core/recovery/recovery_candidate_provider.dart';
-export 'package:media_core/recovery/recovery_failure.dart';
-export 'package:media_core/recovery/recovery_session.dart';
-export 'package:media_core/recovery/recovery_step.dart';
-
-// What the ladder drives.
-export 'package:media_core/recovery/recovery_target.dart';
-
-// Diagnostics. Not part of the decision path.
-export 'package:media_core/recovery/recovery_action.dart';
-export 'package:media_core/recovery/recovery_context.dart';
 export 'package:media_core/recovery/recovery_reason.dart';
+export 'package:media_core/recovery/recovery_session.dart';
 export 'package:media_core/recovery/recovery_snapshot.dart';
 export 'package:media_core/recovery/recovery_state.dart';
+export 'package:media_core/recovery/recovery_step.dart';
+// What the ladder drives.
+export 'package:media_core/recovery/recovery_target.dart';

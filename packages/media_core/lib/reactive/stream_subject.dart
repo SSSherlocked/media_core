@@ -88,9 +88,13 @@ abstract final class StreamSubject {
 /// await state.close();
 /// ```
 class ManagedBehaviorSubject<T> {
-  ManagedBehaviorSubject.seeded(T initialValue) : _subject = BehaviorSubject<T>.seeded(initialValue);
-
+  /// Creates a subject with no value yet; reading [value] before the first
+  /// [add] throws, so use [ManagedBehaviorSubject.seeded] when a default is
+  /// required.
   ManagedBehaviorSubject() : _subject = BehaviorSubject<T>();
+
+  /// Creates a subject that already exposes [initialValue] to new subscribers.
+  ManagedBehaviorSubject.seeded(T initialValue) : _subject = BehaviorSubject<T>.seeded(initialValue);
 
   final BehaviorSubject<T> _subject;
 

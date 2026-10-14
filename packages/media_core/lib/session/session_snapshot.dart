@@ -1,9 +1,9 @@
-import 'package:media_core/session/session_state.dart';
-import 'package:media_core/identity/player_id.dart';
-import 'package:media_core/identity/source_id.dart';
-import 'package:media_core/identity/session_id.dart';
-import 'package:media_core/identity/generation_id.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/identity/generation_id.dart';
+import 'package:media_core/identity/player_id.dart';
+import 'package:media_core/identity/session_id.dart';
+import 'package:media_core/identity/source_id.dart';
+import 'package:media_core/session/session_state.dart';
 
 part 'session_snapshot.freezed.dart';
 
@@ -38,6 +38,9 @@ abstract class SessionSnapshot with _$SessionSnapshot {
     /// Current generation identity.
     required GenerationId generationId,
 
+    /// Time at which this snapshot was created.
+    required DateTime timestamp,
+
     /// Current source identity.
     SourceId? sourceId,
 
@@ -58,14 +61,13 @@ abstract class SessionSnapshot with _$SessionSnapshot {
 
     /// Error description, when available.
     String? errorMessage,
-
-    /// Time at which this snapshot was created.
-    required DateTime timestamp,
   }) = _SessionSnapshot;
 }
 
 /// Serialization helpers for [SessionSnapshot].
 extension SessionSnapshotSerialization on SessionSnapshot {
+  /// Returns the snapshot as a flat map, with identities and durations
+  /// reduced to their serializable representations.
   Map<String, Object?> toMap() => {
     'playerId': playerId.value,
     'sessionId': sessionId.value,

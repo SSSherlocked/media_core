@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'package:media_core/event/event_filter.dart';
-import 'package:media_core/event/player_event.dart';
-import 'package:media_core/event/event_priority.dart';
-import 'package:media_core/event/event_dispatcher.dart';
-import 'package:media_core/event/event_subscription.dart';
 
+import 'package:media_core/event/event_dispatcher.dart';
+import 'package:media_core/event/event_filter.dart';
+import 'package:media_core/event/event_priority.dart';
+import 'package:media_core/event/event_subscription.dart';
+import 'package:media_core/event/player_event.dart';
 
 /// Central event bus for the media core.
 ///
@@ -17,6 +17,8 @@ import 'package:media_core/event/event_subscription.dart';
 ///
 /// Business logic must remain outside the event bus.
 final class PlayerEventBus {
+  /// Creates a bus backed by a broadcast controller; [sync] makes published
+  /// events reach current subscribers within the same [publish] call.
   PlayerEventBus({bool sync = false}) : _controller = StreamController<PlayerEvent>.broadcast(sync: sync) {
     _dispatcher = EventDispatcher(source: _controller.stream);
   }
@@ -30,8 +32,10 @@ final class PlayerEventBus {
   /// Read-only event stream.
   Stream<PlayerEvent> get stream => _controller.stream;
 
+  /// The dispatcher that hands bus events to filtered subscriptions.
   EventDispatcher get dispatcher => _dispatcher;
 
+  /// Whether [dispose] has run and further publishing is rejected.
   bool get isDisposed => _disposed;
 
   /// Publishes one event.
@@ -49,9 +53,7 @@ final class PlayerEventBus {
   void publishAll(Iterable<PlayerEvent> events) {
     _ensureNotDisposed();
 
-    for (final PlayerEvent event in events) {
-      publish(event);
-    }
+    events.forEach(publish);
   }
 
   /// Subscribes to the bus.
@@ -80,11 +82,12 @@ final class PlayerEventBus {
   Future<PlayerEvent> next({EventFilter? filter}) {
     _ensureNotDisposed();
 
-    final EventFilter effectiveFilter = filter ?? const AllowAllEventFilter();
+    final effectiveFilter = filter ?? const AllowAllEventFilter();
 
     return stream.firstWhere(effectiveFilter.accepts);
   }
 
+  /// Disposes the dispatcher and closes the controller; idempotent.
   Future<void> dispose() async {
     if (_disposed) {
       return;

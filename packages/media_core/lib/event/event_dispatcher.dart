@@ -1,15 +1,17 @@
 import 'dart:async';
 import 'package:media_core/event/event_filter.dart';
-import 'package:media_core/event/player_event.dart';
 import 'package:media_core/event/event_priority.dart';
 import 'package:media_core/event/event_subscription.dart';
-
+import 'package:media_core/event/player_event.dart';
+import 'package:media_core/event/player_event_bus.dart' show PlayerEventBus;
 
 /// Dispatches player events to subscribers.
 ///
 /// The dispatcher provides filtering and listener registration but does not
 /// own the event source. [PlayerEventBus] supplies the source stream.
 final class EventDispatcher {
+  /// Creates a dispatcher fed by [source], or an empty stream when none is
+  /// supplied so a dispatcher with no event source is still usable.
   EventDispatcher({Stream<PlayerEvent>? source}) : _source = source;
 
   final Stream<PlayerEvent>? _source;
@@ -18,6 +20,7 @@ final class EventDispatcher {
 
   bool _disposed = false;
 
+  /// Whether [dispose] has run and further subscriptions are rejected.
   bool get isDisposed => _disposed;
 
   /// Subscribes to all events accepted by [filter].
@@ -28,17 +31,17 @@ final class EventDispatcher {
   }) {
     _ensureNotDisposed();
 
-    final EventFilter effectiveFilter = _combineFilters(filter, minimumPriority);
+    final effectiveFilter = _combineFilters(filter, minimumPriority);
 
-    final Stream<PlayerEvent> source = _source ?? const Stream.empty();
+    final source = _source ?? const Stream.empty();
 
-    late EventSubscription result;
-
-    final StreamSubscription<PlayerEvent> subscription = source
-        .where(effectiveFilter.accepts)
-        .listen(listener, onError: (Object error, StackTrace stackTrace) {});
-
-    result = EventSubscription(subscription: subscription, filter: effectiveFilter, onCancelled: _remove);
+    final result = EventSubscription(
+      subscription: source
+          .where(effectiveFilter.accepts)
+          .listen(listener, onError: (Object error, StackTrace stackTrace) {}),
+      filter: effectiveFilter,
+      onCancelled: _remove,
+    );
 
     _subscriptions.add(result);
 
@@ -53,25 +56,18 @@ final class EventDispatcher {
   }) {
     _ensureNotDisposed();
 
-    final EventFilter effectiveFilter = _combineFilters(filter, minimumPriority);
+    final effectiveFilter = _combineFilters(filter, minimumPriority);
 
-    final Stream<PlayerEvent> source = _source ?? const Stream.empty();
+    final source = _source ?? const Stream.empty();
 
     late EventSubscription result;
 
-    final StreamSubscription<PlayerEvent> subscription = source.where(effectiveFilter.accepts).listen((
-      PlayerEvent event,
-    ) async {
+    final subscription = source.where(effectiveFilter.accepts).listen((event) async {
       listener(event);
       await result.cancel();
     });
 
-    result = EventSubscription(
-      subscription: subscription,
-      filter: effectiveFilter,
-      once: true,
-      onCancelled: _remove,
-    );
+    result = EventSubscription(subscription: subscription, filter: effectiveFilter, once: true, onCancelled: _remove);
 
     _subscriptions.add(result);
 
@@ -85,7 +81,7 @@ final class EventDispatcher {
   bool dispatchTo(PlayerEvent event, void Function(PlayerEvent event) listener, {EventFilter? filter}) {
     _ensureNotDisposed();
 
-    final EventFilter effectiveFilter = filter ?? const AllowAllEventFilter();
+    final effectiveFilter = filter ?? const AllowAllEventFilter();
 
     if (!effectiveFilter.accepts(event)) {
       return false;
@@ -108,15 +104,18 @@ final class EventDispatcher {
       return;
     }
 
-    final List<EventSubscription> subscriptions = List<EventSubscription>.from(_subscriptions);
+    final subscriptions = List<EventSubscription>.from(_subscriptions);
 
     _subscriptions.clear();
 
-    for (final EventSubscription subscription in subscriptions) {
+    for (final subscription in subscriptions) {
       await subscription.cancel();
     }
   }
 
+  /// Cancels every registered subscription and rejects further use.
+  ///
+  /// Idempotent: a second call is a no-op once already disposed.
   Future<void> dispose() async {
     if (_disposed) {
       return;
@@ -124,11 +123,11 @@ final class EventDispatcher {
 
     _disposed = true;
 
-    final List<EventSubscription> subscriptions = List<EventSubscription>.from(_subscriptions);
+    final subscriptions = List<EventSubscription>.from(_subscriptions);
 
     _subscriptions.clear();
 
-    for (final EventSubscription subscription in subscriptions) {
+    for (final subscription in subscriptions) {
       await subscription.cancel();
     }
   }
@@ -142,7 +141,8 @@ final class EventDispatcher {
     _subscriptions.remove(subscription);
   }
 
-  EventFilter _combineFilters(EventFilter? filter, EventPriority? minimumPriority) {    if (filter == null && minimumPriority == null) {
+  EventFilter _combineFilters(EventFilter? filter, EventPriority? minimumPriority) {
+    if (filter == null && minimumPriority == null) {
       return const AllowAllEventFilter();
     }
 

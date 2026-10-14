@@ -12,7 +12,16 @@ import 'package:equatable/equatable.dart';
 ///
 /// Renderer decides how to apply this information.
 final class VideoRotationInfo extends Equatable {
+  /// Creates rotation metadata for an explicit [angle].
+  ///
+  /// The [angle] is stored as given; [VideoRotationInfo.fromDegrees] and the
+  /// parsing entry points are the ones that normalize it to a quarter turn.
   const VideoRotationInfo({required this.angle});
+
+  /// Restores rotation metadata from a map produced by [toMap].
+  factory VideoRotationInfo.fromMap(Map<String, dynamic> map) {
+    return VideoRotationInfo(angle: _normalize(map['angle'] as int? ?? 0));
+  }
 
   /// No rotation.
   const VideoRotationInfo.none() : angle = 0;
@@ -91,12 +100,9 @@ final class VideoRotationInfo extends Equatable {
     return VideoRotationInfo(angle: _normalize(angle));
   }
 
+  /// Converts to a simple map.
   Map<String, dynamic> toMap() {
     return {'angle': angle};
-  }
-
-  factory VideoRotationInfo.fromMap(Map<String, dynamic> map) {
-    return VideoRotationInfo(angle: _normalize(map['angle'] as int? ?? 0));
   }
 
   static int _normalize(int degrees) {

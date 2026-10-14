@@ -17,17 +17,8 @@ import 'package:media_core/source/source_protocol.dart';
 const _httpProtocols = <String>{'http', 'https', 'hls', 'dash'};
 const _mp4Formats = <String>{'mp4', 'm4s', 'mpd', 'm3u8'};
 
-PlayerAdapterRegistration _reg(
-  String id, {
-  required PlayerAdapterCapabilities capabilities,
-  int priority = 0,
-}) {
-  return PlayerAdapterRegistration(
-    id: id,
-    capabilities: capabilities,
-    factory: _NullFactory(),
-    priority: priority,
-  );
+PlayerAdapterRegistration _reg(String id, {required PlayerAdapterCapabilities capabilities, int priority = 0}) {
+  return PlayerAdapterRegistration(id: id, capabilities: capabilities, factory: _NullFactory(), priority: priority);
 }
 
 PlayerAdapterCapabilities _caps({
@@ -42,17 +33,11 @@ PlayerAdapterCapabilities _caps({
   supportsLive: live,
 );
 
-MediaTrack _videoTrack(String url) => MediaTrack(
-  uri: Uri.parse(url),
-  kind: MediaTrackType.video,
-  mimeType: 'video/mp4',
-);
+MediaTrack _videoTrack(String url) =>
+    MediaTrack(uri: Uri.parse(url), kind: MediaTrackType.video, mimeType: 'video/mp4');
 
-MediaTrack _audioTrack(String url) => MediaTrack(
-  uri: Uri.parse(url),
-  kind: MediaTrackType.audio,
-  mimeType: 'audio/mp4',
-);
+MediaTrack _audioTrack(String url) =>
+    MediaTrack(uri: Uri.parse(url), kind: MediaTrackType.audio, mimeType: 'audio/mp4');
 
 void main() {
   _liveScoringTests();
@@ -78,9 +63,7 @@ void main() {
         ..register(_reg('ijk', capabilities: _caps()));
       final selector = PlayerAdapterSelector(registry);
 
-      final composite = CompositeMediaSource(
-        videoTracks: [_videoTrack('https://example.com/v.m4s')],
-      );
+      final composite = CompositeMediaSource(videoTracks: [_videoTrack('https://example.com/v.m4s')]);
 
       expect(selector.selectMedia(composite)!.id, 'mpv');
     });
@@ -90,13 +73,10 @@ void main() {
       // back the single-URL backend so the planner is the one that
       // refuses, with a reason. Returning null would hide that failure
       // at the wrong layer.
-      final registry = PlayerAdapterRegistry()
-        ..register(_reg('fijk', capabilities: _caps()));
+      final registry = PlayerAdapterRegistry()..register(_reg('fijk', capabilities: _caps()));
       final selector = PlayerAdapterSelector(registry);
 
-      final composite = CompositeMediaSource(
-        videoTracks: [_videoTrack('https://example.com/v.m4s')],
-      );
+      final composite = CompositeMediaSource(videoTracks: [_videoTrack('https://example.com/v.m4s')]);
 
       expect(selector.selectMedia(composite)!.id, 'fijk');
     });
@@ -112,10 +92,7 @@ void main() {
         audioTracks: [_audioTrack('https://example.com/a.m4s')],
       );
 
-      expect(
-        selector.selectMedia(composite, preferredId: 'mpv')!.id,
-        'mpv',
-      );
+      expect(selector.selectMedia(composite, preferredId: 'mpv')!.id, 'mpv');
     });
 
     test('progressive source is unaffected by composite bonuses', () {
@@ -124,9 +101,7 @@ void main() {
         ..register(_reg('media3', capabilities: _caps(composite: CompositeSupport.native)));
       final selector = PlayerAdapterSelector(registry);
 
-      final progressive = ProgressiveMediaSource(
-        track: _videoTrack('https://example.com/v.mp4'),
-      );
+      final progressive = ProgressiveMediaSource(track: _videoTrack('https://example.com/v.mp4'));
 
       // The high-priority simple backend still wins because composite
       // support is not scored for progressive sources.
@@ -140,14 +115,13 @@ void main() {
       final selector = PlayerAdapterSelector(registry);
 
       final progressiveAudio = ProgressiveMediaSource(
-        track: MediaTrack(
-          uri: Uri.parse('https://example.com/song.mp4'),
-          kind: MediaTrackType.audio,
-        ),
+        track: MediaTrack(uri: Uri.parse('https://example.com/song.mp4'), kind: MediaTrackType.audio),
       );
 
-      expect(selector.scoreMedia(_lookup(registry, 'mpv'), progressiveAudio),
-          greaterThan(selector.scoreMedia(_lookup(registry, 'plain'), progressiveAudio)));
+      expect(
+        selector.scoreMedia(_lookup(registry, 'mpv'), progressiveAudio),
+        greaterThan(selector.scoreMedia(_lookup(registry, 'plain'), progressiveAudio)),
+      );
     });
   });
 
@@ -173,34 +147,18 @@ void main() {
   group('PlayerAdapterSelector.compositeMatches', () {
     test('returns true for a progressive source regardless of backend support', () {
       final selector = PlayerAdapterSelector(PlayerAdapterRegistry());
-      final progressive = ProgressiveMediaSource(
-        track: _videoTrack('https://example.com/v.mp4'),
-      );
+      final progressive = ProgressiveMediaSource(track: _videoTrack('https://example.com/v.mp4'));
 
-      expect(
-        selector.compositeMatches(_caps(), progressive),
-        isTrue,
-      );
-      expect(
-        selector.compositeMatches(_caps(composite: CompositeSupport.native), progressive),
-        isTrue,
-      );
+      expect(selector.compositeMatches(_caps(), progressive), isTrue);
+      expect(selector.compositeMatches(_caps(composite: CompositeSupport.native), progressive), isTrue);
     });
 
     test('mirrors supportsComposite for a composite source', () {
       final selector = PlayerAdapterSelector(PlayerAdapterRegistry());
-      final composite = CompositeMediaSource(
-        videoTracks: [_videoTrack('https://example.com/v.m4s')],
-      );
+      final composite = CompositeMediaSource(videoTracks: [_videoTrack('https://example.com/v.m4s')]);
 
       expect(selector.compositeMatches(_caps(), composite), isFalse);
-      expect(
-        selector.compositeMatches(
-          _caps(composite: CompositeSupport.externalAudio),
-          composite,
-        ),
-        isTrue,
-      );
+      expect(selector.compositeMatches(_caps(composite: CompositeSupport.externalAudio), composite), isTrue);
     });
   });
 
@@ -228,14 +186,9 @@ void main() {
   group('PlayerAdapterSelector.requireMedia', () {
     test('throws StateError when the registry is empty', () {
       final selector = PlayerAdapterSelector(PlayerAdapterRegistry());
-      final progressive = ProgressiveMediaSource(
-        track: _videoTrack('https://example.com/v.mp4'),
-      );
+      final progressive = ProgressiveMediaSource(track: _videoTrack('https://example.com/v.mp4'));
 
-      expect(
-        () => selector.requireMedia(progressive),
-        throwsA(isA<StateError>()),
-      );
+      expect(() => selector.requireMedia(progressive), throwsA(isA<StateError>()));
     });
 
     test('disabled backends are never selected', () {
@@ -251,9 +204,7 @@ void main() {
         ..register(_reg('on', capabilities: _caps(composite: CompositeSupport.externalAudio)));
       final selector = PlayerAdapterSelector(registry);
 
-      final composite = CompositeMediaSource(
-        videoTracks: [_videoTrack('https://example.com/v.m4s')],
-      );
+      final composite = CompositeMediaSource(videoTracks: [_videoTrack('https://example.com/v.m4s')]);
 
       expect(selector.requireMedia(composite).id, 'on');
     });
@@ -267,29 +218,20 @@ void main() {
       final selector = PlayerAdapterSelector(registry);
 
       final uri = Uri.parse('https://example.com/v.mp4');
-      final flat = PlayerSource(
-        id: SourceId('s'),
-        uri: uri,
-        protocol: SourceProtocol.https,
-        format: SourceFormat.mp4,
-      );
-      final media = ProgressiveMediaSource(
-        track: _videoTrack(uri.toString()),
-      );
+      final flat = PlayerSource(id: SourceId('s'), uri: uri, protocol: SourceProtocol.https, format: SourceFormat.mp4);
+      final media = ProgressiveMediaSource(track: _videoTrack(uri.toString()));
 
       expect(selector.require(flat).id, selector.requireMedia(media).id);
     });
   });
 }
 
-PlayerAdapterRegistration _lookup(PlayerAdapterRegistry registry, String id) =>
-    registry.get(id)!;
+PlayerAdapterRegistration _lookup(PlayerAdapterRegistry registry, String id) => registry.get(id)!;
 
 /// Placeholder factory that would never be invoked by selector tests.
 class _NullFactory implements PlayerAdapterFactory {
   @override
-  PlayerAdapter create(String id) =>
-      throw UnsupportedError('Factory must not be invoked by selection tests.');
+  PlayerAdapter create(String id) => throw UnsupportedError('Factory must not be invoked by selection tests.');
 
   @override
   bool supports(String id) => true;
@@ -305,10 +247,7 @@ void _liveScoringTests() {
         ..register(_reg('live-ok', capabilities: _caps(live: true)));
       final selector = PlayerAdapterSelector(registry);
 
-      final live = ProgressiveMediaSource.url(
-        Uri.parse('https://example.com/stream.m3u8'),
-        live: true,
-      );
+      final live = ProgressiveMediaSource.url(Uri.parse('https://example.com/stream.m3u8'), live: true);
 
       expect(selector.selectMedia(live)!.id, 'live-ok');
       expect(
@@ -323,9 +262,7 @@ void _liveScoringTests() {
         ..register(_reg('live-ok', capabilities: _caps(live: true)));
       final selector = PlayerAdapterSelector(registry);
 
-      final vod = ProgressiveMediaSource.url(
-        Uri.parse('https://example.com/movie.mp4'),
-      );
+      final vod = ProgressiveMediaSource.url(Uri.parse('https://example.com/movie.mp4'));
 
       expect(
         selector.scoreMedia(_lookup(registry, 'live-ok'), vod),

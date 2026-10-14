@@ -14,57 +14,32 @@ final class FakePlatformProvider implements PlatformProvider {
     PlatformCapabilities? capabilities,
     PlatformDeviceProfile? device,
     PlatformCodecCapabilities? codecs,
-  })  : _type = type ?? PlatformType.unknown,
-        _info = info ??
-            PlatformInfo(
-              type: type ?? PlatformType.unknown,
-              name: 'FakeDevice',
-              version: '1.0.0',
-            ),
-        _capabilities = capabilities ?? const PlatformCapabilities(),
-        _device = device ?? PlatformDeviceProfile.unknown,
-        _codecs = codecs ?? PlatformCodecCapabilities.unknown;
+  }) : type = type ?? PlatformType.unknown,
+       info = info ?? PlatformInfo(type: type ?? PlatformType.unknown, name: 'FakeDevice', version: '1.0.0'),
+       capabilities = capabilities ?? const PlatformCapabilities(),
+       device = device ?? PlatformDeviceProfile.unknown,
+       codecs = codecs ?? PlatformCodecCapabilities.unknown;
 
-  PlatformType _type;
-  PlatformInfo _info;
-  PlatformCapabilities _capabilities;
-  PlatformDeviceProfile _device;
-  PlatformCodecCapabilities _codecs;
+  @override
+  PlatformType type;
+
+  @override
+  PlatformInfo info;
+
+  @override
+  PlatformCapabilities capabilities;
+
+  @override
+  PlatformDeviceProfile device;
+
+  @override
+  PlatformCodecCapabilities codecs;
+
   bool _ready = false;
-
-  @override
-  PlatformType get type => _type;
-
-  @override
-  PlatformInfo get info => _info;
-
-  @override
-  PlatformCapabilities get capabilities => _capabilities;
-
-  @override
-  PlatformDeviceProfile get device => _device;
-
-  @override
-  PlatformCodecCapabilities get codecs => _codecs;
 
   @override
   bool get isReady => _ready;
 
   /// Marks the provider as ready.
   void markReady() => _ready = true;
-
-  /// Replaces the platform type.
-  void updateType(PlatformType type) => _type = type;
-
-  /// Replaces the platform info.
-  void updateInfo(PlatformInfo info) => _info = info;
-
-  /// Replaces the capabilities.
-  void updateCapabilities(PlatformCapabilities capabilities) => _capabilities = capabilities;
-
-  /// Replaces the device profile.
-  void updateDevice(PlatformDeviceProfile device) => _device = device;
-
-  /// Replaces the codec capabilities.
-  void updateCodecs(PlatformCodecCapabilities codecs) => _codecs = codecs;
 }

@@ -175,7 +175,7 @@ class StreamDisposable {
     for (final subscription in subscriptions) {
       try {
         await subscription.cancel();
-      } catch (_) {
+      } on Object catch (_) {
         // Cleanup should continue even when one subscription fails.
       }
     }
@@ -201,7 +201,7 @@ class StreamDisposable {
     for (final sink in sinks) {
       try {
         await sink.close();
-      } catch (_) {
+      } on Object catch (_) {
         // Cleanup should continue.
       }
     }
@@ -218,7 +218,7 @@ class StreamDisposable {
         if (!subject.isClosed) {
           await subject.close();
         }
-      } catch (_) {
+      } on Object catch (_) {
         // Cleanup should continue.
       }
     }
@@ -233,7 +233,7 @@ class StreamDisposable {
     for (final cleanup in cleanups) {
       try {
         await cleanup();
-      } catch (_) {
+      } on Object catch (_) {
         // Cleanup should continue.
       }
     }

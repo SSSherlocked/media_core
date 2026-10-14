@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:media_core/concurrency/serial_executor.dart';
 import 'package:media_core/diagnostics/library.dart' show LogCategory, LogModule, MediaCoreLog;
-import 'package:media_core_memory/media_core_memory.dart';
-import 'package:media_core/resource/resource_pressure.dart';
-import 'package:media_core/source/player_source.dart';
 import 'package:media_core/pool/player_pool_config.dart';
 import 'package:media_core/pool/pool_player_host.dart';
+import 'package:media_core/resource/resource_pressure.dart';
+import 'package:media_core/source/player_source.dart';
+import 'package:media_core_memory/media_core_memory.dart';
 
 /// Decision trail for the pool.
 ///
@@ -34,10 +34,17 @@ enum PooledItemRole {
 
 /// One item's assignment in the current plan.
 final class PooledItemState {
+  /// Describes item [index] of [source] carrying [role], on [playerId] when a
+  /// player holds it.
   const PooledItemState({required this.index, required this.source, required this.role, this.playerId});
 
+  /// Position of the item in the list.
   final int index;
+
+  /// Source the item plays.
   final PlayerSource source;
+
+  /// Role the pool gave this item in the current plan.
   final PooledItemRole role;
 
   /// PlayerIdentity holding this item, when one does.
@@ -49,6 +56,7 @@ final class PooledItemState {
 
 /// The pool's decision for the whole list after a reconciliation.
 final class PlaybackPoolPlan {
+  /// Describes the pool's holding after a reconciliation.
   const PlaybackPoolPlan({
     required this.items,
     required this.activeIndex,
@@ -57,6 +65,7 @@ final class PlaybackPoolPlan {
     required this.released,
   });
 
+  /// Every list item with the role the pool assigned to it.
   final List<PooledItemState> items;
 
   /// Item that should be playing, or `null` when nothing qualifies.
@@ -88,6 +97,14 @@ final class _Assignment {
   PooledItemRole role;
   Duration since;
   Duration? openedFor;
+
+  /// The source the handle was last opened on.
+  ///
+  /// A list refresh, or an insertion above this item, can put a different video
+  /// behind the same index; without this the pool would happily resume the
+  /// stale source and the viewer would keep watching the item that used to be
+  /// there.
+  PlayerSource? openedSource;
 }
 
 /// Keeps a small set of players warm for an ordered list.
@@ -122,6 +139,7 @@ final class _Assignment {
 /// plays, below [PlayerPoolConfig.pauseVisibilityThreshold] it stops, and in
 /// between nothing changes, so a partly visible item does not flap.
 final class PlaybackPoolOrchestrator {
+  /// Creates a pool over [host] with [config] and an injectable [clock].
   PlaybackPoolOrchestrator({
     required PoolPlayerHost host,
     PlayerPoolConfig config = const PlayerPoolConfig(),
@@ -215,7 +233,7 @@ final class PlaybackPoolOrchestrator {
       // Indexes shift when items are inserted or removed, so an assignment that
       // survived keeps its player but must re-check whether it still holds the
       // source it was opened for.
-      return _reconcileLocked();
+      return await _reconcileLocked();
     });
   }
 
@@ -228,7 +246,7 @@ final class PlaybackPoolOrchestrator {
   }
 
   /// Reports that the whole list scrolled out of view.
-  Future<PlaybackPoolPlan> setViewportVisible(bool visible) {
+  Future<PlaybackPoolPlan> setViewportVisible({required bool visible}) {
     _ensureNotDisposed();
     if (_viewportVisible == visible) {
       return Future<PlaybackPoolPlan>.value(currentPlan);
@@ -239,7 +257,7 @@ final class PlaybackPoolOrchestrator {
   }
 
   /// Reports that the app itself is not visible (backgrounded, another route).
-  Future<PlaybackPoolPlan> setOccluded(bool occluded) {
+  Future<PlaybackPoolPlan> setOccluded({required bool occluded}) {
     _ensureNotDisposed();
     if (_occluded == occluded) {
       return Future<PlaybackPoolPlan>.value(currentPlan);
@@ -301,7 +319,7 @@ final class PlaybackPoolOrchestrator {
     }
     try {
       await releaseAll();
-    } catch (_) {
+    } on Object catch (_) {
       // A pool that cannot hand its players back is still disposed: the caller
       // has no recovery for a kernel that refuses to release, and leaving the
       // orchestrator usable would only repeat the failure.
@@ -314,6 +332,7 @@ final class PlaybackPoolOrchestrator {
   // Reconciliation
   // ---------------------------------------------------------------------------
 
+  /// Re-plans the pool against the current visibility and configuration.
   Future<PlaybackPoolPlan> reconcile() {
     _ensureNotDisposed();
     return _enqueue(_reconcileLocked);
@@ -397,8 +416,9 @@ final class PlaybackPoolOrchestrator {
         fields: <String, Object?>{'from': assignment.index, 'to': target, 'playerId': assignment.handle.id},
       );
       await assignment.handle.pause();
-      assignment.role = PooledItemRole.idle;
-      assignment.since = _now;
+      assignment
+        ..role = PooledItemRole.idle
+        ..since = _now;
     }
   }
 
@@ -479,6 +499,29 @@ final class PlaybackPoolOrchestrator {
   Future<void> _ensureActive(int index, Set<int> playing) async {
     final existing = _findAssignment(index);
     if (existing != null) {
+      final source = _sources[index];
+      if (existing.openedSource != null && existing.openedSource != source) {
+        // The item behind this index was replaced - a refresh, or an insertion
+        // above it shifted the list. Resuming the held player would keep
+        // playing the video that used to sit here.
+        _log.debug(
+          're-opening the active player for a replaced source',
+          fields: <String, Object?>{
+            'index': index,
+            'playerId': existing.handle.id,
+            'was': existing.openedSource?.uri,
+            'now': source.uri,
+          },
+        );
+        await existing.handle.open(source, autoPlay: true);
+        existing
+          ..openedSource = source
+          ..role = PooledItemRole.active;
+        playing.add(index);
+        _refreshOpenTarget(existing);
+        return;
+      }
+
       if (existing.role != PooledItemRole.active) {
         _log.debug(
           'resuming a held item instead of opening a new player',
@@ -498,7 +541,7 @@ final class PlaybackPoolOrchestrator {
       fields: <String, Object?>{'index': index, 'playerId': handle.id, 'uri': _sources[index].uri},
     );
     await handle.open(_sources[index], autoPlay: true);
-    _assign(handle, index, PooledItemRole.active);
+    _assign(handle, index, PooledItemRole.active).openedSource = _sources[index];
     playing.add(index);
   }
 
@@ -509,6 +552,18 @@ final class PlaybackPoolOrchestrator {
       }
       final existing = _findAssignment(index);
       if (existing != null) {
+        if (existing.openedSource != null && existing.openedSource != _sources[index]) {
+          // Same replacement as in the active case: re-point the held player at
+          // the item that is actually here now, still without playing it.
+          await existing.handle.open(_sources[index], autoPlay: false);
+          existing
+            ..openedSource = _sources[index]
+            ..openedFor = _now;
+          if (existing.role != PooledItemRole.idle) {
+            warming.add(index);
+          }
+          continue;
+        }
         if (existing.role == PooledItemRole.active) {
           // It was playing and is now only warm: stop it, keep it open.
           await existing.handle.pause();
@@ -543,8 +598,9 @@ final class PlaybackPoolOrchestrator {
         await _host.release(handle);
         continue;
       }
-      final assignment = _assign(handle, index, PooledItemRole.warming);
-      assignment.openedFor = _now;
+      _assign(handle, index, PooledItemRole.warming)
+        ..openedSource = _sources[index]
+        ..openedFor = _now;
       warming.add(index);
       _log.debug('warming an item', fields: <String, Object?>{'index': index, 'playerId': handle.id});
     }
@@ -709,7 +765,8 @@ final class PlaybackPoolOrchestrator {
     }
 
     final held = active + warming + idle;
-    _memory.report(_memoryKey, 
+    _memory.report(
+      _memoryKey,
       items: held,
       bytes: held * MemoryEstimates.videoStream720p,
       note: '$active active, $warming warm, $idle idle',

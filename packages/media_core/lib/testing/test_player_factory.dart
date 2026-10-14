@@ -1,10 +1,10 @@
-import 'package:media_core/testing/fake_player.dart';
-import 'package:media_core/testing/fake_player_adapter.dart';
 import 'package:media_core/adapter/player_adapter_context.dart';
 import 'package:media_core/adapter/player_adapter_factory.dart';
 import 'package:media_core/core/player_identity.dart';
 import 'package:media_core/identity/player_id.dart';
 import 'package:media_core/identity/session_id.dart';
+import 'package:media_core/testing/fake_player.dart';
+import 'package:media_core/testing/fake_player_adapter.dart';
 
 /// Convenience builders for players and adapters in tests.
 final class TestPlayerFactory {
@@ -22,10 +22,7 @@ final class TestPlayerFactory {
   static PlayerId playerId(String value) => PlayerId(value);
 
   /// Builds a minimal adapter context for [playerId].
-  static PlayerAdapterContext context({
-    String? playerId,
-    String? sessionId,
-  }) {
+  static PlayerAdapterContext context({String? playerId, String? sessionId}) {
     return PlayerAdapterContext.basic(
       playerId: PlayerId(playerId ?? 'test-player'),
       sessionId: SessionId(sessionId ?? 'test-session'),
@@ -37,8 +34,6 @@ final class TestPlayerFactory {
 
   /// Builds a core [PlayerAdapterFactory] that creates fake adapters.
   static DefaultPlayerAdapterFactory fakeAdapterFactory() {
-    final factory = DefaultPlayerAdapterFactory();
-    factory.register('fake', FakePlayerAdapter.new);
-    return factory;
+    return DefaultPlayerAdapterFactory()..register('fake', FakePlayerAdapter.new);
   }
 }

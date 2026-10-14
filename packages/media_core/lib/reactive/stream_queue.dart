@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:media_core/reactive/stream_mutex.dart' show StreamMutex;
 
 /// A serial asynchronous task queue.
 ///
@@ -131,7 +132,9 @@ class StreamQueue<T> {
 
     final task = _queue.removeAt(0);
 
-    _execute(task);
+    // The task's own completer is how its result reaches the caller of `add`;
+    // `_execute` chains the next task itself, so nothing awaits it here.
+    unawaited(_execute(task));
   }
 
   Future<void> _execute(_QueueTask<T> task) async {
@@ -187,18 +190,25 @@ class _QueueTask<T> {
 class StreamTaskQueue {
   final StreamQueue<void> _queue = StreamQueue<void>();
 
+  /// Whether the wrapped queue has been disposed.
   bool get isDisposed => _queue.isDisposed;
 
+  /// Whether [add] and [schedule] still accept work.
   bool get isAlive => _queue.isAlive;
 
+  /// Whether an operation is currently executing.
   bool get isRunning => _queue.isRunning;
 
+  /// Whether no operation is running or waiting.
   bool get isIdle => _queue.isIdle;
 
+  /// Number of operations waiting plus the running one.
   int get length => _queue.length;
 
+  /// Number of operations waiting to start.
   int get pendingCount => _queue.pendingCount;
 
+  /// Future that completes once the current backlog is drained.
   Future<void> get idle => _queue.idle;
 
   /// Add an operation to the queue.

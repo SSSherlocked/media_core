@@ -6,18 +6,23 @@ import 'package:media_core/fallback/line_fallback_state.dart';
 ///
 /// It does not resolve, open, validate, or play a line.
 final class LineFallback {
+  /// Creates a line fallback coordinator, optionally seeded with [initialState].
   LineFallback({LineFallbackState initialState = const LineFallbackState.initial()}) : _state = initialState;
 
   LineFallbackState _state;
 
   bool _disposed = false;
 
+  /// The current line fallback lifecycle state.
   LineFallbackState get state => _state;
 
+  /// The line currently in use, or `null` before one is selected.
   String? get currentLine => _state.currentLine;
 
+  /// The ordered line candidates this coordinator may fall back through.
   List<String> get candidates => _state.candidates;
 
+  /// Whether another line candidate is still available to fall back to.
   bool get canFallback => _state.canFallback;
 
   /// Starts a line fallback lifecycle.
@@ -31,7 +36,7 @@ final class LineFallback {
   String? next() {
     _ensureNotDisposed();
 
-    final String? line = _state.nextLine;
+    final line = _state.nextLine;
 
     if (line == null) {
       _state = _state.exhaust();

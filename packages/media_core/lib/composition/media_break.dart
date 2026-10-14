@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
+import 'package:media_core/composition/playback_schedule.dart' show PlaybackSchedule;
 import 'package:media_core/composition/schedule_clip.dart';
+import 'package:meta/meta.dart';
 
 /// Where a break attaches to the program.
 ///
@@ -28,6 +30,7 @@ sealed class BreakPosition {
 }
 
 /// Before the program: the entry point every viewer sees.
+@immutable
 final class PreRoll extends BreakPosition {
   /// Creates a pre-roll position.
   const PreRoll();
@@ -49,10 +52,10 @@ final class PreRoll extends BreakPosition {
 ///
 /// A negative offset is rejected at construction, so a malformed
 /// feed cannot silently reorder a break to before the program starts.
+@immutable
 final class AtProgramOffset extends BreakPosition {
   /// Creates a break starting [programTime] into the program.
-  AtProgramOffset(this.programTime)
-    : assert(!programTime.isNegative, 'A mid-roll offset cannot be negative.');
+  AtProgramOffset(this.programTime) : assert(!programTime.isNegative, 'A mid-roll offset cannot be negative.');
 
   /// Program time at which the break cuts in.
   final Duration programTime;
@@ -62,8 +65,7 @@ final class AtProgramOffset extends BreakPosition {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is AtProgramOffset && other.programTime == programTime;
+      identical(this, other) || other is AtProgramOffset && other.programTime == programTime;
 
   @override
   int get hashCode => Object.hash(AtProgramOffset, programTime);
@@ -77,13 +79,11 @@ final class AtProgramOffset extends BreakPosition {
 /// Carries the program duration because "the end of the timeline"
 /// only exists once you know how long the content is; the composer
 /// supplies it and an offset can be validated against it.
+@immutable
 final class PostRoll extends BreakPosition {
   /// Creates a post-roll after a program of [programDuration].
   PostRoll(this.programDuration)
-    : assert(
-        !programDuration.isNegative,
-        'A post-roll needs a non-negative program duration.',
-      );
+    : assert(!programDuration.isNegative, 'A post-roll needs a non-negative program duration.');
 
   /// The program length the post-roll follows.
   final Duration programDuration;
@@ -93,8 +93,7 @@ final class PostRoll extends BreakPosition {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is PostRoll && other.programDuration == programDuration;
+      identical(this, other) || other is PostRoll && other.programDuration == programDuration;
 
   @override
   int get hashCode => Object.hash(PostRoll, programDuration);

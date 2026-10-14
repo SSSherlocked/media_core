@@ -13,6 +13,7 @@ import 'package:media_core/presentation/presentation_request.dart';
 /// [modes] must not be empty: a binding that owns nothing can never be routed
 /// to, and silently keeping it would hide a wiring mistake.
 final class PresentationDriverBinding {
+  /// Binds [driver] to the [modes] it owns; rejects an empty [modes].
   PresentationDriverBinding({required Set<PresentationMode> modes, required this.driver})
     : assert(modes.isNotEmpty, 'A presentation driver binding must own at least one mode'),
       modes = Set<PresentationMode>.unmodifiable(modes);
@@ -23,6 +24,7 @@ final class PresentationDriverBinding {
   /// The driver itself.
   final KernelPresentationDriver driver;
 
+  /// Whether this binding's driver is the one to serve [mode].
   bool owns(PresentationMode mode) => modes.contains(mode);
 
   @override

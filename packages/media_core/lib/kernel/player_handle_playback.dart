@@ -12,7 +12,7 @@ extension PlayerHandlePlayback on PlayerHandle {
   /// volume and drives the adapter to 0, unmuting restores it. Safe to
   /// call before a source is open — the value is applied by [open] and
   /// re-asserted after every backend swap.
-  Future<void> setMute(bool muted) {
+  Future<void> setMute({required bool muted}) {
     _ensureNotDisposed();
 
     if (muted == _muted) {
@@ -23,7 +23,7 @@ extension PlayerHandlePlayback on PlayerHandle {
       _unmutedVolume = _pendingVolume ?? (_currentSource != null && _backendReady ? volume : config.volume);
       _muted = true;
 
-      return setVolume(0.0);
+      return setVolume(0);
     }
 
     _muted = false;
@@ -35,7 +35,7 @@ extension PlayerHandlePlayback on PlayerHandle {
   ///
   /// Affects the next completion event; a stream that has already
   /// completed must be replayed with [play] or [seek].
-  Future<void> setLoop(bool loop) {
+  Future<void> setLoop({required bool loop}) {
     _ensureNotDisposed();
 
     _loop = loop;
@@ -54,8 +54,8 @@ extension PlayerHandlePlayback on PlayerHandle {
     }
 
     try {
-      await adapter.setVolume(0.0);
-    } catch (error, stackTrace) {
+      await adapter.setVolume(0);
+    } on Object catch (error, stackTrace) {
       // Best effort: re-applied on the next open/swap. Logged because a
       // player that comes back audible after a swap is otherwise
       // indistinguishable from one the user unmuted.
@@ -76,22 +76,27 @@ extension PlayerHandlePlayback on PlayerHandle {
   ///
   /// Called by the kernel after construction.
   Future<void> initialize() {
-    return _record(OperationType.initialize, _enqueue(() async {
-      await _runtime.adapter.initialize(_adapterContext);
+    return _record(
+      OperationType.initialize,
+      _enqueue(() async {
+        await _runtime.adapter.initialize(_adapterContext);
 
-      if (_disposed) {
-        return;
-      }
+        if (_disposed) {
+          return;
+        }
 
-      _lifecycle.create();
-      _lifecycle.initialize();
+        _lifecycle
+          ..create()
+          ..initialize();
 
-      _publish(PlayerEventType.player, const <String, Object?>{'action': 'initialized'});
-    }));
+        _publish(PlayerEventType.player, const <String, Object?>{'action': 'initialized'});
+      }),
+    );
   }
 
   /// Opens [source] on the adapter.
-  Future<void> open(PlayerSource source, {bool? autoPlay}) {    _ensureNotDisposed();
+  Future<void> open(PlayerSource source, {bool? autoPlay}) {
+    _ensureNotDisposed();
 
     final operationGeneration = _invalidateOperations();
 
@@ -104,172 +109,175 @@ extension PlayerHandlePlayback on PlayerHandle {
       _announceSource(source);
     }
 
-    return _record(OperationType.load, _enqueue(() async {
-      if (!_isOperationCurrent(operationGeneration) || _disposed) {
-        return;
-      }
-
-      // A new source is a new recovery story: whatever the ladder was
-      // doing for the previous one is stale. This is also what makes the
-      // ladder safe to leave running — every lifecycle boundary resets it
-      // instead of racing it.
-      _ladder.reset();
-
-      final generationId = _runtime.sessionController.recreateGeneration();
-
-      _runtime.session.updateContext(
-        SessionContext(
-          playerId: _player.id,
-          sessionId: _runtime.session.context.sessionId,
-          generationId: generationId,
-          sourceId: source.id,
-          source: source,
-          policy: policy,
-          platform: _runtime.session.context.platform,
-        ),
-      );
-
-      await _runtime.sessionController.open();
-
-      if (!_isOperationCurrent(operationGeneration) || _disposed) {
-        return;
-      }
-
-      // The ladder was already reset before the session generation was
-      // recreated, so it cannot be mid-step here.
-      _ladder.resume();
-
-      try {
-        await _runtime.adapter.open(source);
-      } catch (_) {
-        if (_isOperationCurrent(operationGeneration) && _isSourceCurrent(source)) {
-          _backendReady = false;
+    return _record(
+      OperationType.load,
+      _enqueue(() async {
+        if (!_isOperationCurrent(operationGeneration) || _disposed) {
+          return;
         }
 
-        rethrow;
-      }
+        // A new source is a new recovery story: whatever the ladder was
+        // doing for the previous one is stale. This is also what makes the
+        // ladder safe to leave running — every lifecycle boundary resets it
+        // instead of racing it.
+        _ladder.reset();
 
-      if (!_isOperationCurrent(operationGeneration) || _disposed || !_isSourceCurrent(source)) {
+        final generationId = _runtime.sessionController.recreateGeneration();
+
+        _runtime.session.updateContext(
+          SessionContext(
+            playerId: _player.id,
+            sessionId: _runtime.session.context.sessionId,
+            generationId: generationId,
+            sourceId: source.id,
+            source: source,
+            policy: policy,
+            platform: _runtime.session.context.platform,
+          ),
+        );
+
+        await _runtime.sessionController.open();
+
+        if (!_isOperationCurrent(operationGeneration) || _disposed) {
+          return;
+        }
+
+        // The ladder was already reset before the session generation was
+        // recreated, so it cannot be mid-step here.
+        _ladder.resume();
+
         try {
-          await _runtime.adapter.close();
+          await _runtime.adapter.open(source);
         } catch (_) {
-          // Best-effort cleanup of the stale open.
+          if (_isOperationCurrent(operationGeneration) && _isSourceCurrent(source)) {
+            _backendReady = false;
+          }
+
+          rethrow;
         }
 
-        _backendReady = false;
-        return;
-      }
+        if (!_isOperationCurrent(operationGeneration) || _disposed || !_isSourceCurrent(source)) {
+          try {
+            await _runtime.adapter.close();
+          } on Object catch (_) {
+            // Best-effort cleanup of the stale open.
+          }
 
-      _backendReady = true;
+          _backendReady = false;
+          return;
+        }
 
-      if (config.volume != 1.0) {
-        await _runtime.adapter.setVolume(config.volume);
+        _backendReady = true;
+
+        if (config.volume != 1.0) {
+          await _runtime.adapter.setVolume(config.volume);
+
+          if (!_isOperationCurrent(operationGeneration) || _disposed || !_isSourceCurrent(source)) {
+            _backendReady = false;
+
+            try {
+              await _runtime.adapter.close();
+            } on Object catch (_) {}
+
+            return;
+          }
+        }
+
+        if (config.playbackRate != 1.0) {
+          await _runtime.adapter.setRate(config.playbackRate);
+
+          if (!_isOperationCurrent(operationGeneration) || _disposed || !_isSourceCurrent(source)) {
+            _backendReady = false;
+
+            try {
+              await _runtime.adapter.close();
+            } on Object catch (_) {}
+
+            return;
+          }
+        }
+
+        // ---------------------------------------------------------------------
+        // Apply any volume / rate the caller queued while this source was
+        // still opening. The queued value is an explicit user choice and
+        // therefore wins over the config defaults applied above.
+        //
+        // This is what lets `setVolume` be safely called right after
+        // `play()` returned, before the adapter had actually accepted the
+        // source. Previously that path threw a `StateError` and tore down
+        // the whole engine switch.
+        // ---------------------------------------------------------------------
+        final queuedVolume = _pendingVolume;
+        if (queuedVolume != null && queuedVolume != config.volume) {
+          await _runtime.adapter.setVolume(queuedVolume);
+
+          if (!_isOperationCurrent(operationGeneration) || _disposed || !_isSourceCurrent(source)) {
+            _backendReady = false;
+
+            try {
+              await _runtime.adapter.close();
+            } on Object catch (_) {}
+
+            return;
+          }
+        }
+        _pendingVolume = null;
+
+        final queuedRate = _pendingRate;
+        if (queuedRate != null && queuedRate != config.playbackRate) {
+          await _runtime.adapter.setRate(queuedRate);
+
+          if (!_isOperationCurrent(operationGeneration) || _disposed || !_isSourceCurrent(source)) {
+            _backendReady = false;
+
+            try {
+              await _runtime.adapter.close();
+            } on Object catch (_) {}
+
+            return;
+          }
+        }
+        _pendingRate = null;
+
+        // A fresh adapter starts with video enabled; re-assert the track
+        // preference so a recovering engine cannot turn video back on.
+        await _applyAudioOnly(_runtime.adapter);
 
         if (!_isOperationCurrent(operationGeneration) || _disposed || !_isSourceCurrent(source)) {
           _backendReady = false;
-
-          try {
-            await _runtime.adapter.close();
-          } catch (_) {}
-
           return;
         }
-      }
 
-      if (config.playbackRate != 1.0) {
-        await _runtime.adapter.setRate(config.playbackRate);
+        MediaCoreLog.info(
+          LogCategory.source,
+          'opened ${source.uri} on ${_registration.id}',
+          fields: <String, Object?>{
+            'player': _player.id.value,
+            'protocol': source.protocol.name,
+            'format': source.format.name,
+            'live': source.isLive,
+            'volume': config.volume,
+            'rate': config.playbackRate,
+          },
+        );
 
-        if (!_isOperationCurrent(operationGeneration) || _disposed || !_isSourceCurrent(source)) {
-          _backendReady = false;
+        _publish(PlayerEventType.source, <String, Object?>{
+          'action': 'opened',
+          'uri': source.uri.toString(),
+          'backend': _registration.id,
+        });
 
-          try {
-            await _runtime.adapter.close();
-          } catch (_) {}
-
-          return;
-        }
-      }
-
-      // ---------------------------------------------------------------------
-      // Apply any volume / rate the caller queued while this source was
-      // still opening. The queued value is an explicit user choice and
-      // therefore wins over the config defaults applied above.
-      //
-      // This is what lets `setVolume` be safely called right after
-      // `play()` returned, before the adapter had actually accepted the
-      // source. Previously that path threw a `StateError` and tore down
-      // the whole engine switch.
-      // ---------------------------------------------------------------------
-      final queuedVolume = _pendingVolume;
-      if (queuedVolume != null && queuedVolume != config.volume) {
-        await _runtime.adapter.setVolume(queuedVolume);
-
-        if (!_isOperationCurrent(operationGeneration) || _disposed || !_isSourceCurrent(source)) {
-          _backendReady = false;
+        if (autoPlay ?? config.autoPlay) {
+          final token = _createOperationToken();
 
           try {
-            await _runtime.adapter.close();
-          } catch (_) {}
-
-          return;
+            await _playInternal(operationGeneration, token: token, source: source);
+          } finally {
+            _releaseOperationToken(token);
+          }
         }
-      }
-      _pendingVolume = null;
-
-      final queuedRate = _pendingRate;
-      if (queuedRate != null && queuedRate != config.playbackRate) {
-        await _runtime.adapter.setRate(queuedRate);
-
-        if (!_isOperationCurrent(operationGeneration) || _disposed || !_isSourceCurrent(source)) {
-          _backendReady = false;
-
-          try {
-            await _runtime.adapter.close();
-          } catch (_) {}
-
-          return;
-        }
-      }
-      _pendingRate = null;
-
-      // A fresh adapter starts with video enabled; re-assert the track
-      // preference so a recovering engine cannot turn video back on.
-      await _applyAudioOnly(_runtime.adapter);
-
-      if (!_isOperationCurrent(operationGeneration) || _disposed || !_isSourceCurrent(source)) {
-        _backendReady = false;
-        return;
-      }
-
-      MediaCoreLog.info(
-        LogCategory.source,
-        'opened ${source.uri} on ${_registration.id}',
-        fields: <String, Object?>{
-          'player': _player.id.value,
-          'protocol': source.protocol.name,
-          'format': source.format.name,
-          'live': source.isLive,
-          'volume': config.volume,
-          'rate': config.playbackRate,
-        },
-      );
-
-      _publish(PlayerEventType.source, <String, Object?>{
-        'action': 'opened',
-        'uri': source.uri.toString(),
-        'backend': _registration.id,
-      });
-
-      if (autoPlay ?? config.autoPlay) {
-        final token = _createOperationToken();
-
-        try {
-          await _playInternal(operationGeneration, token: token, source: source);
-        } finally {
-          _releaseOperationToken(token);
-        }
-      }
-    }));
+      }),
+    );
   }
 
   /// Opens [source] by first planning it against this handle's
@@ -290,10 +298,14 @@ extension PlayerHandlePlayback on PlayerHandle {
 
     final plan = _planner.plan(source, _registration.capabilities);
 
+    // The `async` boundary is load-bearing: it is what turns a synchronous
+    // throw here — a disposed handle, an unsupported plan — into an error on
+    // the returned Future, which is what every caller of this method awaits.
     switch (plan) {
       case DirectPlan():
       case CompositePlan():
-        return open(source.toPlayerSource(), autoPlay: autoPlay);
+        await open(source.toPlayerSource(), autoPlay: autoPlay);
+        return;
       case UnsupportedPlan(:final reason):
         throw UnsupportedError(reason);
     }
@@ -304,24 +316,27 @@ extension PlayerHandlePlayback on PlayerHandle {
     _ensureNotDisposed();
     _ensureSource();
 
-    _playIntent = true;
+    playIntent = true;
 
     final operationGeneration = _captureOperationGeneration();
     final source = _currentSource!;
 
     final token = _createOperationToken();
 
-    return _record(OperationType.play, _enqueue(() async {
-      try {
-        // An explicit play is a fresh recovery opportunity: it cancels a
-        // previous suspend (see [pause]).
-        _ladder.resume();
+    return _record(
+      OperationType.play,
+      _enqueue(() async {
+        try {
+          // An explicit play is a fresh recovery opportunity: it cancels a
+          // previous suspend (see [pause]).
+          _ladder.resume();
 
-        await _playInternal(operationGeneration, token: token, source: source);
-      } finally {
-        _releaseOperationToken(token);
-      }
-    }));
+          await _playInternal(operationGeneration, token: token, source: source);
+        } finally {
+          _releaseOperationToken(token);
+        }
+      }),
+    );
   }
 
   Future<void> _playInternal(
@@ -363,34 +378,37 @@ extension PlayerHandlePlayback on PlayerHandle {
 
     final source = _currentSource!;
 
-    _playIntent = false;
+    playIntent = false;
 
     // A user pause is a recovery boundary: recovery for playback the user
     // just stopped is stale by definition.
     _ladder.suspend();
     _cancelActiveOperation(StateError('Playback pause requested.'));
 
-    return _record(OperationType.pause, _enqueue(() async {
-      if (_disposed) return;
-      if (!_isSourceCurrent(source)) return;
-      if (!_backendReady) return;
+    return _record(
+      OperationType.pause,
+      _enqueue(() async {
+        if (_disposed) return;
+        if (!_isSourceCurrent(source)) return;
+        if (!_backendReady) return;
 
-      await _runtime.adapter.pause();
+        await _runtime.adapter.pause();
 
-      if (_disposed || !_isSourceCurrent(source)) return;
+        if (_disposed || !_isSourceCurrent(source)) return;
 
-      await _runtime.playback.pause();
+        await _runtime.playback.pause();
 
-      if (_disposed || !_isSourceCurrent(source)) return;
+        if (_disposed || !_isSourceCurrent(source)) return;
 
-      await _runtime.sessionController.pause();
+        await _runtime.sessionController.pause();
 
-      if (_disposed || !_isSourceCurrent(source)) return;
+        if (_disposed || !_isSourceCurrent(source)) return;
 
-      _lifecycle.pause();
+        _lifecycle.pause();
 
-      _publish(PlayerEventType.playback, const <String, Object?>{'action': 'pause'});
-    }));
+        _publish(PlayerEventType.playback, const <String, Object?>{'action': 'pause'});
+      }),
+    );
   }
 
   /// Stops playback and clears the session state.
@@ -403,39 +421,42 @@ extension PlayerHandlePlayback on PlayerHandle {
 
     final source = _currentSource;
 
-    _playIntent = false;
+    playIntent = false;
 
     _ladder.suspend();
     _cancelActiveOperation(StateError('Playback stop requested.'));
 
-    return _record(OperationType.stop, _enqueue(() async {
-      if (_disposed) return;
-      if (source != null && !_isSourceCurrent(source)) return;
-      if (!_backendReady) return;
+    return _record(
+      OperationType.stop,
+      _enqueue(() async {
+        if (_disposed) return;
+        if (source != null && !_isSourceCurrent(source)) return;
+        if (!_backendReady) return;
 
-      await _runtime.adapter.stop();
+        await _runtime.adapter.stop();
 
-      if (_disposed) return;
-      if (source != null && !_isSourceCurrent(source)) return;
+        if (_disposed) return;
+        if (source != null && !_isSourceCurrent(source)) return;
 
-      await _runtime.playback.stop();
+        await _runtime.playback.stop();
 
-      if (_disposed) return;
-      if (source != null && !_isSourceCurrent(source)) return;
+        if (_disposed) return;
+        if (source != null && !_isSourceCurrent(source)) return;
 
-      await _runtime.sessionController.stop();
+        await _runtime.sessionController.stop();
 
-      if (_disposed) return;
-      if (source != null && !_isSourceCurrent(source)) return;
+        if (_disposed) return;
+        if (source != null && !_isSourceCurrent(source)) return;
 
-      // Nothing is playing any more, so the lifecycle must not keep claiming
-      // the player is active: pause()/deactivate() already do this, and a
-      // stopped player that still reports `isActive` contradicts the session
-      // and playback facts the same handle exposes.
-      _lifecycle.pause();
+        // Nothing is playing any more, so the lifecycle must not keep claiming
+        // the player is active: pause()/deactivate() already do this, and a
+        // stopped player that still reports `isActive` contradicts the session
+        // and playback facts the same handle exposes.
+        _lifecycle.pause();
 
-      _publish(PlayerEventType.playback, const <String, Object?>{'action': 'stop'});
-    }));
+        _publish(PlayerEventType.playback, const <String, Object?>{'action': 'stop'});
+      }),
+    );
   }
 
   /// Seeks to [position].
@@ -448,29 +469,35 @@ extension PlayerHandlePlayback on PlayerHandle {
 
     final token = _createOperationToken();
 
-    return _record(OperationType.seek, _enqueue(() async {
-      try {
-        if (!_canUseBackend(operationGeneration: operationGeneration, source: source) || token.isCancelled) {
-          return;
+    return _record(
+      OperationType.seek,
+      _enqueue(() async {
+        try {
+          if (!_canUseBackend(operationGeneration: operationGeneration, source: source) || token.isCancelled) {
+            return;
+          }
+
+          await token.runChecked(() => _runtime.adapter.seek(position));
+
+          if (!_canUseBackend(operationGeneration: operationGeneration, source: source) || token.isCancelled) {
+            return;
+          }
+
+          await token.runChecked(() => _runtime.playback.seek(position));
+
+          if (!_canUseBackend(operationGeneration: operationGeneration, source: source) || token.isCancelled) {
+            return;
+          }
+
+          _publish(PlayerEventType.playback, <String, Object?>{
+            'action': 'seek',
+            'positionMs': position.inMilliseconds,
+          });
+        } finally {
+          _releaseOperationToken(token);
         }
-
-        await token.runChecked(() => _runtime.adapter.seek(position));
-
-        if (!_canUseBackend(operationGeneration: operationGeneration, source: source) || token.isCancelled) {
-          return;
-        }
-
-        await token.runChecked(() => _runtime.playback.seek(position));
-
-        if (!_canUseBackend(operationGeneration: operationGeneration, source: source) || token.isCancelled) {
-          return;
-        }
-
-        _publish(PlayerEventType.playback, <String, Object?>{'action': 'seek', 'positionMs': position.inMilliseconds});
-      } finally {
-        _releaseOperationToken(token);
-      }
-    }));
+      }),
+    );
   }
 
   /// Sets the volume in the 0.0–1.0 range.
@@ -498,32 +525,39 @@ extension PlayerHandlePlayback on PlayerHandle {
     final operationGeneration = _captureOperationGeneration();
     final source = _currentSource!;
 
-    final token = _createOperationToken();
+    // No cancellation token here on purpose: the slot is the one play/seek
+    // continuations are checked against, so a volume request that took it used
+    // to cancel the operation still running — the engine never saw that play at
+    // all. Drag intermediates are dropped by the request number instead.
+    final request = ++_volumeRequest;
 
-    return _record(OperationType.setVolume, _enqueue(() async {
-      try {
-        if (!_canUseBackend(operationGeneration: operationGeneration, source: source) || token.isCancelled) {
+    return _record(
+      OperationType.setVolume,
+      _enqueue(() async {
+        if (request != _volumeRequest) {
           return;
         }
 
-        await token.runChecked(() => _runtime.adapter.setVolume(clamped));
+        if (!_canUseBackend(operationGeneration: operationGeneration, source: source)) {
+          return;
+        }
 
-        if (!_canUseBackend(operationGeneration: operationGeneration, source: source) || token.isCancelled) {
+        await _runtime.adapter.setVolume(clamped);
+
+        if (!_canUseBackend(operationGeneration: operationGeneration, source: source)) {
           return;
         }
 
         _runtime.playback.apply(PlaybackCommand.volume(clamped));
         _pendingVolume = null;
 
-        if (!_canUseBackend(operationGeneration: operationGeneration, source: source) || token.isCancelled) {
+        if (!_canUseBackend(operationGeneration: operationGeneration, source: source)) {
           return;
         }
 
         _publish(PlayerEventType.audio, <String, Object?>{'action': 'volume', 'volume': clamped});
-      } finally {
-        _releaseOperationToken(token);
-      }
-    }));
+      }),
+    );
   }
 
   /// Sets the playback rate.
@@ -542,31 +576,36 @@ extension PlayerHandlePlayback on PlayerHandle {
     final operationGeneration = _captureOperationGeneration();
     final source = _currentSource!;
 
-    final token = _createOperationToken();
+    // Mirrors [setVolume]: a rate slider drags one request per frame, and the
+    // cancellation slot belongs to whatever play/seek is still running.
+    final request = ++_rateRequest;
 
-    return _record(OperationType.setPlaybackRate, _enqueue(() async {
-      try {
-        if (!_canUseBackend(operationGeneration: operationGeneration, source: source) || token.isCancelled) {
+    return _record(
+      OperationType.setPlaybackRate,
+      _enqueue(() async {
+        if (request != _rateRequest) {
           return;
         }
 
-        await token.runChecked(() => _runtime.adapter.setRate(rate));
+        if (!_canUseBackend(operationGeneration: operationGeneration, source: source)) {
+          return;
+        }
 
-        if (!_canUseBackend(operationGeneration: operationGeneration, source: source) || token.isCancelled) {
+        await _runtime.adapter.setRate(rate);
+
+        if (!_canUseBackend(operationGeneration: operationGeneration, source: source)) {
           return;
         }
 
         _runtime.playback.apply(PlaybackCommand.rate(rate));
         _pendingRate = null;
 
-        if (!_canUseBackend(operationGeneration: operationGeneration, source: source) || token.isCancelled) {
+        if (!_canUseBackend(operationGeneration: operationGeneration, source: source)) {
           return;
         }
 
         _publish(PlayerEventType.playback, <String, Object?>{'action': 'rate', 'rate': rate});
-      } finally {
-        _releaseOperationToken(token);
-      }
-    }));
+      }),
+    );
   }
 }

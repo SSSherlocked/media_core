@@ -1,5 +1,5 @@
-import 'package:media_core/geometry/video_size.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/geometry/video_size.dart';
 
 /// Immutable aspect ratio value.
 ///
@@ -19,7 +19,33 @@ import 'package:equatable/equatable.dart';
 /// - rotate video
 /// - apply renderer constraints
 final class AspectRatioValue extends Equatable {
+  /// Creates an aspect ratio from a raw ratio value.
   const AspectRatioValue(this.value);
+
+  /// Creates an aspect ratio from width and height.
+  factory AspectRatioValue.fromSize(VideoSize size) {
+    return AspectRatioValue.fromDimensions(size.width, size.height);
+  }
+
+  /// Creates an aspect ratio from dimensions.
+  factory AspectRatioValue.fromDimensions(int width, int height) {
+    if (width <= 0 || height <= 0) {
+      return const AspectRatioValue.zero();
+    }
+
+    return AspectRatioValue(width / height);
+  }
+
+  /// Creates from a simple map.
+  factory AspectRatioValue.fromMap(Map<String, dynamic> map) {
+    final value = (map['value'] as num?)?.toDouble();
+
+    if (value == null) {
+      return const AspectRatioValue.zero();
+    }
+
+    return AspectRatioValue(value);
+  }
 
   /// Empty aspect ratio.
   ///
@@ -37,20 +63,6 @@ final class AspectRatioValue extends Equatable {
 
   /// Raw ratio value.
   final double value;
-
-  /// Creates an aspect ratio from width and height.
-  factory AspectRatioValue.fromSize(VideoSize size) {
-    return AspectRatioValue.fromDimensions(size.width, size.height);
-  }
-
-  /// Creates an aspect ratio from dimensions.
-  factory AspectRatioValue.fromDimensions(int width, int height) {
-    if (width <= 0 || height <= 0) {
-      return const AspectRatioValue.zero();
-    }
-
-    return AspectRatioValue(width / height);
-  }
 
   /// Whether the ratio is valid.
   bool get isValid {
@@ -124,7 +136,7 @@ final class AspectRatioValue extends Equatable {
       return const AspectRatioValue.zero();
     }
 
-    return AspectRatioValue(value.clamp(min, max).toDouble());
+    return AspectRatioValue(value.clamp(min, max));
   }
 
   /// Calculates width for the supplied height.
@@ -153,17 +165,6 @@ final class AspectRatioValue extends Equatable {
   /// Converts to a simple map.
   Map<String, double> toMap() {
     return {'value': value};
-  }
-
-  /// Creates from a simple map.
-  factory AspectRatioValue.fromMap(Map<String, dynamic> map) {
-    final value = (map['value'] as num?)?.toDouble();
-
-    if (value == null) {
-      return const AspectRatioValue.zero();
-    }
-
-    return AspectRatioValue(value);
   }
 
   @override

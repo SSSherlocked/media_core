@@ -1,5 +1,5 @@
-import 'package:media_core/error/player_error_code.dart';
 import 'package:media_core/error/player_error_category.dart';
+import 'package:media_core/error/player_error_code.dart';
 
 /// Classifies a concrete [PlayerErrorCode] into a broad
 /// [PlayerErrorCategory].
@@ -15,6 +15,8 @@ import 'package:media_core/error/player_error_category.dart';
 ///
 /// The result of this classifier is consumed by error policies.
 final class ErrorClassifier {
+  /// Classification rules are static, so instances exist only to satisfy
+  /// dependency injection of a classifier.
   const ErrorClassifier();
 
   /// Classifies [code] into an error category.

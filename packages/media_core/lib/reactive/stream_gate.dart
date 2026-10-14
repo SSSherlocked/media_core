@@ -11,6 +11,7 @@ import 'dart:async';
 /// - EPG loading
 /// - player fallback operations
 class StreamGate {
+  /// Creates a gate at generation zero, ready to hand out operation tokens.
   StreamGate();
 
   int _generation = 0;
@@ -48,9 +49,9 @@ class StreamGate {
   }
 
   /// Execute [action] only if this gate is still alive.
-  Future<T?> run<T>(Future<T> Function() action) async {
+  Future<T?> run<T>(Future<T> Function() action) {
     if (_disposed) {
-      return null;
+      return Future<T?>.value();
     }
 
     return action();
@@ -183,7 +184,14 @@ class StreamSingleFlight<T> {
     try {
       return await action();
     } finally {
-      _running.remove(key);
+      // `remove` hands back this very operation, which is completing right now;
+      // the caller's own chain owns its result. Naming that keeps the line from
+      // reading like a callback that was dropped on the floor.
+      final finished = _running.remove(key);
+
+      if (finished != null) {
+        unawaited(finished);
+      }
     }
   }
 
@@ -191,14 +199,25 @@ class StreamSingleFlight<T> {
   ///
   /// This does not cancel the underlying Future. Dart Futures generally
   /// cannot be cancelled directly.
+  ///
+  /// The abandoned operation's failure is set aside on purpose: a caller that
+  /// forgets a key has said it will not read the answer, and an error from a
+  /// future nobody is waiting on any more would surface through the zone's
+  /// handler as an unhandled async exception.
   void forget(String key) {
-    _running.remove(key);
+    _running.remove(key)?.ignore();
   }
 
   /// Clear all tracked operations.
   ///
-  /// Underlying Futures continue running.
+  /// Underlying Futures continue running, and like [forget] their results are no
+  /// longer anybody's to read, so their failures are set aside rather than left
+  /// to reach the top level.
   void clear() {
+    for (final future in _running.values) {
+      future.ignore();
+    }
+
     _running.clear();
   }
 }
@@ -217,9 +236,16 @@ class StreamSingleFlight<T> {
 /// });
 /// ```
 class StreamConcurrencyLimiter {
-  StreamConcurrencyLimiter(this.maxConcurrent, {this.queueLimit}) : assert(maxConcurrent > 0);
+  /// Limits to [maxConcurrent] in-flight operations, optionally refusing to
+  /// queue more than [queueLimit] waiting ones; a `null` [queueLimit] lets the
+  /// queue grow without bound.
+  StreamConcurrencyLimiter(this.maxConcurrent, {this.queueLimit})
+    : assert(maxConcurrent > 0, 'maxConcurrent must be positive');
 
+  /// Maximum number of operations executed at the same time.
   final int maxConcurrent;
+
+  /// Upper bound on queued operations, or `null` for an unbounded queue.
   final int? queueLimit;
 
   int _active = 0;
@@ -264,7 +290,9 @@ class StreamConcurrencyLimiter {
     while (_active < maxConcurrent && _queue.isNotEmpty) {
       final operation = _queue.removeAt(0);
 
-      _execute(operation.action).then(operation.complete, onError: operation.completeError);
+      // The queued operation's own completer is the hand-off point, so the
+      // future returned by `then` is intentionally not awaited here.
+      unawaited(_execute(operation.action).then(operation.complete, onError: operation.completeError));
     }
   }
 

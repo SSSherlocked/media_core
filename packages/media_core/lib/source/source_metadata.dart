@@ -109,9 +109,7 @@ extension SourceMetadataExtension on SourceMetadata {
 
   /// Removes an extra field.
   SourceMetadata removeExtra(String key) {
-    final values = Map<String, Object?>.from(extras);
-
-    values.remove(key);
+    final values = Map<String, Object?>.from(extras)..remove(key);
 
     return copyWith(extras: values);
   }

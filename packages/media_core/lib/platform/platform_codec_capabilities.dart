@@ -96,12 +96,19 @@ final class CodecDecodeSupport extends Equatable {
     this.maxFrameRate = 0,
   });
 
+  /// Creates a record from a map.
+  factory CodecDecodeSupport.fromMap(VideoCodec codec, Map<String, Object?> map) {
+    return CodecDecodeSupport(
+      codec: codec,
+      hardware: map['hardware'] as bool? ?? false,
+      maxWidth: (map['maxWidth'] as num?)?.toInt() ?? 0,
+      maxHeight: (map['maxHeight'] as num?)?.toInt() ?? 0,
+      maxFrameRate: (map['maxFrameRate'] as num?)?.toInt() ?? 0,
+    );
+  }
+
   /// A codec the platform cannot decode in hardware.
-  const CodecDecodeSupport.software(this.codec)
-    : hardware = false,
-      maxWidth = 0,
-      maxHeight = 0,
-      maxFrameRate = 0;
+  const CodecDecodeSupport.software(this.codec) : hardware = false, maxWidth = 0, maxHeight = 0, maxFrameRate = 0;
 
   /// Codec this record describes.
   final VideoCodec codec;
@@ -167,17 +174,6 @@ final class CodecDecodeSupport extends Equatable {
     };
   }
 
-  /// Creates a record from a map.
-  factory CodecDecodeSupport.fromMap(VideoCodec codec, Map<String, Object?> map) {
-    return CodecDecodeSupport(
-      codec: codec,
-      hardware: map['hardware'] as bool? ?? false,
-      maxWidth: (map['maxWidth'] as num?)?.toInt() ?? 0,
-      maxHeight: (map['maxHeight'] as num?)?.toInt() ?? 0,
-      maxFrameRate: (map['maxFrameRate'] as num?)?.toInt() ?? 0,
-    );
-  }
-
   @override
   List<Object?> get props => [codec, hardware, maxWidth, maxHeight, maxFrameRate];
 
@@ -217,10 +213,28 @@ final class CodecDecodeSupport extends Equatable {
 /// failed — the opposite of the intent.
 final class PlatformCodecCapabilities extends Equatable {
   /// Creates codec capabilities.
-  const PlatformCodecCapabilities({
-    this.video = const <VideoCodec, CodecDecodeSupport>{},
-    this.reported = false,
-  });
+  const PlatformCodecCapabilities({this.video = const <VideoCodec, CodecDecodeSupport>{}, this.reported = false});
+
+  /// Creates capabilities from a map.
+  factory PlatformCodecCapabilities.fromMap(Map<String, Object?> map) {
+    final raw = map['video'];
+    final video = <VideoCodec, CodecDecodeSupport>{};
+
+    if (raw is Map) {
+      for (final entry in raw.entries) {
+        final codec = VideoCodec.tryParse(entry.key.toString());
+        final value = entry.value;
+
+        if (codec == null || value is! Map) {
+          continue;
+        }
+
+        video[codec] = CodecDecodeSupport.fromMap(codec, value.map((key, item) => MapEntry(key.toString(), item)));
+      }
+    }
+
+    return PlatformCodecCapabilities(video: video, reported: map['reported'] as bool? ?? video.isNotEmpty);
+  }
 
   /// The capabilities of a platform nobody probed.
   static const PlatformCodecCapabilities unknown = PlatformCodecCapabilities();
@@ -281,40 +295,13 @@ final class PlatformCodecCapabilities extends Equatable {
   }
 
   /// Creates modified capabilities.
-  PlatformCodecCapabilities copyWith({
-    Map<VideoCodec, CodecDecodeSupport>? video,
-    bool? reported,
-  }) {
+  PlatformCodecCapabilities copyWith({Map<VideoCodec, CodecDecodeSupport>? video, bool? reported}) {
     return PlatformCodecCapabilities(video: video ?? this.video, reported: reported ?? this.reported);
   }
 
   /// Debug serialization.
   Map<String, Object?> toMap() {
-    return {
-      'reported': reported,
-      'video': video.map((codec, support) => MapEntry(codec.name, support.toMap())),
-    };
-  }
-
-  /// Creates capabilities from a map.
-  factory PlatformCodecCapabilities.fromMap(Map<String, Object?> map) {
-    final raw = map['video'];
-    final video = <VideoCodec, CodecDecodeSupport>{};
-
-    if (raw is Map) {
-      for (final entry in raw.entries) {
-        final codec = VideoCodec.tryParse(entry.key.toString());
-        final value = entry.value;
-
-        if (codec == null || value is! Map) {
-          continue;
-        }
-
-        video[codec] = CodecDecodeSupport.fromMap(codec, value.map((key, item) => MapEntry(key.toString(), item)));
-      }
-    }
-
-    return PlatformCodecCapabilities(video: video, reported: map['reported'] as bool? ?? video.isNotEmpty);
+    return {'reported': reported, 'video': video.map((codec, support) => MapEntry(codec.name, support.toMap()))};
   }
 
   @override

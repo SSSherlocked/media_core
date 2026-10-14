@@ -1,6 +1,6 @@
+import 'package:media_core/identity/operation_id.dart';
 import 'package:media_core/operation/operation.dart';
 import 'package:media_core/operation/operation_state.dart';
-import 'package:media_core/identity/operation_id.dart';
 
 /// Stores and manages currently registered operations.
 ///
@@ -275,14 +275,12 @@ final class OperationRegistry {
       return 0;
     }
 
-    final idsToRemove = _operations.values
-        .where((operation) => operation.isTerminal)
-        .map((operation) => operation.id)
-        .toList(growable: false);
-
-    for (final id in idsToRemove) {
-      _operations.remove(id);
-    }
+    final idsToRemove =
+        _operations.values
+            .where((operation) => operation.isTerminal)
+            .map((operation) => operation.id)
+            .toList(growable: false)
+          ..forEach(_operations.remove);
 
     return idsToRemove.length;
   }
@@ -303,9 +301,7 @@ final class OperationRegistry {
       }
     }
 
-    for (final id in idsToRemove) {
-      _operations.remove(id);
-    }
+    idsToRemove.forEach(_operations.remove);
 
     return idsToRemove.length;
   }

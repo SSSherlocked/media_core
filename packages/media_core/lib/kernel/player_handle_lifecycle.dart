@@ -98,13 +98,14 @@ extension PlayerHandleLifecycle on PlayerHandle {
   // ---------------------------------------------------------------------------
 
   /// Closes the current source without disposing the player.
-  Future<void> close() {    _ensureNotDisposed();
+  Future<void> close() {
+    _ensureNotDisposed();
 
     _invalidateOperations();
 
     _currentSource = null;
     _backendReady = false;
-    _playIntent = false;
+    playIntent = false;
     _ladder.reset();
 
     // The session context names the source; a closed player must not keep
@@ -126,31 +127,34 @@ extension PlayerHandleLifecycle on PlayerHandle {
 
     _cancelActiveOperation(StateError('PlayerIdentity close requested.'));
 
-    return _record(OperationType.close, _enqueue(() async {
-      if (_disposed) return;
+    return _record(
+      OperationType.close,
+      _enqueue(() async {
+        if (_disposed) return;
 
-      try {
-        await _runtime.adapter.close();
-      } catch (_) {
-        // Closing an already released backend is harmless here.
-      }
+        try {
+          await _runtime.adapter.close();
+        } on Object catch (_) {
+          // Closing an already released backend is harmless here.
+        }
 
-      _backendReady = false;
+        _backendReady = false;
 
-      if (_disposed) return;
+        if (_disposed) return;
 
-      await _runtime.playback.stop();
+        await _runtime.playback.stop();
 
-      if (_disposed) return;
+        if (_disposed) return;
 
-      await _runtime.sessionController.stop();
+        await _runtime.sessionController.stop();
 
-      if (_disposed) return;
+        if (_disposed) return;
 
-      _lifecycle.pause();
+        _lifecycle.pause();
 
-      _publish(PlayerEventType.playback, const <String, Object?>{'action': 'stop'});
-    }));
+        _publish(PlayerEventType.playback, const <String, Object?>{'action': 'stop'});
+      }),
+    );
   }
 
   /// Marks the player active. Paired with [deactivate].
@@ -173,7 +177,7 @@ extension PlayerHandleLifecycle on PlayerHandle {
 
     final source = _currentSource;
 
-    _playIntent = false;
+    playIntent = false;
 
     _ladder.suspend();
     _cancelActiveOperation(StateError('PlayerIdentity deactivation requested.'));
@@ -202,7 +206,7 @@ extension PlayerHandleLifecycle on PlayerHandle {
         if (source != null && !_isSourceCurrent(source)) return;
 
         await _runtime.sessionController.pause();
-      } catch (_) {
+      } on Object catch (_) {
         // Backend may already be releasing; deactivation continues.
       }
 
@@ -223,7 +227,7 @@ extension PlayerHandleLifecycle on PlayerHandle {
 
     _currentSource = null;
     _backendReady = false;
-    _playIntent = false;
+    playIntent = false;
     _ladder.reset();
     _announceSource(null);
 
@@ -232,7 +236,7 @@ extension PlayerHandleLifecycle on PlayerHandle {
 
       try {
         await _runtime.adapter.close();
-      } catch (_) {
+      } on Object catch (_) {
         // Recycling must not fail on a broken backend.
       }
 

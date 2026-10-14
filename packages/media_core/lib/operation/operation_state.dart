@@ -1,3 +1,6 @@
+import 'package:media_core/task/task_state.dart' show TaskState;
+import 'package:meta/meta.dart';
+
 /// Describes the lifecycle state of an operation.
 ///
 /// [OperationState] is an immutable value object rather than a Dart enum.
@@ -23,7 +26,38 @@
 /// ```
 ///
 /// Terminal states cannot transition to another state.
+@immutable
 final class OperationState implements Comparable<OperationState> {
+  /// Creates a state from JSON.
+  ///
+  /// Unknown values are represented as custom states.
+  factory OperationState.fromJson(Object? json) {
+    if (json is! String) {
+      throw const FormatException('OperationState JSON value must be a String.');
+    }
+
+    return OperationState.fromValue(json);
+  }
+
+  /// Creates a state from its stable string value.
+  ///
+  /// Built-in values return their canonical instances.
+  /// Unknown values become custom states.
+  factory OperationState.fromValue(String value) {
+    final normalized = value.trim();
+
+    if (normalized.isEmpty) {
+      throw ArgumentError.value(value, 'value', 'Operation state cannot be empty.');
+    }
+
+    for (final state in values) {
+      if (state.value == normalized) {
+        return state;
+      }
+    }
+
+    return OperationState.custom(normalized);
+  }
   const OperationState._(this.value, this.name);
 
   /// Creates a custom operation state.
@@ -41,6 +75,9 @@ final class OperationState implements Comparable<OperationState> {
 
     return OperationState._(normalized, normalized);
   }
+
+  /// Parses an operation state from a string.
+  factory OperationState.parse(String value) = OperationState.fromValue;
 
   // ---------------------------------------------------------------------------
   // Built-in states
@@ -216,42 +253,6 @@ final class OperationState implements Comparable<OperationState> {
   /// Returns the stable state value for JSON serialization.
   String toJson() => value;
 
-  /// Creates a state from JSON.
-  ///
-  /// Unknown values are represented as custom states.
-  factory OperationState.fromJson(Object? json) {
-    if (json is! String) {
-      throw FormatException('OperationState JSON value must be a String.');
-    }
-
-    return OperationState.fromValue(json);
-  }
-
-  /// Creates a state from its stable string value.
-  ///
-  /// Built-in values return their canonical instances.
-  /// Unknown values become custom states.
-  factory OperationState.fromValue(String value) {
-    final normalized = value.trim();
-
-    if (normalized.isEmpty) {
-      throw ArgumentError.value(value, 'value', 'Operation state cannot be empty.');
-    }
-
-    for (final state in values) {
-      if (state.value == normalized) {
-        return state;
-      }
-    }
-
-    return OperationState.custom(normalized);
-  }
-
-  /// Parses an operation state from a string.
-  static OperationState parse(String value) {
-    return OperationState.fromValue(value);
-  }
-
   /// Returns whether [value] is a valid operation state.
   static bool isValid(String value) {
     return value.trim().isNotEmpty;
@@ -284,7 +285,7 @@ final class OperationState implements Comparable<OperationState> {
   /// This method intentionally creates a custom value instead of attempting
   /// to return a built-in singleton.
   ///
-  /// Use [fromValue] when canonical built-in values are desired.
+  /// Use [OperationState.fromValue] when canonical built-in values are desired.
   OperationState copyWith(String value) {
     return OperationState.custom(value);
   }

@@ -1,5 +1,6 @@
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/task/player_task.dart' show PlayerTask;
 
 /// Immutable unique identifier for a [PlayerTask].
 ///
@@ -41,6 +42,22 @@ final class TaskId extends Equatable implements Comparable<TaskId> {
     return TaskId._('task_${timestamp}_$counter');
   }
 
+  /// Creates a [TaskId] from a string.
+  ///
+  /// This is equivalent to calling [TaskId].
+  factory TaskId.parse(String value) = TaskId;
+
+  /// Creates a [TaskId] from a JSON-compatible value.
+  ///
+  /// Throws [FormatException] when [json] is not a string.
+  factory TaskId.fromJson(Object? json) {
+    if (json is! String) {
+      throw const FormatException('TaskId JSON value must be a String.');
+    }
+
+    return TaskId(json);
+  }
+
   static int _counter = 0;
 
   /// The normalized string representation of this ID.
@@ -53,13 +70,6 @@ final class TaskId extends Equatable implements Comparable<TaskId> {
 
   /// Returns whether this ID is non-empty.
   bool get isNotEmpty => value.isNotEmpty;
-
-  /// Creates a [TaskId] from a string.
-  ///
-  /// This is equivalent to calling [TaskId].
-  static TaskId parse(String value) {
-    return TaskId(value);
-  }
 
   /// Returns whether [value] represents a valid task ID.
   static bool isValid(String value) {
@@ -75,17 +85,6 @@ final class TaskId extends Equatable implements Comparable<TaskId> {
   /// Returns this ID as a JSON-compatible string.
   String toJson() {
     return value;
-  }
-
-  /// Creates a [TaskId] from a JSON-compatible value.
-  ///
-  /// Throws [FormatException] when [json] is not a string.
-  static TaskId fromJson(Object? json) {
-    if (json is! String) {
-      throw FormatException('TaskId JSON value must be a String.');
-    }
-
-    return TaskId(json);
   }
 
   @override

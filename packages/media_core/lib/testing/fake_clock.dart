@@ -5,14 +5,13 @@ import 'package:clock/clock.dart';
 /// Wrap test bodies in [run] to make code using `package:clock`
 /// deterministic while still reading `clock.now()`.
 final class FakeClock {
+  /// Creates a clock anchored at [start].
+  factory FakeClock.start([DateTime? start]) {
+    return FakeClock._(start ?? DateTime.utc(2024));
+  }
   FakeClock._(this._now);
 
   DateTime _now;
-
-  /// Creates a clock anchored at [start].
-  factory FakeClock.start([DateTime? start]) {
-    return FakeClock._(start ?? DateTime.utc(2024, 1, 1));
-  }
 
   /// Current fake time.
   DateTime get now => _now;

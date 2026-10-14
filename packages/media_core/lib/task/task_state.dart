@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:media_core/task/player_task.dart' show PlayerTask;
 
 /// Represents the lifecycle state of a [PlayerTask].
 ///
@@ -21,7 +22,61 @@ import 'package:equatable/equatable.dart';
 ///
 /// A task cannot leave a terminal state.
 final class TaskState extends Equatable {
+  /// Creates a task state from [value].
+  ///
+  /// Unknown values are supported as custom states.
+  factory TaskState(String value) {
+    final normalized = value.trim();
+
+    if (normalized.isEmpty) {
+      throw ArgumentError.value(value, 'value', 'Task state cannot be empty.');
+    }
+
+    return TaskState.fromString(normalized);
+  }
+
+  /// Creates a task state from a string value.
+  factory TaskState.fromValue(String value) {
+    return TaskState.fromString(value);
+  }
   const TaskState._(this.value);
+
+  /// Creates the canonical state instance for [value].
+  ///
+  /// Unknown values are returned as custom states.
+  factory TaskState.fromString(String value) {
+    final normalized = value.trim();
+
+    if (normalized.isEmpty) {
+      throw ArgumentError.value(value, 'value', 'Task state cannot be empty.');
+    }
+
+    switch (normalized) {
+      case 'created':
+        return created;
+      case 'queued':
+        return queued;
+      case 'running':
+        return running;
+      case 'completed':
+        return completed;
+      case 'failed':
+        return failed;
+      case 'cancelled':
+        return cancelled;
+      default:
+        return TaskState._(normalized);
+    }
+  }
+
+  /// Deserializes a task state.
+  factory TaskState.fromJson(Object? json) {
+    if (json is! String) {
+      throw ArgumentError.value(json, 'json', 'Task state must be a string.');
+    }
+
+    return TaskState.fromString(json);
+  }
 
   /// Task has been created but has not entered the queue.
   static const TaskState created = TaskState._('created');
@@ -40,24 +95,6 @@ final class TaskState extends Equatable {
 
   /// Task was cancelled before completion.
   static const TaskState cancelled = TaskState._('cancelled');
-
-  /// Creates a task state from [value].
-  ///
-  /// Unknown values are supported as custom states.
-  factory TaskState(String value) {
-    final normalized = value.trim();
-
-    if (normalized.isEmpty) {
-      throw ArgumentError.value(value, 'value', 'Task state cannot be empty.');
-    }
-
-    return TaskState.fromString(normalized);
-  }
-
-  /// Creates a task state from a string value.
-  factory TaskState.fromValue(String value) {
-    return TaskState.fromString(value);
-  }
 
   /// String representation of this state.
   final String value;
@@ -168,34 +205,6 @@ final class TaskState extends Equatable {
   /// All built-in task states.
   static const List<TaskState> builtIns = <TaskState>[created, queued, running, completed, failed, cancelled];
 
-  /// Creates the canonical state instance for [value].
-  ///
-  /// Unknown values are returned as custom states.
-  static TaskState fromString(String value) {
-    final normalized = value.trim();
-
-    if (normalized.isEmpty) {
-      throw ArgumentError.value(value, 'value', 'Task state cannot be empty.');
-    }
-
-    switch (normalized) {
-      case 'created':
-        return created;
-      case 'queued':
-        return queued;
-      case 'running':
-        return running;
-      case 'completed':
-        return completed;
-      case 'failed':
-        return failed;
-      case 'cancelled':
-        return cancelled;
-      default:
-        return TaskState._(normalized);
-    }
-  }
-
   /// Whether [value] represents a built-in state.
   static bool isBuiltInValue(String value) {
     return _builtInValues.contains(value.trim());
@@ -293,15 +302,6 @@ final class TaskState extends Equatable {
   /// The JSON representation is the state string.
   String toJson() {
     return value;
-  }
-
-  /// Deserializes a task state.
-  static TaskState fromJson(Object? json) {
-    if (json is! String) {
-      throw ArgumentError.value(json, 'json', 'Task state must be a string.');
-    }
-
-    return fromString(json);
   }
 
   // ---------------------------------------------------------------------------

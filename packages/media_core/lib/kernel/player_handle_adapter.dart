@@ -28,23 +28,25 @@ extension _HandleAdapterBridge on PlayerHandle {
   /// only place that re-subscribes when the adapter instance is
   /// replaced.
   void _subscribeAdapter(PlayerAdapter adapter) {
-    _adapterSubscription = adapter.events.listen((event) {
-      if (_disposed || !identical(adapter, _runtime.adapter)) {
-        return;
-      }
+    _adapterSubscription = adapter.events.listen(
+      (event) {
+        if (_disposed || !identical(adapter, _runtime.adapter)) {
+          return;
+        }
 
-      if (!_adapterEvents.isClosed) {
-        _adapterEvents.add(event);
-      }
+        if (!_adapterEvents.isClosed) {
+          _adapterEvents.add(event);
+        }
 
-      _onAdapterEvent(event);
-    },
-        // An error delivered through the stream itself — not wrapped in a
-        // PlayerAdapterErrorEvent — still has to reach the session, or the
-        // backend fails and the handle keeps reporting the last good state.
-        onError: (Object error, StackTrace stackTrace) {
-          _handleAdapterError('adapter stream error', error, stackTrace);
-        });
+        _onAdapterEvent(event);
+      },
+      // An error delivered through the stream itself — not wrapped in a
+      // PlayerAdapterErrorEvent — still has to reach the session, or the
+      // backend fails and the handle keeps reporting the last good state.
+      onError: (Object error, StackTrace stackTrace) {
+        _handleAdapterError('adapter stream error', error, stackTrace);
+      },
+    );
   }
 
   /// Replaces the active adapter and moves the handle's own subscription
@@ -80,7 +82,7 @@ extension _HandleAdapterBridge on PlayerHandle {
     if (!identical(previous, next)) {
       try {
         await previous.dispose();
-      } catch (_) {
+      } on Object catch (_) {
         // A backend that refuses to release must not fail the swap that
         // already succeeded.
       }
@@ -101,8 +103,8 @@ extension _HandleAdapterBridge on PlayerHandle {
     }
 
     try {
-      await adapter.setAudioOnly(_audioOnly);
-    } catch (error, stackTrace) {
+      await adapter.setAudioOnly(audioOnly: _audioOnly);
+    } on Object catch (error, stackTrace) {
       // See above: the preference is re-applied on the next open/swap.
       // It is still logged, because a swap that comes back with the
       // picture on and the audio-only request dropped is invisible
@@ -155,21 +157,27 @@ extension _HandleAdapterBridge on PlayerHandle {
 
       case PlayerAdapterPlaying():
         // PlaybackController updated by PlayerPlaybackBinding.
-        _runtime.sessionController.play();
+        //
+        // The session transition is fire-and-forget: the controller updates
+        // its state synchronously and its Future cannot fail, while this
+        // bridge is the synchronous event fan-out — awaiting here would
+        // reorder the handle's own events and let a later adapter event
+        // overtake an earlier session transition.
+        unawaited(_runtime.sessionController.play());
 
       case PlayerAdapterPaused():
-        _runtime.sessionController.pause();
+        unawaited(_runtime.sessionController.pause());
 
       case PlayerAdapterStopped():
-        _runtime.sessionController.stop();
+        unawaited(_runtime.sessionController.stop());
 
-      case PlayerAdapterBuffering(buffering: final buffering, progress: final progress):
+      case PlayerAdapterBuffering(:final buffering, :final progress):
         // PlaybackController updated by PlayerPlaybackBinding.
         //
         // The flag is forwarded, not implied: `buffering: false` ends the
         // condition, and treating it as "enter buffering" left the session in
         // that status (loading == true) after the stream had recovered.
-        _runtime.sessionController.setBuffering(buffering);
+        _runtime.sessionController.setBuffering(buffering: buffering);
 
         _publish(PlayerEventType.buffering, <String, Object?>{'buffering': buffering, 'progress': progress});
 
@@ -187,7 +195,7 @@ extension _HandleAdapterBridge on PlayerHandle {
         // Handled by PlayerPlaybackBinding.
         break;
 
-      case PlayerAdapterVideoSizeChanged(width: final width, height: final height):
+      case PlayerAdapterVideoSizeChanged(:final width, :final height):
         // GeometryController updated by PlayerGeometryBinding.
         _publish(PlayerEventType.renderer, <String, Object?>{'width': width, 'height': height});
 
@@ -198,19 +206,19 @@ extension _HandleAdapterBridge on PlayerHandle {
       case PlayerAdapterVideoReconfigured():
         _publish(PlayerEventType.renderer, const <String, Object?>{'action': 'videoReconfigured'});
 
-      case PlayerAdapterHwdecChanged(decoder: final decoder):
+      case PlayerAdapterHwdecChanged(:final decoder):
         _publish(PlayerEventType.renderer, <String, Object?>{'action': 'hwdecChanged', 'decoder': decoder});
 
       case PlayerAdapterAudioReconfigured():
         _publish(PlayerEventType.audio, const <String, Object?>{'action': 'audioReconfigured'});
 
-      case PlayerAdapterAudioDeviceChanged(device: final device):
+      case PlayerAdapterAudioDeviceChanged(:final device):
         _publish(PlayerEventType.audio, <String, Object?>{'action': 'audioDeviceChanged', 'device': device});
 
-      case PlayerAdapterSubtitleChanged(text: final text):
+      case PlayerAdapterSubtitleChanged(:final text):
         _publish(PlayerEventType.renderer, <String, Object?>{'action': 'subtitleChanged', 'text': text});
 
-      case PlayerAdapterCacheChanged(buffering: final buffering, duration: final duration, progress: final progress):
+      case PlayerAdapterCacheChanged(:final buffering, :final duration, :final progress):
         _publish(PlayerEventType.buffering, <String, Object?>{
           'action': 'cacheChanged',
           'buffering': buffering,
@@ -218,7 +226,7 @@ extension _HandleAdapterBridge on PlayerHandle {
           'progress': progress,
         });
 
-      case PlayerAdapterBufferedRangesChanged(ranges: final ranges):
+      case PlayerAdapterBufferedRangesChanged(:final ranges):
         // The transport state carries the canonical view (the binding
         // normalizes it); this event is the moment the bar repaints,
         // so it publishes the raw reach figure the UI can draw
@@ -226,31 +234,28 @@ extension _HandleAdapterBridge on PlayerHandle {
         _publish(PlayerEventType.buffering, <String, Object?>{
           'action': 'bufferedRanges',
           'ranges': ranges
-              .map((range) => <String, int>{
-                'startMs': range.start.inMilliseconds,
-                'endMs': range.end.inMilliseconds,
-              })
+              .map((range) => <String, int>{'startMs': range.start.inMilliseconds, 'endMs': range.end.inMilliseconds})
               .toList(),
         });
 
-      case PlayerAdapterMetadataChanged(metadata: final metadata):
+      case PlayerAdapterMetadataChanged(:final metadata):
         _publish(PlayerEventType.player, <String, Object?>{'action': 'metadataChanged', 'metadata': metadata});
 
-      case PlayerAdapterPlaylistChanged(items: final items, index: final index):
+      case PlayerAdapterPlaylistChanged(:final items, :final index):
         _publish(PlayerEventType.player, <String, Object?>{
           'action': 'playlistChanged',
           'items': items,
           'index': index,
         });
 
-      case PlayerAdapterClientMessage(message: final message, args: final args):
+      case PlayerAdapterClientMessage(:final message, :final args):
         _publish(PlayerEventType.player, <String, Object?>{
           'action': 'clientMessage',
           'message': message,
           'args': args,
         });
 
-      case PlayerAdapterLogMessage(level: final level, prefix: final prefix, text: final text):
+      case PlayerAdapterLogMessage(:final level, :final prefix, :final text):
         _publish(PlayerEventType.player, <String, Object?>{
           'action': 'logMessage',
           'level': level,
@@ -258,7 +263,7 @@ extension _HandleAdapterBridge on PlayerHandle {
           'text': text,
         });
 
-      case PlayerAdapterErrorEvent(message: final message, error: final error, stackTrace: final stackTrace):
+      case PlayerAdapterErrorEvent(:final message, :final error, :final stackTrace):
         _handleAdapterError(message, error, stackTrace);
     }
   }
@@ -272,7 +277,7 @@ extension _HandleAdapterBridge on PlayerHandle {
   Future<void> _restartForLoop() async {
     try {
       await _handleCompletion();
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       if (_disposed) {
         return;
       }
@@ -351,14 +356,7 @@ extension _HandleAdapterBridge on PlayerHandle {
 
     _runtime.sessionController.error(message);
 
-    _eventBus.publish(
-      PlayerErrorEvent(
-        error: error ?? message,
-        stackTrace: stackTrace,
-        priority: EventPriority.high,
-        context: _buildContext(),
-      ),
-    );
+    _eventBus.publish(PlayerErrorEvent(error: error ?? message, stackTrace: stackTrace, context: _buildContext()));
 
     MediaCoreLog.warning(
       LogCategory.error,
@@ -370,22 +368,15 @@ extension _HandleAdapterBridge on PlayerHandle {
       // `recoveryEnabled=true` for a handle whose recovery the playback owner
       // had explicitly disabled, which reads as "the ladder is running" during
       // a triage where it is not.
-      fields: <String, Object?>{
-        'recoveryEnabled': _recoveryEnabled && _options.enableRecovery && config.enableRecovery,
-      },
+      fields: <String, Object?>{'recoveryEnabled': recoveryEnabled && _options.enableRecovery && config.enableRecovery},
     );
 
-    if (!_recoveryEnabled || !_options.enableRecovery || !config.enableRecovery) {
+    if (!recoveryEnabled || !_options.enableRecovery || !config.enableRecovery) {
       return;
     }
 
     reportFailure(
-      RecoveryFailure.fromMessage(
-        message,
-        error: error,
-        stackTrace: stackTrace,
-        source: RecoveryFailureSource.adapter,
-      ),
+      RecoveryFailure.fromMessage(message, error: error, stackTrace: stackTrace, source: RecoveryFailureSource.adapter),
     );
   }
 

@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'package:media_core/geometry/video_size.dart';
+
 import 'package:media_core/adapter/player_adapter.dart';
 import 'package:media_core/adapter/player_adapter_event.dart';
 import 'package:media_core/geometry/geometry_controller.dart';
+import 'package:media_core/geometry/video_size.dart';
 
 /// Binds player adapter events to the geometry controller.
 ///
@@ -20,6 +21,8 @@ import 'package:media_core/geometry/geometry_controller.dart';
 /// - access platform APIs
 /// - control playback
 final class PlayerGeometryBinding {
+  /// Creates a binding that subscribes to [adapter]'s events and feeds the
+  /// resulting video sizes into [geometry].
   PlayerGeometryBinding({required PlayerAdapter adapter, required GeometryController geometry})
     : _adapter = adapter,
       _geometry = geometry {
@@ -46,6 +49,7 @@ final class PlayerGeometryBinding {
     }
   }
 
+  /// Cancels the adapter event subscription, ending the binding.
   Future<void> dispose() async {
     await _subscription.cancel();
   }

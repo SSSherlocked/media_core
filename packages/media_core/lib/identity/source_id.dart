@@ -1,5 +1,6 @@
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/identity/library.dart' show GenerationId, OperationId, PlayerId, SessionId, SlotId;
 
 /// Unique identifier of a media source.
 ///
@@ -48,7 +49,7 @@ final class SourceId extends Equatable implements Comparable<SourceId> {
 
   /// Creates a new unique runtime source identifier.
   ///
-  /// [clock.now] is used instead of [DateTime.now] so source ID generation
+  /// `clock.now()` is used instead of [DateTime.now] so source ID generation
   /// can be controlled in tests.
   factory SourceId.generate() {
     final timestamp = clock.now().microsecondsSinceEpoch;
@@ -76,6 +77,22 @@ final class SourceId extends Equatable implements Comparable<SourceId> {
 
   const SourceId._(this.value);
 
+  /// Parses an existing source identifier.
+  ///
+  /// Throws [ArgumentError] when [value] is empty.
+  factory SourceId.parse(String value) => SourceId(value);
+
+  /// Creates a [SourceId] from its JSON representation.
+  ///
+  /// The JSON representation is simply the raw string value.
+  factory SourceId.fromJson(Object? json) {
+    if (json is! String) {
+      throw const FormatException('SourceId JSON value must be a String.');
+    }
+
+    return SourceId(json);
+  }
+
   static int _counter = 0;
 
   /// The raw identifier value.
@@ -97,27 +114,9 @@ final class SourceId extends Equatable implements Comparable<SourceId> {
     return value == 'unknown';
   }
 
-  /// Parses an existing source identifier.
-  ///
-  /// Throws [ArgumentError] when [value] is empty.
-  static SourceId parse(String value) {
-    return SourceId(value);
-  }
-
   /// Returns whether [value] can be used as a valid source identifier.
   static bool isValid(String value) {
     return value.trim().isNotEmpty;
-  }
-
-  /// Creates a [SourceId] from its JSON representation.
-  ///
-  /// The JSON representation is simply the raw string value.
-  static SourceId fromJson(Object? json) {
-    if (json is! String) {
-      throw FormatException('SourceId JSON value must be a String.');
-    }
-
-    return SourceId(json);
   }
 
   /// Converts this identifier to its JSON representation.

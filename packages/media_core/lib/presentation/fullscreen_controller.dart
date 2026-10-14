@@ -55,7 +55,7 @@ final class FullscreenController {
         return;
       }
 
-      final int generation = ++_generation;
+      final generation = ++_generation;
 
       _stateSubject.add(current.copyWith(transitioning: true, generation: generation, error: null));
     });
@@ -73,7 +73,7 @@ final class FullscreenController {
         return;
       }
 
-      final int generation = ++_generation;
+      final generation = ++_generation;
 
       _stateSubject.add(current.copyWith(transitioning: true, generation: generation, error: null));
     });
@@ -108,7 +108,7 @@ final class FullscreenController {
   }
 
   /// Updates fullscreen availability.
-  void updateAvailability(bool available) {
+  void updateAvailability({required bool available}) {
     _ensureNotDisposed();
 
     _stateSubject.add(current.copyWith(available: available));
@@ -116,7 +116,7 @@ final class FullscreenController {
 
   /// Serializes operations.
   Future<void> _enqueue(Future<void> Function() action) {
-    final Future<void> next = _operation.then((_) => action());
+    final next = _operation.then((_) => action());
 
     _operation = next.catchError((_) {});
 

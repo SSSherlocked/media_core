@@ -1,7 +1,7 @@
 import 'package:media_core/source/player_source.dart';
+import 'package:media_core/source/source_resolve_context.dart';
 import 'package:media_core/source/source_resolved.dart';
 import 'package:media_core/source/source_resolver.dart';
-import 'package:media_core/source/source_resolve_context.dart';
 
 /// Resolves a [PlayerSource] by trying registered resolvers in order.
 ///
@@ -11,6 +11,7 @@ import 'package:media_core/source/source_resolve_context.dart';
 /// Resolver order is significant: the first resolver that supports the
 /// source is selected.
 final class SourceResolverChain implements SourceResolver {
+  /// Creates a chain seeded with [resolvers], in resolution order.
   SourceResolverChain({Iterable<SourceResolver> resolvers = const []})
     : _resolvers = List<SourceResolver>.from(resolvers);
 
@@ -75,8 +76,9 @@ final class SourceResolverChain implements SourceResolver {
       return true;
     }
 
-    _resolvers.removeAt(index);
-    _resolvers.insert(0, resolver);
+    _resolvers
+      ..removeAt(index)
+      ..insert(0, resolver);
     return true;
   }
 
@@ -107,14 +109,13 @@ final class SourceResolverChain implements SourceResolver {
   }
 
   @override
-  Future<ResolvedSource> resolve(
-    PlayerSource source, {
-    SourceResolveContext context = SourceResolveContext.empty,
-  }) async {
+  Future<ResolvedSource> resolve(PlayerSource source, {SourceResolveContext context = SourceResolveContext.empty}) {
     final resolver = findResolver(source);
 
     if (resolver == null) {
-      throw StateError('No source resolver supports source: ${source.uri}');
+      // Delivered through the returned Future, as an `async` body did, so
+      // no caller ever sees this failure thrown synchronously.
+      return Future<ResolvedSource>.error(StateError('No source resolver supports source: ${source.uri}'));
     }
 
     return resolver.resolve(source, context: context);

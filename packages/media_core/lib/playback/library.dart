@@ -27,7 +27,7 @@ export 'package:media_core/playback/playback_position.dart';
 export 'package:media_core/playback/playback_rate.dart';
 export 'package:media_core/playback/playback_request.dart';
 export 'package:media_core/playback/playback_snapshot.dart';
-export 'package:media_core/playback/player_transport_state.dart';
 export 'package:media_core/playback/playback_volume.dart';
+export 'package:media_core/playback/player_transport_state.dart';
 export 'package:media_core/playback/thumbnail_slice.dart';
 export 'package:media_core/playback/thumbnail_track.dart';

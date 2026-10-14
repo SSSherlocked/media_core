@@ -12,6 +12,7 @@
 /// removing or renaming files in this module.
 library;
 
+export 'package:media_core/visibility/player_visibility_binding.dart';
 // ============================================================================
 // Public exports
 // ============================================================================
@@ -19,7 +20,6 @@ library;
 export 'package:media_core/visibility/visibility_controller.dart';
 export 'package:media_core/visibility/visibility_event.dart';
 export 'package:media_core/visibility/visibility_metrics.dart';
-export 'package:media_core/visibility/player_visibility_binding.dart';
 export 'package:media_core/visibility/visibility_observer.dart';
 export 'package:media_core/visibility/visibility_snapshot.dart';
 export 'package:media_core/visibility/visibility_state.dart';

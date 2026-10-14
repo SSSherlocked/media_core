@@ -1,3 +1,5 @@
+import 'package:media_core/audio/audio_focus.dart' show AudioFocus;
+
 /// Platform-independent audio session abstraction.
 ///
 /// An audio session represents the system-level audio environment required by

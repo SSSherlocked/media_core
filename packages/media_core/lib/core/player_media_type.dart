@@ -21,6 +21,8 @@ final class PlayerMediaType extends Equatable implements Comparable<PlayerMediaT
     return PlayerMediaType._(normalized);
   }
 
+  const PlayerMediaType._(this.value);
+
   /// Creates a custom media type.
   factory PlayerMediaType.custom(String value) {
     return PlayerMediaType(value);
@@ -29,14 +31,14 @@ final class PlayerMediaType extends Equatable implements Comparable<PlayerMediaT
   /// Creates a media type from a JSON value.
   factory PlayerMediaType.fromJson(Object? json) {
     if (json is! String) {
-      throw FormatException('PlayerMediaType JSON value must be a String.');
+      throw const FormatException('PlayerMediaType JSON value must be a String.');
     }
 
     return PlayerMediaType(json);
   }
 
-  /// Parses a media type from a string.
-  static PlayerMediaType parse(String value) {
+  /// Creates a media type by parsing a raw string.
+  factory PlayerMediaType.parse(String value) {
     return PlayerMediaType(value);
   }
 
@@ -44,18 +46,12 @@ final class PlayerMediaType extends Equatable implements Comparable<PlayerMediaT
   ///
   /// Returns `null` when [value] is empty or invalid.
   static PlayerMediaType? tryParse(String? value) {
-    if (value == null || value.trim().isEmpty) {
+    if (value == null || !isValid(value)) {
       return null;
     }
 
-    try {
-      return PlayerMediaType(value);
-    } on ArgumentError {
-      return null;
-    }
+    return PlayerMediaType(value);
   }
-
-  const PlayerMediaType._(this.value);
 
   /// Represents an unknown media type.
   static const PlayerMediaType unknown = PlayerMediaType._('unknown');
@@ -152,7 +148,7 @@ final class PlayerMediaType extends Equatable implements Comparable<PlayerMediaT
   static bool isBuiltInValue(String value) {
     final normalized = value.trim();
 
-    return builtIns.any((PlayerMediaType type) => type.value == normalized);
+    return builtIns.any((type) => type.value == normalized);
   }
 
   /// Returns the corresponding built-in type for [value].

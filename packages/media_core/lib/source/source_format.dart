@@ -1,3 +1,5 @@
+import 'package:media_core/source/source_protocol.dart' show SourceProtocol;
+
 /// Describes the container or media file format of a source.
 ///
 /// [SourceFormat] describes the format of the media resource itself.
@@ -324,7 +326,6 @@ extension SourceFormatX on SourceFormat {
         return null;
     }
   }
-
 
   /// Returns the stable string representation of this format.
   String get value => name;

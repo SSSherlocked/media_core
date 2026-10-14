@@ -51,9 +51,7 @@ abstract final class MapUtils {
   static Map<K, V> mergeAll<K, V>(Iterable<Map<K, V>> maps) {
     final result = <K, V>{};
 
-    for (final map in maps) {
-      result.addAll(map);
-    }
+    maps.forEach(result.addAll);
 
     return result;
   }

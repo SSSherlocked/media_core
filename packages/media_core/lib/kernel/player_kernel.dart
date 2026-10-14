@@ -1,11 +1,13 @@
 import 'dart:async';
-
+import 'package:flutter/widgets.dart' show AppLifecycleState, WidgetsBinding, WidgetsBindingObserver;
+import 'package:media_core/adapter/player_adapter_capabilities.dart' show PlayerAdapterCapabilities;
 import 'package:media_core/adapter/player_adapter_config.dart';
 import 'package:media_core/adapter/player_adapter_context.dart';
 import 'package:media_core/adapter/player_adapter_registry.dart';
+import 'package:media_core/adapter/player_adapter_selector.dart';
 import 'package:media_core/coordinator/global_player_coordinator.dart';
-import 'package:media_core/core/player_identity.dart';
 import 'package:media_core/core/player_config.dart';
+import 'package:media_core/core/player_identity.dart';
 import 'package:media_core/event/event_context.dart';
 import 'package:media_core/event/event_priority.dart';
 import 'package:media_core/event/event_subscription.dart';
@@ -14,23 +16,27 @@ import 'package:media_core/event/player_event_bus.dart';
 import 'package:media_core/event/player_event_type.dart';
 import 'package:media_core/identity/player_id.dart';
 import 'package:media_core/identity/session_id.dart';
-import 'package:media_core/pool/player_pool.dart';
-import 'package:media_core/preload/preload_manager.dart';
-import 'package:media_core/preload/preload_priority.dart';
-import 'package:media_core/preload/preload_request.dart';
+import 'package:media_core/kernel/kernel_audio_driver.dart';
+import 'package:media_core/kernel/kernel_options.dart';
+import 'package:media_core/kernel/kernel_presentation_driver.dart';
+import 'package:media_core/kernel/player_handle.dart';
+import 'package:media_core/planning/default_media_source_planner.dart';
+import 'package:media_core/planning/media_source_plan.dart';
+import 'package:media_core/planning/media_source_planner.dart';
 import 'package:media_core/platform/platform_capabilities.dart';
 import 'package:media_core/platform/platform_codec_capabilities.dart';
 import 'package:media_core/platform/platform_device_profile.dart';
 import 'package:media_core/platform/platform_provider.dart';
+import 'package:media_core/pool/player_pool.dart';
+import 'package:media_core/preload/preload_manager.dart';
+import 'package:media_core/preload/preload_priority.dart';
+import 'package:media_core/preload/preload_request.dart';
 import 'package:media_core/presentation/presentation_request.dart';
 import 'package:media_core/screenshot/player_screenshot.dart';
 import 'package:media_core/screenshot/screenshot_options.dart';
 import 'package:media_core/session/player_session.dart';
-import 'package:media_core/planning/default_media_source_planner.dart';
 import 'package:media_core/source/media_source.dart';
 import 'package:media_core/source/media_source_bridge.dart';
-import 'package:media_core/planning/media_source_plan.dart';
-import 'package:media_core/planning/media_source_planner.dart';
 import 'package:media_core/source/player_source.dart';
 import 'package:media_core/source/source_format.dart';
 import 'package:media_core/source/source_media_type.dart';
@@ -38,11 +44,6 @@ import 'package:media_core/source/source_protocol.dart';
 import 'package:media_core/source/source_service.dart';
 import 'package:media_core_logging/media_core_logging.dart';
 import 'package:media_core_memory/media_core_memory.dart';
-import 'package:media_core/adapter/player_adapter_selector.dart';
-import 'package:media_core/kernel/kernel_audio_driver.dart';
-import 'package:media_core/kernel/kernel_options.dart';
-import 'package:media_core/kernel/kernel_presentation_driver.dart';
-import 'package:media_core/kernel/player_handle.dart';
 
 /// The orchestration root of the media core.
 ///
@@ -109,7 +110,7 @@ import 'package:media_core/kernel/player_handle.dart';
 /// );
 /// await handle.play();
 /// ```
-final class PlayerKernel {
+final class PlayerKernel with WidgetsBindingObserver {
   /// Creates a kernel.
   ///
   /// Every dependency is optional and lazily constructed, so
@@ -142,6 +143,17 @@ final class PlayerKernel {
     if (options.shouldAttachAudio(hasFactory: audioDriverFactory != null)) {
       _audioDriver = audioDriverFactory!.call();
     }
+
+    if (options.pauseWhenBackgrounded) {
+      try {
+        WidgetsBinding.instance.addObserver(this);
+        _observesLifecycle = true;
+      } on Object {
+        // No Flutter binding in this process: nothing to observe, and the
+        // players carry on. A host that wants the pause asks for it from a
+        // widget context instead.
+      }
+    }
   }
 
   /// Registry of available backends.
@@ -160,6 +172,14 @@ final class PlayerKernel {
 
   final Map<PlayerId, PlayerHandle> _handles = {};
 
+  /// Whether this kernel is registered with the app-lifecycle broadcast.
+  ///
+  /// Tracked because the registration is conditional on
+  /// [KernelOptions.pauseWhenBackgrounded] *and* on a binding existing: a
+  /// pure-Dart host (a CLI, an isolate, a suite without a platform) gets no
+  /// observer, and `removeObserver` for one that was never added is a wrong call.
+  bool _observesLifecycle = false;
+
   /// Ledger of the players this kernel holds.
   /// This instance's key in the shared account.
   late final String _memoryKey = memoryContributorKey(this);
@@ -167,9 +187,33 @@ final class PlayerKernel {
   final MemoryAccount _memory = MediaCoreMemory.of(MemoryModule.kernel);
 
   KernelAudioDriver? _audioDriver;
-  KernelPresentationDriver? _presentationDriver;
 
-  PlatformProvider? _platformProvider;
+  /// The presentation driver this kernel publishes window requests to, if any.
+  ///
+  /// Assigned directly (or cleared through [detachPresentation]) by a host that
+  /// owns a presentation capability package; null means fullscreen and PiP
+  /// requests from this kernel throw instead of being half-applied.
+  KernelPresentationDriver? presentationDriver;
+
+  /// The platform capability source players are created from, if any.
+  ///
+  /// Assigned directly (or cleared through [detachPlatformProvider]) once the
+  /// host has loaded a provider. Without one, every session and every adapter is
+  /// handed the optimistic defaults in `PlatformCapabilities` — playback works,
+  /// but nothing knows what the device can actually decode.
+  ///
+  /// Set it before creating players: the provider is consulted once per created
+  /// player and its answers are carried into the session and adapter contexts,
+  /// so a backend can pick a decoder from facts instead of guesses. It is never
+  /// awaited — the provider caches its own probe, and a player created while
+  /// the probe is still running gets the provider's documented "unknown"
+  /// answers rather than waiting for a device query before it can start.
+  ///
+  /// ```dart
+  /// final provider = await NativePlatformProvider.load();
+  /// kernel.platformProvider = provider;
+  /// ```
+  PlatformProvider? platformProvider;
 
   /// The driver a new kernel takes when nothing else was attached.
   ///
@@ -208,17 +252,15 @@ final class PlayerKernel {
   ///
   /// The method never throws for an unsupported source: an
   /// [UnsupportedPlan] is a legitimate answer and the caller decides
-  /// what to do with it. A [StateError] from [selector.requireMedia]
-  /// still surfaces, because "no backend registered at all" is a
-  /// configuration bug rather than a planning outcome.
+  /// what to do with it. A [StateError] from
+  /// [PlayerAdapterSelector.requireMedia] still surfaces, because "no
+  /// backend registered at all" is a configuration bug rather than a
+  /// planning outcome.
   ({PlayerAdapterRegistration registration, MediaSourcePlan plan}) planFor(
     MediaSource source, {
     String? preferredBackend,
   }) {
-    final registration = selector.requireMedia(
-      source,
-      preferredId: preferredBackend,
-    );
+    final registration = selector.requireMedia(source, preferredId: preferredBackend);
     final plan = _planner.plan(source, registration.capabilities);
 
     return (registration: registration, plan: plan);
@@ -257,7 +299,7 @@ final class PlayerKernel {
     MediaCoreLog.info(
       LogCategory.fallback,
       'backend registered: ${registration.id} (priority ${registration.priority}'
-          '${registration.enabled ? '' : ', disabled'})',
+      '${registration.enabled ? '' : ', disabled'})',
       fields: <String, Object?>{
         'registered': registry.ids.toList(),
         'live': registration.capabilities.supportsLive,
@@ -298,16 +340,13 @@ final class PlayerKernel {
       effectiveSource = await _resolveSource(effectiveSource);
     }
 
-    final registration = selector.require(
-      effectiveSource ?? PlayerSource.unknown(),
-      preferredId: preferredBackend,
-    );
+    final registration = selector.require(effectiveSource ?? PlayerSource.unknown(), preferredId: preferredBackend);
 
     MediaCoreLog.info(
       LogCategory.player,
       'create: backend "${registration.id}"'
-          '${preferredBackend == null ? ' (selected by score)' : ' (requested: $preferredBackend)'}'
-          ' for ${effectiveSource?.uri ?? '<no source>'}',
+      '${preferredBackend == null ? ' (selected by score)' : ' (requested: $preferredBackend)'}'
+      ' for ${effectiveSource?.uri ?? '<no source>'}',
       fields: <String, Object?>{
         'backend': registration.id,
         'preferredBackend': preferredBackend,
@@ -320,7 +359,7 @@ final class PlayerKernel {
     final player = PlayerIdentity.create();
     final sessionId = SessionId.generate();
     final adapter = registration.factory.create(registration.id);
-    final platform = _platformProvider;
+    final platform = platformProvider;
 
     final adapterContext = PlayerAdapterContext(
       playerId: player.id,
@@ -358,10 +397,10 @@ final class PlayerKernel {
     // `PlayerConfig(muted: true)` actually silent and keeps
     // `options.enableFallback` / `config.enableFallback` meaningful.
     if (config.muted) {
-      await handle.setMute(true);
+      await handle.setMute(muted: true);
     }
 
-    handle.setEngineFallbackEnabled(options.enableFallback && config.enableFallback);
+    handle.engineFallbackEnabled = options.enableFallback && config.enableFallback;
 
     await handle.initialize();
 
@@ -410,20 +449,18 @@ final class PlayerKernel {
     PlayerConfig config = PlayerConfig.defaults,
     String? preferredBackend,
   }) async {
-    final registration = selector.requireMedia(
-      source,
-      preferredId: preferredBackend,
-    );
+    final registration = selector.requireMedia(source, preferredId: preferredBackend);
     final plan = _planner.plan(source, registration.capabilities);
 
+    // Kept `async` on purpose: the two throws below (no backend registered,
+    // unsupported plan) reach callers as an error on the returned Future,
+    // which is what every caller of this method awaits.
     switch (plan) {
       case DirectPlan():
       case CompositePlan():
-        return create(
-          config: config,
-          source: source.toPlayerSource(),
-          preferredBackend: registration.id,
-        );
+        final handle = await create(config: config, source: source.toPlayerSource(), preferredBackend: registration.id);
+
+        return handle;
 
       case UnsupportedPlan(:final reason):
         throw UnsupportedError(reason);
@@ -482,7 +519,7 @@ final class PlayerKernel {
   /// Releases a player completely.
   ///
   /// The handle is disposed, unregistered from every coordinator
-  /// and removed from the pool. Use [PlayerHandle.recycle] plus
+  /// and removed from the pool. Use `PlayerHandle.recycle` plus
   /// [acquire] for soft reuse.
   Future<void> release(PlayerId playerId) async {
     final handle = _handles.remove(playerId);
@@ -535,10 +572,7 @@ final class PlayerKernel {
   Stream<PlayerEvent> get events => _eventBus.stream;
 
   /// Subscribes to the global event stream.
-  EventSubscription subscribe(
-    void Function(PlayerEvent event) listener, {
-    EventPriority? minimumPriority,
-  }) {
+  EventSubscription subscribe(void Function(PlayerEvent event) listener, {EventPriority? minimumPriority}) {
     return _eventBus.subscribe(listener, minimumPriority: minimumPriority);
   }
 
@@ -588,62 +622,22 @@ final class PlayerKernel {
   // Platform capability
   // ---------------------------------------------------------------------------
 
-  /// The attached platform provider, if any.
+  /// Detaches the platform capability source, clearing [platformProvider].
   ///
-  /// Without one, every session and every adapter is handed the optimistic
-  /// defaults in `PlatformCapabilities` — playback works, but nothing knows
-  /// what the device can actually decode.
-  PlatformProvider? get platformProvider => _platformProvider;
-
-  /// Attaches the platform capability source.
-  ///
-  /// The provider is consulted once per created player and its answers are
-  /// carried into the session context and into the adapter context, so a
-  /// backend can pick a decoder from facts instead of guesses:
-  ///
-  /// ```dart
-  /// final provider = await NativePlatformProvider.load();
-  /// kernel.attachPlatformProvider(provider);
-  /// ```
-  ///
-  /// It is never awaited: the provider caches its own probe, and a player
-  /// created while the probe is still running gets whatever the provider
-  /// reports at that moment (its documented "unknown" answers) rather than
-  /// waiting for a device query before it can start.
-  void attachPlatformProvider(PlatformProvider provider) {
-    _platformProvider = provider;
-  }
-
-  /// Detaches the platform capability source.
+  /// Players created afterwards fall back to the optimistic defaults in
+  /// `PlatformCapabilities`; live players keep the context they were built
+  /// with.
   void detachPlatformProvider() {
-    _platformProvider = null;
+    platformProvider = null;
   }
 
   // ---------------------------------------------------------------------------
   // Presentation capability
   // ---------------------------------------------------------------------------
 
-  /// The attached presentation driver, if any.
-  KernelPresentationDriver? get presentationDriver => _presentationDriver;
-
-  /// Attaches a presentation capability driver.
-  ///
-  /// After attaching, presentation requests flow to the driver:
-  ///
-  /// ```dart
-  /// final presentation = MediaCorePresentation();
-  /// await presentation.initialize();          // window_manager init
-  /// kernel.attachPresentation(presentation);
-  ///
-  /// await kernel.enterFullscreen(playerId);   // → driver
-  /// ```
-  void attachPresentation(KernelPresentationDriver driver) {
-    _presentationDriver = driver;
-  }
-
   /// Detaches the presentation driver.
   void detachPresentation() {
-    _presentationDriver = null;
+    presentationDriver = null;
   }
 
   /// Requests fullscreen for [playerId].
@@ -683,7 +677,7 @@ final class PlayerKernel {
   ///
   /// Returns null when the player is unknown, has no source open, or neither
   /// capture route could produce an image; see
-  /// [PlayerHandle.captureScreenshot] for which route is tried and why a
+  /// `PlayerHandle.captureScreenshot` for which route is tried and why a
   /// capture can legitimately produce nothing.
   Future<PlayerScreenshot?> captureScreenshot(
     PlayerId playerId, {
@@ -695,13 +689,18 @@ final class PlayerKernel {
       return null;
     }
 
-    return handle.captureScreenshot(options: options);
+    // Awaited instead of returned directly: this method stays `async` so a
+    // disposed handle's synchronous `StateError` reaches callers as an error
+    // on the Future, exactly as it did before.
+    final screenshot = await handle.captureScreenshot(options: options);
+
+    return screenshot;
   }
 
   Future<void> _requestPresentation(PlayerId playerId, PresentationRequest request) async {
-    final driver = _presentationDriver;
+    final driver = presentationDriver;
     if (driver == null) {
-      throw StateError('No presentation driver attached. Call attachPresentation first.');
+      throw StateError('No presentation driver attached. Assign PlayerKernel.presentationDriver first.');
     }
     if (!_handles.containsKey(playerId)) {
       throw StateError('Unknown player: $playerId');
@@ -779,17 +778,11 @@ final class PlayerKernel {
       return source.copyWith(
         uri: resolved.uri,
         headers: resolved.headers,
-        protocol: resolved.protocol == SourceProtocol.unknown
-            ? source.protocol
-            : resolved.protocol,
-        mediaType: resolved.mediaType == SourceMediaType.unknown
-            ? source.mediaType
-            : resolved.mediaType,
-        format: resolved.format == SourceFormat.unknown
-            ? source.format
-            : resolved.format,
+        protocol: resolved.protocol == SourceProtocol.unknown ? source.protocol : resolved.protocol,
+        mediaType: resolved.mediaType == SourceMediaType.unknown ? source.mediaType : resolved.mediaType,
+        format: resolved.format == SourceFormat.unknown ? source.format : resolved.format,
       );
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       // Resolution is an enhancement, so the original source still
       // opens — but a resolver that throws (expired token, dead
       // provider) has to leave a trace, or the failure resurfaces as a
@@ -820,12 +813,7 @@ final class PlayerKernel {
     if (bridge == null || carried.metadata.containsKey(MediaSourceBridge.metadataKey)) {
       return carried;
     }
-    return carried.copyWith(
-      metadata: <String, Object?>{
-        ...carried.metadata,
-        MediaSourceBridge.metadataKey: bridge,
-      },
-    );
+    return carried.copyWith(metadata: <String, Object?>{...carried.metadata, MediaSourceBridge.metadataKey: bridge});
   }
 
   void _registerEverywhere(PlayerHandle handle) {
@@ -833,12 +821,13 @@ final class PlayerKernel {
     _reportMemory();
 
     if (options.enablePool) {
-      _pool.add(handle.id);
       // A freshly created handle belongs to its creator. Without reserving it
       // the pool counts it as idle, and the next acquire() (e.g. a feed cell
       // taking a warm player) would hand out - and recycle - the player that is
       // currently playing.
-      _pool.reserve(handle.id, sessionId: handle.session.context.sessionId);
+      _pool
+        ..add(handle.id)
+        ..reserve(handle.id, sessionId: handle.session.context.sessionId);
     }
 
     _coordinator.player.register(handle.player);
@@ -855,15 +844,79 @@ final class PlayerKernel {
   /// without asking every snapshot), which is why the item count is reported
   /// alongside it.
   void _reportMemory() {
-    _memory.report(_memoryKey, 
+    _memory.report(
+      _memoryKey,
       items: _handles.length,
       bytes: _handles.length * MemoryEstimates.videoStream720p,
       note: '${_handles.length} open player(s)',
     );
   }
 
+  /// App-lifecycle transitions, applied to every player this kernel owns.
+  ///
+  /// The framework has had a class for this for a long time and nothing ever
+  /// installed it, so a video kept decoding with the app in the background and a
+  /// background-playback switch had nothing to switch off.
+  ///
+  /// Every *playing* handle is deactivated, not only the active one: a wall or a
+  /// warm pool has several, and pausing the visible one leaves nine decoders
+  /// running behind a widget nobody can see. Nothing is resumed on the way back —
+  /// audio starting by itself after an app switch reads as a bug, so the viewer
+  /// presses play.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!options.pauseWhenBackgrounded) {
+      return;
+    }
+
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        for (final handle in List<PlayerHandle>.from(_handles.values)) {
+          if (handle.disposed ||
+              !(handle.config.pauseWhenBackgrounded ?? true) ||
+              !handle.playbackStream.value.isPlaying) {
+            continue;
+          }
+
+          unawaited(handle.deactivate());
+        }
+      case AppLifecycleState.resumed:
+        // Back in the foreground: the players are addressable again, which is
+        // what `activate` records. Playback stays where the viewer left it.
+        for (final handle in List<PlayerHandle>.from(_handles.values)) {
+          if (handle.disposed) {
+            continue;
+          }
+
+          handle.activate();
+        }
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+        // Transient on the way to paused, or the process is going away: no
+        // player action, and no surprise pause when a dialog steals focus.
+        break;
+    }
+  }
+
   /// Disposes the kernel and every live player.
+  ///
+  /// Releases each handle through [release] — which disposes its adapter and
+  /// takes the player out of the pool and every coordinator — drops the app
+  /// lifecycle observer this kernel installed when it asked for one, withdraws
+  /// the memory ledger entry, and then tears down the shared services (preload
+  /// manager, coordinator, pool, event bus) in that order.
   Future<void> dispose() async {
+    if (_observesLifecycle) {
+      _observesLifecycle = false;
+
+      try {
+        WidgetsBinding.instance.removeObserver(this);
+      } on Object {
+        // The binding is already gone; there is nobody left to notify.
+      }
+    }
+
     final ids = List<PlayerId>.from(_handles.keys);
     for (final id in ids) {
       await release(id);

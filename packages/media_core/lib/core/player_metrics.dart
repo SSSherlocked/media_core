@@ -31,15 +31,15 @@ final class PlayerMetrics extends Equatable {
     this.createdAt,
     this.updatedAt,
     this.metadata = const <String, Object?>{},
-  }) : assert(playbackRate > 0.0),
-       assert(volume >= 0.0 && volume <= 1.0),
-       assert(droppedFrames >= 0),
-       assert(renderedFrames >= 0),
-       assert(decodedFrames >= 0),
-       assert(bufferCount >= 0),
-       assert(errorCount >= 0),
-       assert(networkBytesReceived >= 0),
-       assert(networkBytesSent >= 0);
+  }) : assert(playbackRate > 0.0, 'playbackRate must be greater than 0.0.'),
+       assert(volume >= 0.0 && volume <= 1.0, 'volume must be within 0.0 to 1.0.'),
+       assert(droppedFrames >= 0, 'droppedFrames must not be negative.'),
+       assert(renderedFrames >= 0, 'renderedFrames must not be negative.'),
+       assert(decodedFrames >= 0, 'decodedFrames must not be negative.'),
+       assert(bufferCount >= 0, 'bufferCount must not be negative.'),
+       assert(errorCount >= 0, 'errorCount must not be negative.'),
+       assert(networkBytesReceived >= 0, 'networkBytesReceived must not be negative.'),
+       assert(networkBytesSent >= 0, 'networkBytesSent must not be negative.');
 
   /// Current playback position.
   final Duration? position;
@@ -206,7 +206,7 @@ final class PlayerMetrics extends Equatable {
     final total = renderedFrames + droppedFrames;
 
     if (total <= 0) {
-      return 0.0;
+      return 0;
     }
 
     return (droppedFrames / total).clamp(0.0, 1.0);
@@ -217,7 +217,7 @@ final class PlayerMetrics extends Equatable {
   /// The value is normalized to the range 0.0 to 1.0.
   double get renderEfficiency {
     if (decodedFrames <= 0) {
-      return 0.0;
+      return 0;
     }
 
     return (renderedFrames / decodedFrames).clamp(0.0, 1.0);
@@ -494,7 +494,7 @@ final class PlayerMetrics extends Equatable {
   static const PlayerMetrics empty = PlayerMetrics();
 
   /// Initial metrics snapshot.
-  static const PlayerMetrics initial = PlayerMetrics(playbackRate: 1.0, volume: 1.0);
+  static const PlayerMetrics initial = PlayerMetrics();
 
   static int _nonNegative(int value) {
     return value < 0 ? 0 : value;

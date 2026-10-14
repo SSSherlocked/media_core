@@ -11,7 +11,7 @@ abstract final class DebugUtils {
     assert(() {
       result = true;
       return true;
-    }());
+    }(), 'isDebug probe: this callback must return true so assertions stay enabled.');
 
     return result;
   }
@@ -34,7 +34,7 @@ abstract final class DebugUtils {
   }
 
   /// Checks condition in debug mode.
-  static void assertDebug(bool condition, String message) {
+  static void assertDebug({required bool condition, required String message}) {
     assert(condition, message);
   }
 

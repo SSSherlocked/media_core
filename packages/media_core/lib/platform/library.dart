@@ -18,11 +18,11 @@ library;
 
 export 'package:media_core/platform/platform_audio.dart';
 export 'package:media_core/platform/platform_capabilities.dart';
+export 'package:media_core/platform/platform_codec_capabilities.dart';
+export 'package:media_core/platform/platform_device_profile.dart';
 export 'package:media_core/platform/platform_info.dart';
 export 'package:media_core/platform/platform_lifecycle.dart';
 export 'package:media_core/platform/platform_network.dart';
-export 'package:media_core/platform/platform_codec_capabilities.dart';
-export 'package:media_core/platform/platform_device_profile.dart';
 export 'package:media_core/platform/platform_pip.dart';
 export 'package:media_core/platform/platform_provider.dart';
 export 'package:media_core/platform/platform_renderer.dart';

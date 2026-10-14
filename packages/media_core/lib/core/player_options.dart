@@ -1,6 +1,7 @@
+import 'package:equatable/equatable.dart';
+import 'package:media_core/core/player_capabilities.dart' show PlayerCapabilities;
 import 'package:media_core/core/player_constants.dart';
 import 'package:media_core/identity/source_id.dart';
-import 'package:equatable/equatable.dart';
 
 /// Defines immutable runtime options used to configure a player.
 ///
@@ -209,22 +210,22 @@ final class PlayerOptions extends Equatable {
   }
 
   /// Returns options with automatic playback enabled or disabled.
-  PlayerOptions withAutoPlay(bool value) {
+  PlayerOptions withAutoPlay({required bool value}) {
     return copyWith(autoPlay: value);
   }
 
   /// Returns options with automatic initialization enabled or disabled.
-  PlayerOptions withAutoInitialize(bool value) {
+  PlayerOptions withAutoInitialize({required bool value}) {
     return copyWith(autoInitialize: value);
   }
 
   /// Returns options with looping enabled or disabled.
-  PlayerOptions withLoop(bool value) {
+  PlayerOptions withLoop({required bool value}) {
     return copyWith(loop: value);
   }
 
   /// Returns options with the requested mute state.
-  PlayerOptions withMuted(bool value) {
+  PlayerOptions withMuted({required bool value}) {
     return copyWith(muted: value);
   }
 
@@ -239,57 +240,57 @@ final class PlayerOptions extends Equatable {
   }
 
   /// Returns options with preloading enabled or disabled.
-  PlayerOptions withPreload(bool value) {
+  PlayerOptions withPreload({required bool value}) {
     return copyWith(preload: value);
   }
 
   /// Returns options with keep-alive behavior enabled or disabled.
-  PlayerOptions withKeepAlive(bool value) {
+  PlayerOptions withKeepAlive({required bool value}) {
     return copyWith(keepAlive: value);
   }
 
   /// Returns options with hardware decoding preference changed.
-  PlayerOptions withHardwareDecoding(bool value) {
+  PlayerOptions withHardwareDecoding({required bool value}) {
     return copyWith(preferHardwareDecoding: value);
   }
 
   /// Returns options with audio output enabled or disabled.
-  PlayerOptions withAudio(bool value) {
+  PlayerOptions withAudio({required bool value}) {
     return copyWith(enableAudio: value);
   }
 
   /// Returns options with video output enabled or disabled.
-  PlayerOptions withVideo(bool value) {
+  PlayerOptions withVideo({required bool value}) {
     return copyWith(enableVideo: value);
   }
 
   /// Returns options with subtitle support enabled or disabled.
-  PlayerOptions withSubtitles(bool value) {
+  PlayerOptions withSubtitles({required bool value}) {
     return copyWith(enableSubtitles: value);
   }
 
   /// Returns options with buffering enabled or disabled.
-  PlayerOptions withBuffering(bool value) {
+  PlayerOptions withBuffering({required bool value}) {
     return copyWith(enableBuffering: value);
   }
 
   /// Returns options with recovery enabled or disabled.
-  PlayerOptions withRecovery(bool value) {
+  PlayerOptions withRecovery({required bool value}) {
     return copyWith(enableRecovery: value);
   }
 
   /// Returns options with fallback enabled or disabled.
-  PlayerOptions withFallback(bool value) {
+  PlayerOptions withFallback({required bool value}) {
     return copyWith(enableFallback: value);
   }
 
   /// Returns options with metrics collection enabled or disabled.
-  PlayerOptions withMetrics(bool value) {
+  PlayerOptions withMetrics({required bool value}) {
     return copyWith(enableMetrics: value);
   }
 
   /// Returns options with diagnostics enabled or disabled.
-  PlayerOptions withDiagnostics(bool value) {
+  PlayerOptions withDiagnostics({required bool value}) {
     return copyWith(enableDiagnostics: value);
   }
 
@@ -343,35 +344,24 @@ final class PlayerOptions extends Equatable {
 
   /// Minimal player options.
   static const PlayerOptions minimal = PlayerOptions(
-    autoPlay: false,
-    autoInitialize: true,
-    loop: false,
-    muted: false,
-    volume: 1.0,
-    playbackRate: 1.0,
     preload: false,
     keepAlive: false,
-    preferHardwareDecoding: true,
-    enableAudio: true,
-    enableVideo: true,
     enableSubtitles: false,
-    enableBuffering: true,
     enableRecovery: false,
     enableFallback: false,
     enableMetrics: false,
-    enableDiagnostics: false,
     maxRecoveryAttempts: 0,
     maxFallbackAttempts: 0,
   );
 
   /// Options optimized for audio-only playback.
-  static const PlayerOptions audioOnly = PlayerOptions(enableAudio: true, enableVideo: false, enableSubtitles: false);
+  static const PlayerOptions audioOnly = PlayerOptions(enableVideo: false, enableSubtitles: false);
 
   /// Options optimized for video-only playback.
-  static const PlayerOptions videoOnly = PlayerOptions(enableAudio: false, enableVideo: true, enableSubtitles: true);
+  static const PlayerOptions videoOnly = PlayerOptions(enableAudio: false);
 
   /// Options optimized for combined audio-video playback.
-  static const PlayerOptions audioVideo = PlayerOptions(enableAudio: true, enableVideo: true, enableSubtitles: true);
+  static const PlayerOptions audioVideo = PlayerOptions();
 
   /// Whether two option sets configure the same media outputs.
   bool isSameMedia(PlayerOptions other) {

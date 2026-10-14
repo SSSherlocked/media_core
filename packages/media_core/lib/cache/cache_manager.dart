@@ -1,11 +1,11 @@
-import 'package:media_core/cache/cache_key.dart';
-import 'package:media_core/cache/cache_entry.dart';
-import 'package:media_core/cache/cache_state.dart';
-import 'package:media_core/cache/cache_result.dart';
-import 'package:media_core/cache/memory_cache.dart';
-import 'package:media_core/cache/cache_metrics.dart';
-import 'package:media_core/cache/cache_storage.dart';
 import 'package:clock/clock.dart';
+import 'package:media_core/cache/cache_entry.dart';
+import 'package:media_core/cache/cache_key.dart';
+import 'package:media_core/cache/cache_metrics.dart';
+import 'package:media_core/cache/cache_result.dart';
+import 'package:media_core/cache/cache_state.dart';
+import 'package:media_core/cache/cache_storage.dart';
+import 'package:media_core/cache/memory_cache.dart';
 
 /// Coordinates cache storage and cache lifecycle.
 ///
@@ -29,6 +29,7 @@ import 'package:clock/clock.dart';
 /// The manager owns cache policy at the orchestration level but does not
 /// implement a specific disk format.
 final class CacheManager<T> {
+  /// Creates a manager over an optional memory layer and persistent [storage].
   CacheManager({CacheStorage<T>? storage, MemoryCache<T>? memory}) : _storage = storage, _memory = memory;
 
   final CacheStorage<T>? _storage;
@@ -39,14 +40,19 @@ final class CacheManager<T> {
 
   bool _disposed = false;
 
+  /// Current lifecycle state of the manager.
   CacheState get state => _state;
 
+  /// Metrics snapshot carried by the current state.
   CacheMetrics get metrics => _state.metrics;
 
+  /// Whether the manager has completed initialization.
   bool get initialized => _state.initialized;
 
+  /// Number of entries currently tracked across the active layers.
   int get size => _state.size;
 
+  /// Total size in bytes currently tracked across the active layers.
   int get sizeBytes => _state.sizeBytes;
 
   /// Initializes all configured storage layers.
@@ -76,7 +82,7 @@ final class CacheManager<T> {
     _ensureReady();
 
     if (_memory != null) {
-      final CacheEntry<T>? memoryEntry = await _memory.read(key);
+      final memoryEntry = await _memory.read(key);
 
       if (memoryEntry != null) {
         _state = _state.update(metrics: _state.metrics.recordHit(bytes: memoryEntry.sizeBytes));
@@ -88,7 +94,7 @@ final class CacheManager<T> {
     }
 
     if (_storage != null) {
-      final CacheEntry<T>? storedEntry = await _storage.read(key);
+      final storedEntry = await _storage.read(key);
 
       if (storedEntry != null) {
         if (storedEntry.isExpired) {
@@ -99,7 +105,7 @@ final class CacheManager<T> {
           return CacheResult<T>.expired(storedEntry);
         }
 
-        final CacheEntry<T> touched = storedEntry.touch();
+        final touched = storedEntry.touch();
 
         if (_memory != null) {
           await _memory.write(touched);
@@ -130,9 +136,9 @@ final class CacheManager<T> {
   }) async {
     _ensureReady();
 
-    final DateTime now = clock.now();
+    final now = clock.now();
 
-    final CacheEntry<T> entry = CacheEntry<T>(
+    final entry = CacheEntry<T>(
       key: key,
       value: value,
       createdAt: now,
@@ -156,7 +162,7 @@ final class CacheManager<T> {
   Future<bool> remove(CacheKey key) async {
     _ensureReady();
 
-    bool removed = false;
+    var removed = false;
 
     if (_memory != null) {
       removed = await _memory.remove(key) || removed;
@@ -209,12 +215,12 @@ final class CacheManager<T> {
   Future<int> removeExpired() async {
     _ensureReady();
 
-    int removed = 0;
+    var removed = 0;
 
     if (_memory != null) {
-      final List<CacheEntry<T>> entries = await _memory.entries();
+      final entries = await _memory.entries();
 
-      for (final CacheEntry<T> entry in entries) {
+      for (final entry in entries) {
         if (entry.isExpired) {
           if (await _memory.remove(entry.key)) {
             removed++;
@@ -224,9 +230,9 @@ final class CacheManager<T> {
     }
 
     if (_storage != null) {
-      final List<CacheEntry<T>> entries = await _storage.entries();
+      final entries = await _storage.entries();
 
-      for (final CacheEntry<T> entry in entries) {
+      for (final entry in entries) {
         if (entry.isExpired) {
           if (await _storage.remove(entry.key)) {
             removed++;
@@ -236,9 +242,9 @@ final class CacheManager<T> {
     }
 
     if (removed > 0) {
-      CacheMetrics metrics = _state.metrics;
+      var metrics = _state.metrics;
 
-      for (int i = 0; i < removed; i++) {
+      for (var i = 0; i < removed; i++) {
         metrics = metrics.recordExpiration();
       }
 
@@ -255,11 +261,11 @@ final class CacheManager<T> {
     _ensureReady();
 
     if (_storage != null) {
-      return _storage.entries();
+      return await _storage.entries();
     }
 
     if (_memory != null) {
-      return _memory.entries();
+      return await _memory.entries();
     }
 
     return <CacheEntry<T>>[];
@@ -297,17 +303,17 @@ final class CacheManager<T> {
   }
 
   Future<void> _refreshState({required CacheMetrics metrics}) async {
-    int size = 0;
-    int sizeBytes = 0;
+    var size = 0;
+    var sizeBytes = 0;
 
     if (_memory != null) {
       size += _memory.length;
       sizeBytes += _memory.sizeBytes;
     } else if (_storage != null) {
-      final List<CacheEntry<T>> entries = await _storage.entries();
+      final entries = await _storage.entries();
 
       size = entries.length;
-      sizeBytes = entries.fold<int>(0, (int total, CacheEntry<T> entry) => total + entry.sizeBytes);
+      sizeBytes = entries.fold<int>(0, (total, entry) => total + entry.sizeBytes);
     }
 
     _state = _state.update(size: size, sizeBytes: sizeBytes, metrics: metrics);

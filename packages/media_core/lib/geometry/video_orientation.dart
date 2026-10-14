@@ -10,23 +10,34 @@ import 'package:equatable/equatable.dart';
 /// - transform renderer
 /// - modify decoder output
 enum VideoOrientation {
+  /// Orientation has not been determined yet.
   unknown,
+
+  /// Wider than tall.
   landscape,
+
+  /// Taller than wide.
   portrait,
+
+  /// Equally wide and tall.
   square;
 
+  /// Whether the orientation has not been determined.
   bool get isUnknown {
     return this == VideoOrientation.unknown;
   }
 
+  /// Whether the content is wider than tall.
   bool get isLandscape {
     return this == VideoOrientation.landscape;
   }
 
+  /// Whether the content is taller than wide.
   bool get isPortrait {
     return this == VideoOrientation.portrait;
   }
 
+  /// Whether the content is equally wide and tall.
   bool get isSquare {
     return this == VideoOrientation.square;
   }
@@ -63,7 +74,30 @@ enum VideoOrientation {
 /// - Renderer
 /// - PlayerIdentity snapshot
 final class VideoOrientationInfo extends Equatable {
+  /// Creates orientation metadata from explicit values.
+  ///
+  /// [rotation] is taken as given; the parsing entry points normalize it to
+  /// a quarter turn.
   const VideoOrientationInfo({required this.orientation, this.rotation = 0, this.mirrored = false});
+
+  /// Restores orientation metadata from a map produced by [toMap].
+  ///
+  /// An unrecognized or missing orientation name yields
+  /// [VideoOrientation.unknown].
+  factory VideoOrientationInfo.fromMap(Map<String, dynamic> map) {
+    final name = map['orientation'] as String?;
+
+    final orientation = VideoOrientation.values.firstWhere(
+      (item) => item.name == name,
+      orElse: () => VideoOrientation.unknown,
+    );
+
+    return VideoOrientationInfo(
+      orientation: orientation,
+      rotation: _normalize(map['rotation'] as int? ?? 0),
+      mirrored: map['mirrored'] as bool? ?? false,
+    );
+  }
 
   /// Empty orientation.
   const VideoOrientationInfo.unknown() : orientation = VideoOrientation.unknown, rotation = 0, mirrored = false;
@@ -89,18 +123,22 @@ final class VideoOrientationInfo extends Equatable {
   /// Whether horizontally mirrored.
   final bool mirrored;
 
+  /// Whether the logical orientation has not been determined.
   bool get isUnknown {
     return orientation.isUnknown;
   }
 
+  /// Whether the logical orientation is wider than tall.
   bool get isLandscape {
     return orientation.isLandscape;
   }
 
+  /// Whether the logical orientation is taller than wide.
   bool get isPortrait {
     return orientation.isPortrait;
   }
 
+  /// Whether the logical orientation is equally wide and tall.
   bool get isSquare {
     return orientation.isSquare;
   }
@@ -146,23 +184,9 @@ final class VideoOrientationInfo extends Equatable {
     return VideoOrientationInfo(orientation: orientation, rotation: rotation, mirrored: !mirrored);
   }
 
+  /// Converts to a simple map.
   Map<String, dynamic> toMap() {
     return {'orientation': orientation.name, 'rotation': rotation, 'mirrored': mirrored};
-  }
-
-  factory VideoOrientationInfo.fromMap(Map<String, dynamic> map) {
-    final name = map['orientation'] as String?;
-
-    final orientation = VideoOrientation.values.firstWhere(
-      (item) => item.name == name,
-      orElse: () => VideoOrientation.unknown,
-    );
-
-    return VideoOrientationInfo(
-      orientation: orientation,
-      rotation: _normalize(map['rotation'] as int? ?? 0),
-      mirrored: map['mirrored'] as bool? ?? false,
-    );
   }
 
   static int _normalize(int value) {

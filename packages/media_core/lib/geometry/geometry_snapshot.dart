@@ -1,11 +1,11 @@
-import 'package:media_core/geometry/video_size.dart';
-import 'package:media_core/geometry/pixel_ratio.dart';
-import 'package:media_core/geometry/display_size.dart';
-import 'package:media_core/geometry/video_geometry.dart';
-import 'package:media_core/geometry/geometry_state.dart';
-import 'package:media_core/geometry/video_rotation.dart';
-import 'package:media_core/geometry/video_orientation.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/geometry/display_size.dart';
+import 'package:media_core/geometry/geometry_state.dart';
+import 'package:media_core/geometry/pixel_ratio.dart';
+import 'package:media_core/geometry/video_geometry.dart';
+import 'package:media_core/geometry/video_orientation.dart';
+import 'package:media_core/geometry/video_rotation.dart';
+import 'package:media_core/geometry/video_size.dart';
 
 /// Immutable geometry snapshot.
 ///
@@ -24,12 +24,23 @@ import 'package:equatable/equatable.dart';
 /// - trigger recalculation
 /// - call platform APIs
 final class GeometrySnapshot extends Equatable {
+  /// Creates a snapshot from explicit read-only values.
   const GeometrySnapshot({
     required this.geometry,
     required this.generation,
     required this.initialized,
     required this.timestamp,
   });
+
+  /// Restores a snapshot from a map produced by [toMap].
+  factory GeometrySnapshot.fromMap(Map<String, dynamic> map) {
+    return GeometrySnapshot(
+      geometry: VideoGeometry.fromMap(map['geometry'] as Map<String, dynamic>),
+      generation: map['generation'] as int? ?? 0,
+      initialized: map['initialized'] as bool? ?? false,
+      timestamp: map['timestamp'] == null ? null : DateTime.tryParse(map['timestamp'] as String),
+    );
+  }
 
   /// Creates empty snapshot.
   const GeometrySnapshot.empty()
@@ -136,15 +147,6 @@ final class GeometrySnapshot extends Equatable {
       'initialized': initialized,
       'timestamp': timestamp?.toIso8601String(),
     };
-  }
-
-  factory GeometrySnapshot.fromMap(Map<String, dynamic> map) {
-    return GeometrySnapshot(
-      geometry: VideoGeometry.fromMap(map['geometry'] as Map<String, dynamic>),
-      generation: map['generation'] as int? ?? 0,
-      initialized: map['initialized'] as bool? ?? false,
-      timestamp: map['timestamp'] == null ? null : DateTime.tryParse(map['timestamp'] as String),
-    );
   }
 
   @override

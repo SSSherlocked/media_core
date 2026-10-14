@@ -42,6 +42,8 @@
 /// tracks, not the media source being selected.
 library;
 
+import 'package:media_core/media_core.dart' show PlayerAdapterCapabilities, SourceProtocol;
+
 /// Coverage of media_kit (libmpv / FFmpeg).
 ///
 /// Verified against libmpv's demuxer set: FFmpeg carries the containers,

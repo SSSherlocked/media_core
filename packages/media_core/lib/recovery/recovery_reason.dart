@@ -5,6 +5,7 @@ import 'package:equatable/equatable.dart';
 /// A recovery reason is diagnostic and policy input data.
 /// It does not decide which recovery action should be executed.
 sealed class RecoveryReason extends Equatable {
+  /// Records why recovery was requested, without deciding what to do about it.
   const RecoveryReason();
 
   const factory RecoveryReason.unknown() = RecoveryReasonUnknown;
@@ -25,22 +26,31 @@ sealed class RecoveryReason extends Equatable {
 
   const factory RecoveryReason.resource() = RecoveryReasonResource;
 
+  /// Whether no backend evidence identified the trigger.
   bool get isUnknown => this is RecoveryReasonUnknown;
 
+  /// Whether the trigger was reaching the media over the network.
   bool get isNetwork => this is RecoveryReasonNetwork;
 
+  /// Whether the trigger was an operation exceeding its deadline.
   bool get isTimeout => this is RecoveryReasonTimeout;
 
+  /// Whether the trigger was in the decode or demux path.
   bool get isDecoder => this is RecoveryReasonDecoder;
 
+  /// Whether the trigger was in the render path.
   bool get isRenderer => this is RecoveryReasonRenderer;
 
+  /// Whether the trigger was the media source itself.
   bool get isSource => this is RecoveryReasonSource;
 
+  /// Whether the trigger was setup rather than steady-state playback.
   bool get isInitialization => this is RecoveryReasonInitialization;
 
+  /// Whether playback was cut short by an interrupt or a replacement.
   bool get isInterrupted => this is RecoveryReasonInterrupted;
 
+  /// Whether the trigger was memory, bandwidth, or another limited resource.
   bool get isResource => this is RecoveryReasonResource;
 
   /// Infers a reason from a raw backend message and an optional error.
@@ -138,6 +148,7 @@ sealed class RecoveryReason extends Equatable {
 
 /// Recovery reason could not be determined.
 final class RecoveryReasonUnknown extends RecoveryReason {
+  /// Creates the reason for a trigger that no backend evidence identifies.
   const RecoveryReasonUnknown();
 
   @override
@@ -146,6 +157,7 @@ final class RecoveryReasonUnknown extends RecoveryReason {
 
 /// Recovery was triggered by a network failure.
 final class RecoveryReasonNetwork extends RecoveryReason {
+  /// Creates the reason for a transport or connectivity failure while reaching the media.
   const RecoveryReasonNetwork();
 
   @override
@@ -154,6 +166,7 @@ final class RecoveryReasonNetwork extends RecoveryReason {
 
 /// Recovery was triggered by an operation timeout.
 final class RecoveryReasonTimeout extends RecoveryReason {
+  /// Creates the reason for an operation that exceeded its deadline.
   const RecoveryReasonTimeout();
 
   @override
@@ -162,6 +175,7 @@ final class RecoveryReasonTimeout extends RecoveryReason {
 
 /// Recovery was triggered by a decoder failure.
 final class RecoveryReasonDecoder extends RecoveryReason {
+  /// Creates the reason for a decode or demux failure in the media pipeline.
   const RecoveryReasonDecoder();
 
   @override
@@ -170,6 +184,7 @@ final class RecoveryReasonDecoder extends RecoveryReason {
 
 /// Recovery was triggered by a renderer failure.
 final class RecoveryReasonRenderer extends RecoveryReason {
+  /// Creates the reason for a failure in the render path.
   const RecoveryReasonRenderer();
 
   @override
@@ -178,6 +193,7 @@ final class RecoveryReasonRenderer extends RecoveryReason {
 
 /// Recovery was triggered by a source failure.
 final class RecoveryReasonSource extends RecoveryReason {
+  /// Creates the reason for a source that cannot be played as supplied.
   const RecoveryReasonSource();
 
   @override
@@ -186,6 +202,7 @@ final class RecoveryReasonSource extends RecoveryReason {
 
 /// Recovery was triggered by initialization failure.
 final class RecoveryReasonInitialization extends RecoveryReason {
+  /// Creates the reason for a failure while the pipeline was being set up.
   const RecoveryReasonInitialization();
 
   @override
@@ -194,6 +211,7 @@ final class RecoveryReasonInitialization extends RecoveryReason {
 
 /// Recovery was triggered because the operation was interrupted.
 final class RecoveryReasonInterrupted extends RecoveryReason {
+  /// Creates the reason for playback that was cut short or superseded.
   const RecoveryReasonInterrupted();
 
   @override
@@ -202,6 +220,7 @@ final class RecoveryReasonInterrupted extends RecoveryReason {
 
 /// Recovery was triggered by a resource failure.
 final class RecoveryReasonResource extends RecoveryReason {
+  /// Creates the reason for a memory, bandwidth, or other resource shortage.
   const RecoveryReasonResource();
 
   @override

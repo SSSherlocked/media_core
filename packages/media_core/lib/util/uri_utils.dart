@@ -101,9 +101,7 @@ abstract final class UriUtils {
       return uri;
     }
 
-    final params = Map<String, String>.from(parsed.queryParameters);
-
-    params.addAll(values);
+    final params = Map<String, String>.from(parsed.queryParameters)..addAll(values);
 
     return parsed.replace(queryParameters: params).toString();
   }
@@ -116,9 +114,7 @@ abstract final class UriUtils {
       return uri;
     }
 
-    final params = Map<String, String>.from(parsed.queryParameters);
-
-    params.remove(key);
+    final params = Map<String, String>.from(parsed.queryParameters)..remove(key);
 
     return parsed.replace(queryParameters: params).toString();
   }

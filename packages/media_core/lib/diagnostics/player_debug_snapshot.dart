@@ -1,8 +1,7 @@
-import 'package:media_core_memory/media_core_memory.dart';
+import 'package:equatable/equatable.dart';
 import 'package:media_core/diagnostics/network_snapshot.dart';
 import 'package:media_core/diagnostics/performance_sample.dart';
-import 'package:equatable/equatable.dart';
-
+import 'package:media_core_memory/media_core_memory.dart';
 
 /// Represents a point-in-time diagnostic snapshot of the player.
 ///

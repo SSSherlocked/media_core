@@ -1,7 +1,6 @@
-import 'package:media_core/presentation/presentation_mode.dart';
 import 'package:clock/clock.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-
+import 'package:media_core/presentation/presentation_mode.dart';
 
 part 'presentation_request.freezed.dart';
 
@@ -25,6 +24,7 @@ part 'presentation_request.freezed.dart';
 /// - PresentationAdapter
 @freezed
 abstract class PresentationRequest with _$PresentationRequest {
+  /// Creates a presentation request from its fields.
   const factory PresentationRequest({
     /// Target presentation mode.
     ///
@@ -90,8 +90,6 @@ abstract class PresentationRequest with _$PresentationRequest {
     int generation = 0,
   }) {
     return PresentationRequest(
-      mode: PresentationMode.normal,
-
       animated: animated,
 
       automatic: automatic,

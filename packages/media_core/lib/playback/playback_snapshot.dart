@@ -1,5 +1,5 @@
-import 'package:media_core/playback/player_transport_state.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/playback/player_transport_state.dart';
 
 /// Immutable playback snapshot.
 ///
@@ -17,6 +17,11 @@ import 'package:equatable/equatable.dart';
 /// - modify playback
 /// - control backend
 final class PlaybackSnapshot extends Equatable {
+  /// Creates a snapshot from transport fields that were already read.
+  ///
+  /// `PlaybackSnapshot.fromState()` is the normal entry point; this
+  /// constructor exists so a snapshot can be built without holding a
+  /// [PlayerTransportState].
   const PlaybackSnapshot({
     required this.command,
     required this.position,
@@ -111,6 +116,11 @@ final class PlaybackSnapshot extends Equatable {
     return value;
   }
 
+  /// The snapshot as plain scalars, with [command] reduced to its type name.
+  ///
+  /// Times are whole milliseconds, and the command is not reconstructible from
+  /// the result — this is a readout for identity, diagnostics and UI, not a
+  /// serialization.
   Map<String, dynamic> toMap() {
     return {
       'position': position.inMilliseconds,

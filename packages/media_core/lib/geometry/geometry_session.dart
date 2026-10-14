@@ -1,8 +1,7 @@
-import 'package:media_core/geometry/geometry_snapshot.dart';
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/geometry/geometry_snapshot.dart';
 import 'package:media_core/geometry/video_geometry.dart';
-
 
 /// Geometry lifecycle session.
 ///
@@ -20,7 +19,23 @@ import 'package:media_core/geometry/video_geometry.dart';
 /// - modify geometry
 /// - perform layout
 final class GeometrySession extends Equatable {
+  /// Creates a session from explicit lifecycle values.
   const GeometrySession({required this.id, required this.generation, required this.snapshot, required this.createdAt});
+
+  /// Creates new session.
+  factory GeometrySession.create({required int id, GeometrySnapshot snapshot = const GeometrySnapshot.empty()}) {
+    return GeometrySession(id: id, generation: snapshot.generation, snapshot: snapshot, createdAt: clock.now());
+  }
+
+  /// Restores a session from a map produced by [toMap].
+  factory GeometrySession.fromMap(Map<String, dynamic> map) {
+    return GeometrySession(
+      id: map['id'] as int? ?? 0,
+      generation: map['generation'] as int? ?? 0,
+      snapshot: GeometrySnapshot.fromMap(map['snapshot'] as Map<String, dynamic>),
+      createdAt: map['createdAt'] == null ? null : DateTime.tryParse(map['createdAt'] as String),
+    );
+  }
 
   /// Empty session.
   const GeometrySession.empty() : id = 0, generation = 0, snapshot = const GeometrySnapshot.empty(), createdAt = null;
@@ -54,11 +69,6 @@ final class GeometrySession extends Equatable {
     return snapshot.geometry;
   }
 
-  /// Creates new session.
-  factory GeometrySession.create({required int id, GeometrySnapshot snapshot = const GeometrySnapshot.empty()}) {
-    return GeometrySession(id: id, generation: snapshot.generation, snapshot: snapshot, createdAt: clock.now());
-  }
-
   /// Updates snapshot.
   GeometrySession update(GeometrySnapshot snapshot) {
     return GeometrySession(id: id, generation: snapshot.generation, snapshot: snapshot, createdAt: createdAt);
@@ -75,6 +85,7 @@ final class GeometrySession extends Equatable {
     return GeometrySession(id: id, generation: generation + 1, snapshot: snapshot, createdAt: createdAt);
   }
 
+  /// Converts to a simple map.
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -82,15 +93,6 @@ final class GeometrySession extends Equatable {
       'snapshot': snapshot.toMap(),
       'createdAt': createdAt?.toIso8601String(),
     };
-  }
-
-  factory GeometrySession.fromMap(Map<String, dynamic> map) {
-    return GeometrySession(
-      id: map['id'] as int? ?? 0,
-      generation: map['generation'] as int? ?? 0,
-      snapshot: GeometrySnapshot.fromMap(map['snapshot'] as Map<String, dynamic>),
-      createdAt: map['createdAt'] == null ? null : DateTime.tryParse(map['createdAt'] as String),
-    );
   }
 
   @override

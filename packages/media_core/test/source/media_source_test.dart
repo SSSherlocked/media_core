@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:media_core/adapter/composite_support.dart';
 import 'package:media_core/adapter/player_adapter_capabilities.dart';
 import 'package:media_core/planning/default_media_source_planner.dart';
+import 'package:media_core/planning/media_source_plan.dart';
+import 'package:media_core/planning/media_source_planner.dart' show MediaSourcePlanner;
 import 'package:media_core/source/media_source.dart';
 import 'package:media_core/source/media_source_bridge.dart';
-import 'package:media_core/planning/media_source_plan.dart';
 import 'package:media_core/source/media_track.dart';
 import 'package:media_core/source/media_track_type.dart';
 import 'package:media_core/source/source_headers.dart';
@@ -26,11 +26,8 @@ MediaTrack _audio(String url, {int bitrate = 192_000}) => MediaTrack(
   bitrate: bitrate,
 );
 
-MediaTrack _subtitle(String url) => MediaTrack(
-  uri: Uri.parse(url),
-  kind: MediaTrackType.subtitle,
-  mimeType: 'text/vtt',
-);
+MediaTrack _subtitle(String url) =>
+    MediaTrack(uri: Uri.parse(url), kind: MediaTrackType.subtitle, mimeType: 'text/vtt');
 
 /// A [MediaSourcePlanner] that only ever returns [UnsupportedPlan] so
 /// tests can verify [DefaultMediaSourcePlanner] is not the one the
@@ -42,20 +39,14 @@ class _RecordingPlannerSpy implements _PlannerHandle {
   final calls = <MediaSource>[];
 
   @override
-  MediaSourcePlan plan(
-    MediaSource source,
-    PlayerAdapterCapabilities capabilities,
-  ) {
+  MediaSourcePlan plan(MediaSource source, PlayerAdapterCapabilities capabilities) {
     calls.add(source);
     return inner.plan(source, capabilities);
   }
 }
 
 abstract class _PlannerHandle {
-  MediaSourcePlan plan(
-    MediaSource source,
-    PlayerAdapterCapabilities capabilities,
-  );
+  MediaSourcePlan plan(MediaSource source, PlayerAdapterCapabilities capabilities);
 }
 
 void main() {
@@ -72,7 +63,7 @@ void main() {
       final original = MediaTrack(
         uri: Uri.parse('https://example.com/v.m4s'),
         kind: MediaTrackType.video,
-        headers: SourceHeaders({'User-Agent': 'test'}),
+        headers: SourceHeaders(const {'User-Agent': 'test'}),
         mimeType: 'video/mp4',
         codec: 'hev1.2.4.L153.B0',
         bitrate: 12_000_000,
@@ -118,10 +109,7 @@ void main() {
     test('value equality follows the wrapped track', () {
       final track = _video('https://a/v.mp4');
 
-      expect(
-        ProgressiveMediaSource(track: track),
-        ProgressiveMediaSource(track: track),
-      );
+      expect(ProgressiveMediaSource(track: track), ProgressiveMediaSource(track: track));
     });
   });
 
@@ -148,10 +136,11 @@ void main() {
         subtitleTracks: [_subtitle('https://a/en.vtt')],
       );
 
-      expect(
-        composite.tracks.map((t) => t.kind).toList(),
-        [MediaTrackType.video, MediaTrackType.audio, MediaTrackType.subtitle],
-      );
+      expect(composite.tracks.map((t) => t.kind).toList(), [
+        MediaTrackType.video,
+        MediaTrackType.audio,
+        MediaTrackType.subtitle,
+      ]);
     });
 
     test('subtitle-only is rejected by the constructor assert', () {
@@ -162,9 +151,7 @@ void main() {
     });
 
     test('audio-only composite is legal (music mode)', () {
-      final composite = CompositeMediaSource(
-        audioTracks: [_audio('https://a/a.m4s')],
-      );
+      final composite = CompositeMediaSource(audioTracks: [_audio('https://a/a.m4s')]);
 
       expect(composite.hasVideo, isFalse);
       expect(composite.primaryAudio, isNotNull);
@@ -173,48 +160,30 @@ void main() {
 
   group('DefaultMediaSourcePlanner', () {
     final progressive = ProgressiveMediaSource(
-      track: MediaTrack(
-        uri: Uri.parse('https://a/v.mp4'),
-        kind: MediaTrackType.video,
-      ),
+      track: MediaTrack(uri: Uri.parse('https://a/v.mp4'), kind: MediaTrackType.video),
     );
 
     final composite = CompositeMediaSource(
-      videoTracks: [
-        MediaTrack(
-          uri: Uri.parse('https://a/v.m4s'),
-          kind: MediaTrackType.video,
-        ),
-      ],
-      audioTracks: [
-        MediaTrack(
-          uri: Uri.parse('https://a/a.m4s'),
-          kind: MediaTrackType.audio,
-        ),
-      ],
+      videoTracks: [MediaTrack(uri: Uri.parse('https://a/v.m4s'), kind: MediaTrackType.video)],
+      audioTracks: [MediaTrack(uri: Uri.parse('https://a/a.m4s'), kind: MediaTrackType.audio)],
     );
 
-    const native = PlayerAdapterCapabilities(
-      compositeSupport: CompositeSupport.native,
-    );
-    const externalAudio = PlayerAdapterCapabilities(
-      compositeSupport: CompositeSupport.externalAudio,
-    );
+    const native = PlayerAdapterCapabilities(compositeSupport: CompositeSupport.native);
+    const externalAudio = PlayerAdapterCapabilities(compositeSupport: CompositeSupport.externalAudio);
     const none = PlayerAdapterCapabilities();
 
     test('progressive always plans direct', () {
-      final planner = const DefaultMediaSourcePlanner();
+      const planner = DefaultMediaSourcePlanner();
 
       expect(planner.plan(progressive, none), isA<DirectPlan>());
       expect(planner.plan(progressive, native), isA<DirectPlan>());
     });
 
     test('composite on native or externalAudio backend plans composite', () {
-      final planner = const DefaultMediaSourcePlanner();
+      const planner = DefaultMediaSourcePlanner();
 
       final nativePlan = planner.plan(composite, native) as CompositePlan;
-      final sideChannelPlan =
-          planner.plan(composite, externalAudio) as CompositePlan;
+      final sideChannelPlan = planner.plan(composite, externalAudio) as CompositePlan;
 
       expect(nativePlan, isA<CompositePlan>());
       expect(sideChannelPlan, isA<CompositePlan>());
@@ -241,12 +210,7 @@ void main() {
     test('a live composite still takes a native backend', () {
       const planner = DefaultMediaSourcePlanner();
       final liveComposite = CompositeMediaSource(
-        videoTracks: [
-          MediaTrack(
-            uri: Uri.parse('https://example.com/live_v.m4s'),
-            kind: MediaTrackType.video,
-          ),
-        ],
+        videoTracks: [MediaTrack(uri: Uri.parse('https://example.com/live_v.m4s'), kind: MediaTrackType.video)],
         live: true,
       );
 
@@ -266,25 +230,16 @@ void main() {
   group('CompositeSupport', () {
     test('capabilities.supportsComposite is derived from the enum', () {
       expect(noneCap().supportsComposite, isFalse);
+      expect(const PlayerAdapterCapabilities(compositeSupport: CompositeSupport.native).supportsComposite, isTrue);
       expect(
-        const PlayerAdapterCapabilities(
-          compositeSupport: CompositeSupport.native,
-        ).supportsComposite,
-        isTrue,
-      );
-      expect(
-        const PlayerAdapterCapabilities(
-          compositeSupport: CompositeSupport.externalAudio,
-        ).supportsComposite,
+        const PlayerAdapterCapabilities(compositeSupport: CompositeSupport.externalAudio).supportsComposite,
         isTrue,
       );
     });
 
     test('copyWith round-trips the composite field', () {
       const base = PlayerAdapterCapabilities();
-      final upgraded = base.copyWith(
-        compositeSupport: CompositeSupport.externalAudio,
-      );
+      final upgraded = base.copyWith(compositeSupport: CompositeSupport.externalAudio);
 
       expect(upgraded.compositeSupport, CompositeSupport.externalAudio);
       expect(upgraded.copyWith().compositeSupport, CompositeSupport.externalAudio);
@@ -310,9 +265,7 @@ void main() {
 
   group('MediaSourceBridge', () {
     test('progressive source becomes a PlayerSource with matching uri', () {
-      final source = ProgressiveMediaSource(
-        track: _video('https://example.com/v.mp4'),
-      );
+      final source = ProgressiveMediaSource(track: _video('https://example.com/v.mp4'));
 
       final bridged = source.toPlayerSource();
 
@@ -322,14 +275,10 @@ void main() {
     });
 
     test('composite bridge carries headers from every track', () {
-      final headers = SourceHeaders({'Referer': 'https://www.bilibili.com/'});
+      final headers = SourceHeaders(const {'Referer': 'https://www.bilibili.com/'});
       final composite = CompositeMediaSource(
         videoTracks: [
-          MediaTrack(
-            uri: Uri.parse('https://example.com/v.m4s'),
-            kind: MediaTrackType.video,
-            headers: headers,
-          ),
+          MediaTrack(uri: Uri.parse('https://example.com/v.m4s'), kind: MediaTrackType.video, headers: headers),
         ],
         audioTracks: [
           MediaTrack(
@@ -350,8 +299,7 @@ void main() {
     });
 
     test('fromPlayerSource returns null for a source that never crossed the bridge', () {
-      final plain = ProgressiveMediaSource.url('https://example.com/v.mp4').toPlayerSource()
-          .copyWith();
+      final plain = ProgressiveMediaSource.url('https://example.com/v.mp4').toPlayerSource().copyWith();
 
       // fresh PlayerSource without our metadata key.
       expect(MediaSourceBridge.fromPlayerSource(plain), isNotNull);

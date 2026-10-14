@@ -55,10 +55,7 @@ extension MediaSourceBridge on MediaSource {
   PlayerSource toPlayerSource({SourceId? id, String? title}) {
     final primary = _primaryTrackFor(this);
     final mergedHeaders = _mergeHeaders(this);
-    final metadata = <String, Object?>{
-      ...?primary?.metadata,
-      metadataKey: this,
-    };
+    final metadata = <String, Object?>{...?primary?.metadata, metadataKey: this};
 
     return PlayerSource(
       id: id ?? _stableIdFor(primary),

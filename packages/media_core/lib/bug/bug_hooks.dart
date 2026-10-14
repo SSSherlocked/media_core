@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:media_core/bug/fault_config.dart';
+import 'package:media_core/bug/fault_event.dart' show FaultEvent;
 
 /// Defines a module-level hook that can handle a fault injection.
 ///
@@ -21,10 +22,9 @@ abstract interface class BugHook {
 
 /// Registry of fault injection hooks.
 final class BugHooks {
+  /// Creates a registry pre-filled with [hooks], keyed by hook name.
   BugHooks({Iterable<BugHook> hooks = const <BugHook>[]}) {
-    for (final hook in hooks) {
-      register(hook);
-    }
+    hooks.forEach(register);
   }
 
   final Map<String, BugHook> _hooks = <String, BugHook>{};
@@ -175,7 +175,7 @@ final class BugHooks {
   Future<bool> tryInject(FaultConfig config, {String? target, Object? metadata}) async {
     try {
       return await inject(config, target: target, metadata: metadata);
-    } catch (_) {
+    } on Object catch (_) {
       return false;
     }
   }

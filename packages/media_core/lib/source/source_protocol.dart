@@ -1,3 +1,5 @@
+import 'package:media_core/source/library.dart' show SourceFormat, SourceType;
+
 /// Describes the protocol or transport used to access a media source.
 ///
 /// [SourceProtocol] describes how a source is accessed. It is intentionally
@@ -253,5 +255,4 @@ extension SourceProtocolX on SourceProtocol {
 
   /// Returns the stable string representation of this protocol.
   String get value => name;
-
 }

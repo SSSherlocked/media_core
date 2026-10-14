@@ -1,5 +1,5 @@
-import 'package:media_core_logging/media_core_logging.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core_logging/media_core_logging.dart';
 
 /// Defines configuration for the diagnostics subsystem.
 ///
@@ -39,8 +39,8 @@ final class DiagnosticsConfig extends Equatable {
     this.minimumLogLevel = LogLevel.info,
     this.maxPerformanceSamples = 200,
     this.monitoringInterval = const Duration(seconds: 5),
-  }) : assert(maxPerformanceSamples > 0),
-       assert(monitoringInterval > Duration.zero);
+  }) : assert(maxPerformanceSamples > 0, 'maxPerformanceSamples must be positive'),
+       assert(monitoringInterval > Duration.zero, 'monitoringInterval must be positive');
 
   /// Whether the diagnostics subsystem is enabled.
   final bool enabled;

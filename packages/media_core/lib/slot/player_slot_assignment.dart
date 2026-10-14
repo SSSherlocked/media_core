@@ -1,10 +1,9 @@
-import 'package:media_core/slot/player_slot_owner.dart';
 import 'package:clock/clock.dart';
-import 'package:media_core/identity/slot_id.dart';
+import 'package:equatable/equatable.dart';
 import 'package:media_core/identity/player_id.dart';
 import 'package:media_core/identity/session_id.dart';
-import 'package:equatable/equatable.dart';
-
+import 'package:media_core/identity/slot_id.dart';
+import 'package:media_core/slot/player_slot_owner.dart';
 
 /// Represents a player slot assignment.
 ///
@@ -37,6 +36,22 @@ final class PlayerSlotAssignment extends Equatable {
     required this.createdAt,
   });
 
+  /// Creates assignment.
+  factory PlayerSlotAssignment.create({
+    required SlotId slotId,
+    required PlayerSlotOwner owner,
+    required PlayerId playerId,
+    required SessionId sessionId,
+  }) {
+    return PlayerSlotAssignment(
+      slotId: slotId,
+      owner: owner,
+      playerId: playerId,
+      sessionId: sessionId,
+      createdAt: clock.now(),
+    );
+  }
+
   /// Slot identity.
   final SlotId slotId;
 
@@ -65,22 +80,6 @@ final class PlayerSlotAssignment extends Equatable {
   /// Whether assignment belongs to PIP.
   bool get isPip {
     return owner.isPip;
-  }
-
-  /// Creates assignment.
-  factory PlayerSlotAssignment.create({
-    required SlotId slotId,
-    required PlayerSlotOwner owner,
-    required PlayerId playerId,
-    required SessionId sessionId,
-  }) {
-    return PlayerSlotAssignment(
-      slotId: slotId,
-      owner: owner,
-      playerId: playerId,
-      sessionId: sessionId,
-      createdAt: clock.now(),
-    );
   }
 
   /// Checks whether assignment matches slot.

@@ -1,11 +1,11 @@
-import 'package:media_core/identity/slot_id.dart';
+import 'package:equatable/equatable.dart';
+import 'package:media_core/identity/generation_id.dart';
+import 'package:media_core/identity/operation_id.dart';
 import 'package:media_core/identity/player_id.dart';
-import 'package:media_core/identity/source_id.dart';
 import 'package:media_core/identity/request_id.dart';
 import 'package:media_core/identity/session_id.dart';
-import 'package:media_core/identity/operation_id.dart';
-import 'package:media_core/identity/generation_id.dart';
-import 'package:equatable/equatable.dart';
+import 'package:media_core/identity/slot_id.dart';
+import 'package:media_core/identity/source_id.dart';
 
 /// Structured runtime context associated with a player error.
 ///
@@ -21,6 +21,8 @@ import 'package:equatable/equatable.dart';
 ///
 /// Those responsibilities belong to other layers of the architecture.
 final class ErrorContext extends Equatable {
+  ///
+  /// Creates a context from the diagnostic fields known when the failure was recorded.
   const ErrorContext({
     this.playerId,
     this.sessionId,
@@ -98,36 +100,68 @@ final class ErrorContext extends Equatable {
   // Presence
   // ===========================================================================
 
+  ///
+  /// Whether the failure is attributed to a specific player instance.
   bool get hasPlayerId => playerId != null;
 
+  ///
+  /// Whether the failure is attributed to a specific playback session.
   bool get hasSessionId => sessionId != null;
 
+  ///
+  /// Whether the failure happened inside a pooled player slot.
   bool get hasSlotId => slotId != null;
 
+  ///
+  /// Whether the failure is attributed to a specific media source.
   bool get hasSourceId => sourceId != null;
 
+  ///
+  /// Whether the failure is tied to one network or backend request.
   bool get hasRequestId => requestId != null;
 
+  ///
+  /// Whether the failure is tied to one high-level operation.
   bool get hasOperationId => operationId != null;
 
+  ///
+  /// Whether the failure carries the generation it occurred in, which is what lets stale reports be recognised.
   bool get hasGenerationId => generationId != null;
 
+  ///
+  /// Whether a human-readable operation name is attached.
   bool get hasOperation => _hasText(operation);
 
+  ///
+  /// Whether the failing delivery line of the source is known.
   bool get hasLineId => _hasText(lineId);
 
+  ///
+  /// Whether the quality level requested for the failure is known.
   bool get hasQuality => _hasText(quality);
 
+  ///
+  /// Whether a media URI is attached; it may carry credentials and must be sanitized before display.
   bool get hasUri => _hasText(uri);
 
+  ///
+  /// Whether the platform the failure came from is recorded.
   bool get hasPlatform => _hasText(platform);
 
+  ///
+  /// Whether the backend that failed is recorded.
   bool get hasBackend => _hasText(backend);
 
+  ///
+  /// Whether the adapter that failed is recorded.
   bool get hasAdapter => _hasText(adapter);
 
+  ///
+  /// Whether the player state at failure time is recorded.
   bool get hasState => _hasText(state);
 
+  ///
+  /// Whether any additional diagnostic metadata is attached.
   bool get hasMetadata => metadata.isNotEmpty;
 
   /// Whether this context contains any diagnostic information.
@@ -150,6 +184,8 @@ final class ErrorContext extends Equatable {
         !hasMetadata;
   }
 
+  ///
+  /// Whether this context carries at least one diagnostic field.
   bool get isNotEmpty => !isEmpty;
 
   // ===========================================================================
@@ -215,9 +251,7 @@ final class ErrorContext extends Equatable {
 
   /// Returns a copy without the specified metadata key.
   ErrorContext withoutMetadata(String key) {
-    final nextMetadata = <String, Object?>{...metadata};
-
-    nextMetadata.remove(key);
+    final nextMetadata = <String, Object?>{...metadata}..remove(key);
 
     return copyWith(metadata: nextMetadata);
   }
@@ -313,13 +347,16 @@ final class ErrorContext extends Equatable {
   // Identity helpers
   // ===========================================================================
 
+  ///
+  /// Returns a copy attributed to the given player instance.
   ErrorContext withPlayerId(PlayerId playerId) {
     return copyWith(playerId: playerId);
   }
 
+  ///
+  /// Returns a copy that is no longer attributed to a player instance.
   ErrorContext withoutPlayerId() {
     return ErrorContext(
-      playerId: null,
       sessionId: sessionId,
       slotId: slotId,
       sourceId: sourceId,
@@ -338,14 +375,17 @@ final class ErrorContext extends Equatable {
     );
   }
 
+  ///
+  /// Returns a copy attributed to the given playback session.
   ErrorContext withSessionId(SessionId sessionId) {
     return copyWith(sessionId: sessionId);
   }
 
+  ///
+  /// Returns a copy that is no longer attributed to a session.
   ErrorContext withoutSessionId() {
     return ErrorContext(
       playerId: playerId,
-      sessionId: null,
       slotId: slotId,
       sourceId: sourceId,
       requestId: requestId,
@@ -363,15 +403,18 @@ final class ErrorContext extends Equatable {
     );
   }
 
+  ///
+  /// Returns a copy attributed to the given pooled slot.
   ErrorContext withSlotId(SlotId slotId) {
     return copyWith(slotId: slotId);
   }
 
+  ///
+  /// Returns a copy that is no longer attributed to a slot.
   ErrorContext withoutSlotId() {
     return ErrorContext(
       playerId: playerId,
       sessionId: sessionId,
-      slotId: null,
       sourceId: sourceId,
       requestId: requestId,
       operationId: operationId,
@@ -388,16 +431,19 @@ final class ErrorContext extends Equatable {
     );
   }
 
+  ///
+  /// Returns a copy attributed to the given media source.
   ErrorContext withSourceId(SourceId sourceId) {
     return copyWith(sourceId: sourceId);
   }
 
+  ///
+  /// Returns a copy that is no longer attributed to a source.
   ErrorContext withoutSourceId() {
     return ErrorContext(
       playerId: playerId,
       sessionId: sessionId,
       slotId: slotId,
-      sourceId: null,
       requestId: requestId,
       operationId: operationId,
       generationId: generationId,
@@ -413,17 +459,20 @@ final class ErrorContext extends Equatable {
     );
   }
 
+  ///
+  /// Returns a copy tied to the given request.
   ErrorContext withRequestId(RequestId requestId) {
     return copyWith(requestId: requestId);
   }
 
+  ///
+  /// Returns a copy that is no longer tied to a request.
   ErrorContext withoutRequestId() {
     return ErrorContext(
       playerId: playerId,
       sessionId: sessionId,
       slotId: slotId,
       sourceId: sourceId,
-      requestId: null,
       operationId: operationId,
       generationId: generationId,
       operation: operation,
@@ -438,10 +487,14 @@ final class ErrorContext extends Equatable {
     );
   }
 
+  ///
+  /// Returns a copy tied to the given high-level operation.
   ErrorContext withOperationId(OperationId operationId) {
     return copyWith(operationId: operationId);
   }
 
+  ///
+  /// Returns a copy that is no longer tied to an operation.
   ErrorContext withoutOperationId() {
     return ErrorContext(
       playerId: playerId,
@@ -449,7 +502,6 @@ final class ErrorContext extends Equatable {
       slotId: slotId,
       sourceId: sourceId,
       requestId: requestId,
-      operationId: null,
       generationId: generationId,
       operation: operation,
       lineId: lineId,
@@ -463,10 +515,14 @@ final class ErrorContext extends Equatable {
     );
   }
 
+  ///
+  /// Returns a copy stamped with the generation the failure occurred in.
   ErrorContext withGenerationId(GenerationId generationId) {
     return copyWith(generationId: generationId);
   }
 
+  ///
+  /// Returns a copy without generation information, for failures whose staleness is not in question.
   ErrorContext withoutGenerationId() {
     return ErrorContext(
       playerId: playerId,
@@ -475,7 +531,6 @@ final class ErrorContext extends Equatable {
       sourceId: sourceId,
       requestId: requestId,
       operationId: operationId,
-      generationId: null,
       operation: operation,
       lineId: lineId,
       quality: quality,
@@ -492,34 +547,51 @@ final class ErrorContext extends Equatable {
   // Text helpers
   // ===========================================================================
 
+  ///
+  /// Returns a copy with the operation name set; blank names are rejected.
   ErrorContext withOperation(String operation) {
     return copyWith(operation: _requireText(operation, 'operation'));
   }
 
+  ///
+  /// Returns a copy with the delivery line identifier set; blank values are rejected.
   ErrorContext withLineId(String lineId) {
     return copyWith(lineId: _requireText(lineId, 'lineId'));
   }
 
+  ///
+  /// Returns a copy with the requested quality set; blank values are rejected.
   ErrorContext withQuality(String quality) {
     return copyWith(quality: _requireText(quality, 'quality'));
   }
 
+  ///
+  /// Returns a copy with the media URI set; blank values are rejected.
+  /// The URI is diagnostic data and may contain credentials.
   ErrorContext withUri(String uri) {
     return copyWith(uri: _requireText(uri, 'uri'));
   }
 
+  ///
+  /// Returns a copy with the platform identifier set; blank values are rejected.
   ErrorContext withPlatform(String platform) {
     return copyWith(platform: _requireText(platform, 'platform'));
   }
 
+  ///
+  /// Returns a copy with the backend identifier set; blank values are rejected.
   ErrorContext withBackend(String backend) {
     return copyWith(backend: _requireText(backend, 'backend'));
   }
 
+  ///
+  /// Returns a copy with the adapter identifier set; blank values are rejected.
   ErrorContext withAdapter(String adapter) {
     return copyWith(adapter: _requireText(adapter, 'adapter'));
   }
 
+  ///
+  /// Returns a copy with the player state at failure time set; blank values are rejected.
   ErrorContext withState(String state) {
     return copyWith(state: _requireText(state, 'state'));
   }

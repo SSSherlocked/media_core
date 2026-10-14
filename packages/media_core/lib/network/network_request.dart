@@ -1,6 +1,6 @@
-import 'package:media_core/source/source_headers.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-
+import 'package:media_core/network/network_manager.dart' show NetworkManager;
+import 'package:media_core/source/source_headers.dart';
 
 part 'network_request.freezed.dart';
 
@@ -34,8 +34,7 @@ abstract class NetworkRequest with _$NetworkRequest {
     required Uri uri,
 
     /// HTTP method.
-    @Default('GET')
-    String method,
+    @Default('GET') String method,
 
     /// Request headers.
     SourceHeaders? headers,
@@ -53,12 +52,10 @@ abstract class NetworkRequest with _$NetworkRequest {
     Duration? receiveTimeout,
 
     /// Maximum retry count.
-    @Default(0)
-    int maxRetries,
+    @Default(0) int maxRetries,
 
     /// Whether this request can use cache.
-    @Default(false)
-    bool cacheable,
+    @Default(false) bool cacheable,
 
     /// Extra request metadata.
     Map<String, Object?>? metadata,

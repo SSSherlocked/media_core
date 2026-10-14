@@ -16,21 +16,6 @@ import 'package:equatable/equatable.dart';
 /// Custom modes are supported for applications that need their own mode
 /// vocabulary.
 final class BugMode extends Equatable implements Comparable<BugMode> {
-  /// Bug injection is completely disabled.
-  static const BugMode disabled = BugMode._('disabled', 'Disabled');
-
-  /// Only explicitly safe and deterministic faults are allowed.
-  static const BugMode safe = BugMode._('safe', 'Safe');
-
-  /// Normal development fault injection.
-  static const BugMode normal = BugMode._('normal', 'Normal');
-
-  /// Aggressive fault injection intended for stress testing.
-  static const BugMode aggressive = BugMode._('aggressive', 'Aggressive');
-
-  /// Chaos-style fault injection.
-  static const BugMode chaos = BugMode._('chaos', 'Chaos');
-
   const BugMode._(this.value, this.name);
 
   /// Creates a custom bug mode.
@@ -78,11 +63,26 @@ final class BugMode extends Equatable implements Comparable<BugMode> {
   /// Creates a bug mode from JSON.
   factory BugMode.fromJson(Object? json) {
     if (json is! String) {
-      throw FormatException('BugMode JSON value must be a String.');
+      throw const FormatException('BugMode JSON value must be a String.');
     }
 
     return BugMode.fromValue(json);
   }
+
+  /// Bug injection is completely disabled.
+  static const BugMode disabled = BugMode._('disabled', 'Disabled');
+
+  /// Only explicitly safe and deterministic faults are allowed.
+  static const BugMode safe = BugMode._('safe', 'Safe');
+
+  /// Normal development fault injection.
+  static const BugMode normal = BugMode._('normal', 'Normal');
+
+  /// Aggressive fault injection intended for stress testing.
+  static const BugMode aggressive = BugMode._('aggressive', 'Aggressive');
+
+  /// Chaos-style fault injection.
+  static const BugMode chaos = BugMode._('chaos', 'Chaos');
 
   /// Attempts to parse a bug mode.
   ///

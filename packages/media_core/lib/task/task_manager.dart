@@ -1,18 +1,20 @@
 import 'dart:async';
-import 'package:media_core/task/task_id.dart';
-import 'package:media_core/task/task_type.dart';
-import 'package:media_core/task/task_state.dart';
-import 'package:media_core/task/player_task.dart';
-import 'package:media_core/task/task_context.dart';
-import 'package:media_core/task/task_priority.dart';
-import 'package:media_core/task/task_scheduler.dart';
-import 'package:media_core/task/task_cancel_token.dart';
-import 'package:media_core/task/task_errors.dart';
+
+import 'package:media_core/identity/generation_id.dart';
 import 'package:media_core/identity/player_id.dart';
 import 'package:media_core/identity/request_id.dart';
-import 'package:media_core/identity/generation_id.dart';
 import 'package:media_core/operation/operation_context.dart';
+import 'package:media_core/task/player_task.dart';
+import 'package:media_core/task/task_cancel_token.dart';
+import 'package:media_core/task/task_context.dart';
+import 'package:media_core/task/task_errors.dart';
+import 'package:media_core/task/task_id.dart';
+import 'package:media_core/task/task_priority.dart';
+import 'package:media_core/task/task_scheduler.dart';
+import 'package:media_core/task/task_state.dart';
+import 'package:media_core/task/task_type.dart';
 
+part 'task_manager_cancellation.dart';
 // The implementation of [TaskManager] is split by concern across `part`
 // files next to this one:
 //
@@ -25,7 +27,6 @@ import 'package:media_core/operation/operation_context.dart';
 // callable surface of [TaskManager] is unchanged.
 
 part 'task_manager_execution.dart';
-part 'task_manager_cancellation.dart';
 
 /// Manages the complete lifecycle of [PlayerTask] instances.
 ///
@@ -57,6 +58,7 @@ part 'task_manager_cancellation.dart';
 /// The scheduler never owns [TaskCancelToken] and never decides whether a
 /// task completed, failed, or was cancelled.
 final class TaskManager {
+  /// Creates a manager with an optional [scheduler] and a concurrency limit.
   TaskManager({TaskScheduler? scheduler, this.maxConcurrentTasks = 1})
     : _scheduler = scheduler ?? TaskScheduler(maxConcurrentTasks: maxConcurrentTasks) {
     if (maxConcurrentTasks <= 0) {
@@ -394,11 +396,7 @@ final class TaskManager {
     // A cancelled task reports `isRunning == false` while its handler keeps
     // executing, and that handler registers its final state when it finishes;
     // dropping it here would resurrect it into a reset manager.
-    final executingIds = _scheduler.runningTaskIds;
-
-    for (final id in executingIds) {
-      cancel(id);
-    }
+    final executingIds = _scheduler.runningTaskIds..forEach(cancel);
 
     _scheduler.reset();
 
@@ -479,11 +477,7 @@ final class TaskManager {
   void _disposeCompletedTokens() {
     final executingIds = _scheduler.runningTaskIds;
 
-    final ids = _cancelTokens.keys.where((id) => !executingIds.contains(id)).toList(growable: false);
-
-    for (final id in ids) {
-      _disposeToken(id);
-    }
+    _cancelTokens.keys.where((id) => !executingIds.contains(id)).toList(growable: false).forEach(_disposeToken);
   }
 
   /// Returns a registered task or throws.

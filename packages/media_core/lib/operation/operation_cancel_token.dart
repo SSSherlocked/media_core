@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:media_core/operation/library.dart' show Operation, OperationState;
 
 /// Controls cancellation of a running or pending operation.
 ///
@@ -176,7 +177,7 @@ final class OperationCancelToken {
 
     throwIfCancelled();
 
-    return action();
+    return await action();
   }
 
   /// Runs [action] and checks cancellation before returning its result.
@@ -253,13 +254,8 @@ final class OperationCancelToken {
 
     _disposed = true;
 
-    final subscription = _parentSubscription;
-
+    unawaited(_parentSubscription?.cancel());
     _parentSubscription = null;
-
-    if (subscription != null) {
-      unawaited(subscription.cancel());
-    }
 
     unawaited(_cancelController.close());
   }

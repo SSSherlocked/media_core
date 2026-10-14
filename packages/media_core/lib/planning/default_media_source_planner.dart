@@ -1,8 +1,8 @@
 import 'package:media_core/adapter/composite_support.dart';
 import 'package:media_core/adapter/player_adapter_capabilities.dart';
-import 'package:media_core/source/media_source.dart';
 import 'package:media_core/planning/media_source_plan.dart';
 import 'package:media_core/planning/media_source_planner.dart';
+import 'package:media_core/source/media_source.dart';
 import 'package:media_core_logging/media_core_logging.dart';
 
 /// The default [MediaSourcePlanner].
@@ -56,10 +56,7 @@ final class DefaultMediaSourcePlanner implements MediaSourcePlanner {
   const DefaultMediaSourcePlanner();
 
   @override
-  MediaSourcePlan plan(
-    MediaSource source,
-    PlayerAdapterCapabilities capabilities,
-  ) {
+  MediaSourcePlan plan(MediaSource source, PlayerAdapterCapabilities capabilities) {
     final plan = _decide(source, capabilities);
     MediaCoreLog.debug(
       LogCategory.fallback,
@@ -70,8 +67,7 @@ final class DefaultMediaSourcePlanner implements MediaSourcePlanner {
         'compositeSupport': capabilities.compositeSupport.name,
         if (source is CompositeMediaSource) 'video': source.videoTracks.length,
         if (source is CompositeMediaSource) 'audio': source.audioTracks.length,
-        if (source is CompositeMediaSource)
-          'subtitle': source.subtitleTracks.length,
+        if (source is CompositeMediaSource) 'subtitle': source.subtitleTracks.length,
         if (plan is UnsupportedPlan) 'reason': plan.reason,
       },
     );
@@ -86,10 +82,7 @@ final class DefaultMediaSourcePlanner implements MediaSourcePlanner {
     };
   }
 
-  MediaSourcePlan _decide(
-    MediaSource source,
-    PlayerAdapterCapabilities capabilities,
-  ) {
+  MediaSourcePlan _decide(MediaSource source, PlayerAdapterCapabilities capabilities) {
     if (source is! CompositeMediaSource) {
       return DirectPlan(source);
     }

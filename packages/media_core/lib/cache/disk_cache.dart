@@ -1,10 +1,10 @@
-import 'dart:io';
 import 'dart:convert';
-import 'package:media_core/cache/cache_key.dart';
+import 'dart:io';
 import 'dart:typed_data';
-import 'package:media_core/cache/cache_entry.dart';
-import 'package:media_core/cache/cache_storage.dart';
 
+import 'package:media_core/cache/cache_entry.dart';
+import 'package:media_core/cache/cache_key.dart';
+import 'package:media_core/cache/cache_storage.dart';
 
 /// Disk-backed cache storage for byte-oriented cache values.
 ///
@@ -26,8 +26,10 @@ import 'package:media_core/cache/cache_storage.dart';
 /// Large media payloads should generally use a dedicated streaming/file cache
 /// rather than loading the entire value into memory.
 final class DiskCache implements CacheStorage<Uint8List> {
+  /// Creates disk storage rooted at [directory].
   DiskCache({required this.directory});
 
+  /// Directory holding one encoded-key `.json` file per entry.
   final Directory directory;
 
   bool _initialized = false;
@@ -47,14 +49,14 @@ final class DiskCache implements CacheStorage<Uint8List> {
   Future<CacheEntry<Uint8List>?> read(CacheKey key) async {
     _ensureReady();
 
-    final File file = _fileFor(key);
+    final file = _fileFor(key);
 
-    if (!await file.exists()) {
+    if (!file.existsSync()) {
       return null;
     }
 
     try {
-      final String content = await file.readAsString();
+      final content = await file.readAsString();
       final Object? decoded = jsonDecode(content);
 
       if (decoded is! Map) {
@@ -62,17 +64,17 @@ final class DiskCache implements CacheStorage<Uint8List> {
         return null;
       }
 
-      final Map<String, dynamic> map = Map<String, dynamic>.from(decoded);
+      final map = Map<String, dynamic>.from(decoded);
 
-      final String? createdAtValue = map['createdAt'] as String?;
-      final String? accessedAtValue = map['accessedAt'] as String?;
-      final String? expiresAtValue = map['expiresAt'] as String?;
+      final createdAtValue = map['createdAt'] as String?;
+      final accessedAtValue = map['accessedAt'] as String?;
+      final expiresAtValue = map['expiresAt'] as String?;
 
-      final DateTime? createdAt = createdAtValue == null ? null : DateTime.tryParse(createdAtValue);
+      final createdAt = createdAtValue == null ? null : DateTime.tryParse(createdAtValue);
 
-      final DateTime? accessedAt = accessedAtValue == null ? null : DateTime.tryParse(accessedAtValue);
+      final accessedAt = accessedAtValue == null ? null : DateTime.tryParse(accessedAtValue);
 
-      final DateTime? expiresAt = expiresAtValue == null ? null : DateTime.tryParse(expiresAtValue);
+      final expiresAt = expiresAtValue == null ? null : DateTime.tryParse(expiresAtValue);
 
       final Object? value = map['value'];
 
@@ -81,15 +83,13 @@ final class DiskCache implements CacheStorage<Uint8List> {
         return null;
       }
 
-      final Uint8List bytes = Uint8List.fromList(base64Decode(value));
+      final bytes = Uint8List.fromList(base64Decode(value));
 
       final Object? metadataValue = map['metadata'];
 
-      final Map<String, Object?> metadata = metadataValue is Map
-          ? Map<String, Object?>.from(metadataValue)
-          : const <String, Object?>{};
+      final metadata = metadataValue is Map ? Map<String, Object?>.from(metadataValue) : const <String, Object?>{};
 
-      final CacheEntry<Uint8List> entry = CacheEntry<Uint8List>(
+      final entry = CacheEntry<Uint8List>(
         key: key,
         value: bytes,
         createdAt: createdAt,
@@ -104,12 +104,12 @@ final class DiskCache implements CacheStorage<Uint8List> {
         return entry;
       }
 
-      final CacheEntry<Uint8List> touched = entry.touch();
+      final touched = entry.touch();
       await _writeEntry(touched);
 
       return touched;
     } on FormatException {
-      if (await file.exists()) {
+      if (file.existsSync()) {
         await file.delete();
       }
 
@@ -128,9 +128,9 @@ final class DiskCache implements CacheStorage<Uint8List> {
   Future<bool> remove(CacheKey key) async {
     _ensureReady();
 
-    final File file = _fileFor(key);
+    final file = _fileFor(key);
 
-    if (!await file.exists()) {
+    if (!file.existsSync()) {
       return false;
     }
 
@@ -142,7 +142,7 @@ final class DiskCache implements CacheStorage<Uint8List> {
   Future<void> clear() async {
     _ensureReady();
 
-    if (!await directory.exists()) {
+    if (!directory.existsSync()) {
       return;
     }
 
@@ -157,13 +157,13 @@ final class DiskCache implements CacheStorage<Uint8List> {
   Future<bool> contains(CacheKey key) async {
     _ensureReady();
 
-    final File file = _fileFor(key);
+    final file = _fileFor(key);
 
-    if (!await file.exists()) {
+    if (!file.existsSync()) {
       return false;
     }
 
-    final CacheEntry<Uint8List>? entry = await read(key);
+    final entry = await read(key);
 
     return entry != null;
   }
@@ -172,23 +172,23 @@ final class DiskCache implements CacheStorage<Uint8List> {
   Future<List<CacheEntry<Uint8List>>> entries() async {
     _ensureReady();
 
-    if (!await directory.exists()) {
+    if (!directory.existsSync()) {
       return const <CacheEntry<Uint8List>>[];
     }
 
-    final List<CacheEntry<Uint8List>> result = <CacheEntry<Uint8List>>[];
+    final result = <CacheEntry<Uint8List>>[];
 
     await for (final FileSystemEntity entity in directory.list(followLinks: false)) {
       if (entity is! File || !entity.path.endsWith('.json')) {
         continue;
       }
 
-      final String fileName = entity.uri.pathSegments.last;
-      final String encodedKey = fileName.substring(0, fileName.length - '.json'.length);
+      final fileName = entity.uri.pathSegments.last;
+      final encodedKey = fileName.substring(0, fileName.length - '.json'.length);
 
-      final String keyValue = Uri.decodeComponent(encodedKey);
+      final keyValue = Uri.decodeComponent(encodedKey);
 
-      final CacheEntry<Uint8List>? entry = await read(CacheKey(keyValue));
+      final entry = await read(CacheKey(keyValue));
 
       if (entry != null) {
         result.add(entry);
@@ -208,15 +208,15 @@ final class DiskCache implements CacheStorage<Uint8List> {
   }
 
   File _fileFor(CacheKey key) {
-    final String encoded = Uri.encodeComponent(key.value);
+    final encoded = Uri.encodeComponent(key.value);
 
     return File('${directory.path}${Platform.pathSeparator}$encoded.json');
   }
 
   Future<void> _writeEntry(CacheEntry<Uint8List> entry) async {
-    final File file = _fileFor(entry.key);
+    final file = _fileFor(entry.key);
 
-    final Map<String, dynamic> map = <String, dynamic>{
+    final map = <String, dynamic>{
       'key': entry.key.value,
       'value': base64Encode(entry.value),
       'createdAt': entry.createdAt.toIso8601String(),

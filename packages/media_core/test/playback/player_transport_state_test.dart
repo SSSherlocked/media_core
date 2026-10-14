@@ -10,9 +10,7 @@ void main() {
       const state = PlayerTransportState.initial();
 
       final next = state.reduce(
-        const PlaybackCommandBuffered([
-          BufferRange(start: Duration.zero, end: Duration(seconds: 10)),
-        ]),
+        const PlaybackCommandBuffered([BufferRange(start: Duration.zero, end: Duration(seconds: 10))]),
       );
 
       // The controller only emits when the reduced state differs from the
@@ -21,27 +19,17 @@ void main() {
       // and PlayerHandle.buffer stays empty on a backend that does report.
       expect(next, isNot(state));
       expect(next.buffer.ranges, hasLength(1));
-      expect(
-        next.buffer.bufferedEndAt(Duration.zero),
-        const Duration(seconds: 10),
-      );
+      expect(next.buffer.bufferedEndAt(Duration.zero), const Duration(seconds: 10));
     });
 
     test('re-reporting the same ranges keeps the reported end', () {
-      const ranges = [
-        BufferRange(start: Duration.zero, end: Duration(seconds: 5)),
-      ];
+      const ranges = [BufferRange(start: Duration.zero, end: Duration(seconds: 5))];
 
-      final once = const PlayerTransportState.initial().reduce(
-        PlaybackCommandBuffered(ranges),
-      );
-      final twice = once.reduce(PlaybackCommandBuffered(ranges));
+      final once = const PlayerTransportState.initial().reduce(const PlaybackCommandBuffered(ranges));
+      final twice = once.reduce(const PlaybackCommandBuffered(ranges));
 
       expect(twice.buffer.ranges, once.buffer.ranges);
-      expect(
-        twice.buffer.bufferedEndAt(Duration.zero),
-        const Duration(seconds: 5),
-      );
+      expect(twice.buffer.bufferedEndAt(Duration.zero), const Duration(seconds: 5));
     });
 
     test('ranges arriving out of order are canonicalized on reduce', () {
@@ -53,10 +41,7 @@ void main() {
       );
 
       expect(state.buffer.ranges.first.start, Duration.zero);
-      expect(
-        state.buffer.bufferedEndAt(Duration.zero),
-        const Duration(seconds: 5),
-      );
+      expect(state.buffer.bufferedEndAt(Duration.zero), const Duration(seconds: 5));
     });
   });
 }

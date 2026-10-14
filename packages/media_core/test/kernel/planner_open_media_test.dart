@@ -1,53 +1,38 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:media_core/source/media_track.dart';
-import 'package:media_core/source/media_source.dart';
+import 'package:media_core/adapter/composite_support.dart';
+import 'package:media_core/adapter/player_adapter_capabilities.dart';
+import 'package:media_core/adapter/player_adapter_registry.dart';
+import 'package:media_core/event/player_event_bus.dart';
+import 'package:media_core/kernel/kernel_options.dart';
 import 'package:media_core/kernel/player_handle.dart';
 import 'package:media_core/kernel/player_kernel.dart';
-import 'package:media_core/kernel/kernel_options.dart';
-import 'package:media_core/event/player_event_bus.dart';
-import 'package:media_core/source/media_track_type.dart';
-import 'package:media_core/adapter/composite_support.dart';
-import 'package:media_core/source/media_source_bridge.dart';
 import 'package:media_core/planning/media_source_plan.dart';
+import 'package:media_core/planning/media_source_planner.dart';
+import 'package:media_core/source/media_source.dart';
+import 'package:media_core/source/media_source_bridge.dart';
+import 'package:media_core/source/media_track.dart';
+import 'package:media_core/source/media_track_type.dart';
 import 'package:media_core/testing/fake_player_adapter.dart';
 import 'package:media_core/testing/test_player_factory.dart';
-import 'package:media_core/planning/media_source_planner.dart';
-import 'package:media_core/adapter/player_adapter_registry.dart';
-import 'package:media_core/adapter/player_adapter_capabilities.dart';
 
+PlayerAdapterRegistration _reg(String id, {required PlayerAdapterCapabilities capabilities, int priority = 0}) =>
+    PlayerAdapterRegistration(
+      id: id,
+      capabilities: capabilities,
+      factory: TestPlayerFactory.fakeAdapterFactory(),
+      priority: priority,
+    );
 
-PlayerAdapterRegistration _reg(
-  String id, {
-  required PlayerAdapterCapabilities capabilities,
-  int priority = 0,
-}) => PlayerAdapterRegistration(
-  id: id,
-  capabilities: capabilities,
-  factory: TestPlayerFactory.fakeAdapterFactory(),
-  priority: priority,
-);
+MediaTrack _videoTrack(String url) => MediaTrack(uri: Uri.parse(url), kind: MediaTrackType.video);
 
-MediaTrack _videoTrack(String url) => MediaTrack(
-  uri: Uri.parse(url),
-  kind: MediaTrackType.video,
-);
-
-MediaTrack _audioTrack(String url) => MediaTrack(
-  uri: Uri.parse(url),
-  kind: MediaTrackType.audio,
-);
+MediaTrack _audioTrack(String url) => MediaTrack(uri: Uri.parse(url), kind: MediaTrackType.audio);
 
 void main() {
   group('PlayerKernel.planFor', () {
     test('returns a DirectPlan when progressive is fed to any backend', () {
-      final kernel = PlayerKernel()
-        ..registerBackend(
-          _reg('fake', capabilities: const PlayerAdapterCapabilities()),
-        );
+      final kernel = PlayerKernel()..registerBackend(_reg('fake', capabilities: const PlayerAdapterCapabilities()));
 
-      final outcome = kernel.planFor(
-        ProgressiveMediaSource(track: _videoTrack('https://example.com/v.mp4')),
-      );
+      final outcome = kernel.planFor(ProgressiveMediaSource(track: _videoTrack('https://example.com/v.mp4')));
 
       expect(outcome.registration.id, 'fake');
       expect(outcome.plan, isA<DirectPlan>());
@@ -55,16 +40,9 @@ void main() {
 
     test('prefers the composite-capable backend and reports the mode', () {
       final kernel = PlayerKernel()
+        ..registerBackend(_reg('plain', capabilities: const PlayerAdapterCapabilities()))
         ..registerBackend(
-          _reg('plain', capabilities: const PlayerAdapterCapabilities()),
-        )
-        ..registerBackend(
-          _reg(
-            'media3',
-            capabilities: const PlayerAdapterCapabilities(
-              compositeSupport: CompositeSupport.native,
-            ),
-          ),
+          _reg('media3', capabilities: const PlayerAdapterCapabilities(compositeSupport: CompositeSupport.native)),
         );
 
       final outcome = kernel.planFor(
@@ -82,21 +60,12 @@ void main() {
     test('honours preferredBackend even when its capabilities differ from the best match', () {
       final kernel = PlayerKernel()
         ..registerBackend(
-          _reg(
-            'media3',
-            capabilities: const PlayerAdapterCapabilities(
-              compositeSupport: CompositeSupport.native,
-            ),
-          ),
+          _reg('media3', capabilities: const PlayerAdapterCapabilities(compositeSupport: CompositeSupport.native)),
         )
-        ..registerBackend(
-          _reg('fijk', capabilities: const PlayerAdapterCapabilities()),
-        );
+        ..registerBackend(_reg('fijk', capabilities: const PlayerAdapterCapabilities()));
 
       final outcome = kernel.planFor(
-        CompositeMediaSource(
-          videoTracks: [_videoTrack('https://example.com/v.m4s')],
-        ),
+        CompositeMediaSource(videoTracks: [_videoTrack('https://example.com/v.m4s')]),
         preferredBackend: 'fijk',
       );
 
@@ -105,16 +74,9 @@ void main() {
     });
 
     test('never throws on UnsupportedPlan; a caller decides what to do', () {
-      final kernel = PlayerKernel()
-        ..registerBackend(
-          _reg('fijk', capabilities: const PlayerAdapterCapabilities()),
-        );
+      final kernel = PlayerKernel()..registerBackend(_reg('fijk', capabilities: const PlayerAdapterCapabilities()));
 
-      final outcome = kernel.planFor(
-        CompositeMediaSource(
-          videoTracks: [_videoTrack('https://example.com/v.m4s')],
-        ),
-      );
+      final outcome = kernel.planFor(CompositeMediaSource(videoTracks: [_videoTrack('https://example.com/v.m4s')]));
 
       expect(outcome.plan, isA<UnsupportedPlan>());
     });
@@ -127,30 +89,19 @@ void main() {
 
       await handle.initialize();
 
-      await handle.openMedia(
-        ProgressiveMediaSource(track: _videoTrack('https://example.com/v.mp4')),
-        autoPlay: false,
-      );
+      await handle.openMedia(ProgressiveMediaSource(track: _videoTrack('https://example.com/v.mp4')), autoPlay: false);
 
       expect(adapter.openedSources, hasLength(1));
       final opened = adapter.openedSources.single;
       expect(opened.uri.toString(), 'https://example.com/v.mp4');
-      expect(
-        MediaSourceBridge.fromPlayerSource(opened),
-        isA<ProgressiveMediaSource>(),
-      );
+      expect(MediaSourceBridge.fromPlayerSource(opened), isA<ProgressiveMediaSource>());
     });
 
     test('composite source is preserved in the opened PlayerSource metadata', () async {
-      final adapter = FakePlayerAdapter(
-        id: 'fake-native',
-        behavior: const FakePlayerAdapterBehavior(),
-      );
+      final adapter = FakePlayerAdapter(id: 'fake-native');
       final handle = _handle(
         adapter,
-        capabilities: const PlayerAdapterCapabilities(
-          compositeSupport: CompositeSupport.native,
-        ),
+        capabilities: const PlayerAdapterCapabilities(compositeSupport: CompositeSupport.native),
       );
 
       await handle.initialize();
@@ -163,17 +114,11 @@ void main() {
       await handle.openMedia(composite, autoPlay: false);
 
       final opened = adapter.openedSources.single;
-      expect(
-        MediaSourceBridge.compositeFromPlayerSource(opened),
-        composite,
-      );
+      expect(MediaSourceBridge.compositeFromPlayerSource(opened), composite);
     });
 
     test('composite on a none backend throws UnsupportedError', () async {
-      final handle = _handle(
-        FakePlayerAdapter(id: 'fijk-like'),
-        capabilities: const PlayerAdapterCapabilities(),
-      );
+      final handle = _handle(FakePlayerAdapter(id: 'fijk-like'));
 
       await handle.initialize();
 
@@ -184,29 +129,18 @@ void main() {
             audioTracks: [_audioTrack('https://example.com/a.m4s')],
           ),
         ),
-        throwsA(
-          isA<UnsupportedError>().having(
-            (e) => e.message,
-            'message',
-            contains('composite'),
-          ),
-        ),
+        throwsA(isA<UnsupportedError>().having((e) => e.message, 'message', contains('composite'))),
       );
     });
 
     test('custom planner is consulted instead of the default', () async {
       final stubPlanner = _StubPlanner(const UnsupportedPlan('stubbed'));
-      final handle = _handle(
-        FakePlayerAdapter(id: 'stub'),
-        planner: stubPlanner,
-      );
+      final handle = _handle(FakePlayerAdapter(id: 'stub'), planner: stubPlanner);
 
       await handle.initialize();
 
       await expectLater(
-        handle.openMedia(
-          ProgressiveMediaSource(track: _videoTrack('https://example.com/v.mp4')),
-        ),
+        handle.openMedia(ProgressiveMediaSource(track: _videoTrack('https://example.com/v.mp4'))),
         throwsA(isA<UnsupportedError>()),
       );
       expect(stubPlanner.calls, hasLength(1));
@@ -218,9 +152,7 @@ void main() {
       final adapter = FakePlayerAdapter(id: 'mpv-like');
       final handle = _handle(
         adapter,
-        capabilities: const PlayerAdapterCapabilities(
-          compositeSupport: CompositeSupport.externalAudio,
-        ),
+        capabilities: const PlayerAdapterCapabilities(compositeSupport: CompositeSupport.externalAudio),
       );
       await handle.initialize();
 
@@ -233,9 +165,7 @@ void main() {
               startOffset: const Duration(milliseconds: 40),
             ),
           ],
-          audioTracks: [
-            _audioTrack('https://example.com/a.m4s'),
-          ],
+          audioTracks: [_audioTrack('https://example.com/a.m4s')],
         ),
         autoPlay: false,
       );
@@ -245,8 +175,7 @@ void main() {
       // The audio track anchors the clock; the video trails by 40 ms.
       expect(timeline!.primary!.track.kind, MediaTrackType.video);
       expect(timeline.primary!.offset, const Duration(milliseconds: 40));
-      final audio = timeline.tracks
-          .firstWhere((t) => t.track.kind == MediaTrackType.audio);
+      final audio = timeline.tracks.firstWhere((t) => t.track.kind == MediaTrackType.audio);
       expect(audio.offset, Duration.zero);
     });
 
@@ -283,10 +212,7 @@ class _StubPlanner implements MediaSourcePlanner {
   final calls = <MediaSource>[];
 
   @override
-  MediaSourcePlan plan(
-    MediaSource source,
-    PlayerAdapterCapabilities capabilities,
-  ) {
+  MediaSourcePlan plan(MediaSource source, PlayerAdapterCapabilities capabilities) {
     calls.add(source);
     return _result;
   }

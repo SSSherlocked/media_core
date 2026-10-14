@@ -1,10 +1,10 @@
-import 'package:media_core/recording/recording_error.dart';
-import 'package:media_core/recording/recording_state.dart';
+import 'package:clock/clock.dart';
+import 'package:media_core/recording/recording_backend.dart';
 import 'package:media_core/recording/recording_config.dart';
+import 'package:media_core/recording/recording_error.dart';
 import 'package:media_core/recording/recording_result.dart';
 import 'package:media_core/recording/recording_source.dart';
-import 'package:media_core/recording/recording_backend.dart';
-import 'package:clock/clock.dart';
+import 'package:media_core/recording/recording_state.dart';
 import 'package:rxdart/rxdart.dart';
 
 /// Represents one recording lifecycle session.
@@ -89,23 +89,21 @@ final class RecordingSession {
     }
 
     if (!_backend.isAvailable) {
-      final error = const RecordingError.backendUnavailable(message: 'The recording backend is unavailable.');
+      const error = RecordingError.backendUnavailable(message: 'The recording backend is unavailable.');
 
       _setState(_state.copyWith(status: RecordingStatus.error, error: error));
 
       throw StateError(error.message);
     }
 
-    _setState(_state.copyWith(status: RecordingStatus.starting, error: null));
+    _setState(_state.copyWith(status: RecordingStatus.starting));
 
     try {
       await _backend.start(source, config);
 
       _startedAt = clock.now();
 
-      _setState(
-        _state.copyWith(status: RecordingStatus.recording, duration: Duration.zero, bytesWritten: 0, error: null),
-      );
+      _setState(_state.copyWith(status: RecordingStatus.recording, duration: Duration.zero, bytesWritten: 0));
     } catch (error) {
       final recordingError = error is RecordingError
           ? error

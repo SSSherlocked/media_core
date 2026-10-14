@@ -122,7 +122,6 @@ final class ScreenshotOptions extends Equatable {
         'pixelRatio: $pixelRatio, '
         'route: ${route.name}, '
         'includeSubtitles: $includeSubtitles, '
-        'timeout: ${timeout.inMilliseconds}ms'
-        ')';
+        'timeout: ${timeout.inMilliseconds}ms)';
   }
 }

@@ -1,6 +1,6 @@
-import 'package:media_core/recovery/recovery_step.dart';
-import 'package:media_core/recovery/recovery_failure.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/recovery/recovery_failure.dart';
+import 'package:media_core/recovery/recovery_step.dart';
 
 /// Kind of ladder transition.
 enum RecoveryLadderEventKind {
@@ -32,13 +32,7 @@ enum RecoveryLadderEventKind {
 /// They describe decisions, not physical operations — see
 /// `RecoveryTargetEvent` for the execution side.
 sealed class RecoveryLadderEvent extends Equatable {
-  const RecoveryLadderEvent({
-    required this.kind,
-    this.failure,
-    this.step,
-    this.attempt = 0,
-    this.message,
-  });
+  const RecoveryLadderEvent({required this.kind, this.failure, this.step, this.attempt = 0, this.message});
 
   /// Transition kind.
   final RecoveryLadderEventKind kind;
@@ -81,16 +75,14 @@ sealed class RecoveryLadderEvent extends Equatable {
   List<Object?> get props => <Object?>[kind, failure, step, attempt, message];
 
   @override
-  String toString() => '$runtimeType($detail)';
+  String toString() => 'RecoveryLadderEvent(${kind.name}, $detail)';
 }
 
 /// The ladder accepted a failure and started escalating.
 final class RecoveryLadderStarted extends RecoveryLadderEvent {
   /// Creates a start event.
-  const RecoveryLadderStarted({
-    required RecoveryFailure failure,
-    required this.plan,
-  }) : super(kind: RecoveryLadderEventKind.started, failure: failure);
+  const RecoveryLadderStarted({required RecoveryFailure failure, required this.plan})
+    : super(kind: RecoveryLadderEventKind.started, failure: failure);
 
   /// Escalation order the ladder will follow.
   final List<RecoveryStepKind> plan;
@@ -108,11 +100,8 @@ final class RecoveryLadderStarted extends RecoveryLadderEvent {
 /// The ladder is about to execute a step.
 final class RecoveryLadderStepStarted extends RecoveryLadderEvent {
   /// Creates a step-start event.
-  const RecoveryLadderStepStarted({
-    required super.step,
-    required super.attempt,
-    super.failure,
-  }) : super(kind: RecoveryLadderEventKind.stepStarted);
+  const RecoveryLadderStepStarted({required super.step, required super.attempt, super.failure})
+    : super(kind: RecoveryLadderEventKind.stepStarted);
 
   @override
   String toString() => 'RecoveryLadderStepStarted(${step?.label}, attempt: $attempt)';
@@ -145,11 +134,8 @@ final class RecoveryLadderStepFailed extends RecoveryLadderEvent {
 /// Recovery succeeded.
 final class RecoveryLadderCompleted extends RecoveryLadderEvent {
   /// Creates a completion event.
-  const RecoveryLadderCompleted({
-    required super.step,
-    required super.attempt,
-    super.failure,
-  }) : super(kind: RecoveryLadderEventKind.completed);
+  const RecoveryLadderCompleted({required super.step, required super.attempt, super.failure})
+    : super(kind: RecoveryLadderEventKind.completed);
 
   @override
   String toString() => 'RecoveryLadderCompleted(${step?.label}, attempt: $attempt)';
@@ -158,11 +144,8 @@ final class RecoveryLadderCompleted extends RecoveryLadderEvent {
 /// Recovery ran out of steps.
 final class RecoveryLadderExhausted extends RecoveryLadderEvent {
   /// Creates an exhaustion event.
-  const RecoveryLadderExhausted({
-    required super.attempt,
-    required super.message,
-    super.failure,
-  }) : super(kind: RecoveryLadderEventKind.exhausted);
+  const RecoveryLadderExhausted({required super.attempt, required super.message, super.failure})
+    : super(kind: RecoveryLadderEventKind.exhausted);
 
   @override
   String toString() => 'RecoveryLadderExhausted(attempt: $attempt, reason: $message)';
@@ -171,11 +154,8 @@ final class RecoveryLadderExhausted extends RecoveryLadderEvent {
 /// The run was stopped from the outside.
 final class RecoveryLadderCancelled extends RecoveryLadderEvent {
   /// Creates a cancellation event.
-  const RecoveryLadderCancelled({
-    required super.attempt,
-    required super.message,
-    super.failure,
-  }) : super(kind: RecoveryLadderEventKind.cancelled);
+  const RecoveryLadderCancelled({required super.attempt, required super.message, super.failure})
+    : super(kind: RecoveryLadderEventKind.cancelled);
 
   @override
   String toString() => 'RecoveryLadderCancelled(attempt: $attempt, reason: $message)';

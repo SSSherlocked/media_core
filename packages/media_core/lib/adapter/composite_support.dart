@@ -1,3 +1,5 @@
+import 'package:media_core/media_core.dart' show CompositeMediaSource, UnsupportedPlan;
+
 /// How a backend consumes a [CompositeMediaSource].
 ///
 /// A composite source can be presented in more than one way, and the

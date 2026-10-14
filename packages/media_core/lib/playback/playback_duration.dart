@@ -10,7 +10,16 @@ import 'package:equatable/equatable.dart';
 /// - perform seeking
 /// - calculate renderer layout
 final class PlaybackDuration extends Equatable {
+  /// Creates a duration of [value].
   const PlaybackDuration({required this.value});
+
+  /// Reads a duration written by [toMap].
+  ///
+  /// A missing `milliseconds` becomes [Duration.zero], which [isUnknown] then
+  /// reports — the same value an engine gives for a length it does not know yet.
+  factory PlaybackDuration.fromMap(Map<String, dynamic> map) {
+    return PlaybackDuration.fromMilliseconds(map['milliseconds'] as int? ?? 0);
+  }
 
   /// Zero duration.
   const PlaybackDuration.zero() : value = Duration.zero;
@@ -40,6 +49,7 @@ final class PlaybackDuration extends Equatable {
     return value < other.value;
   }
 
+  /// Whether this duration is longer than [other].
   bool operator >(PlaybackDuration other) {
     return value > other.value;
   }
@@ -74,12 +84,10 @@ final class PlaybackDuration extends Equatable {
     return result;
   }
 
+  /// The `fromMap()` form: duration as whole milliseconds, so any sub-millisecond
+  /// remainder is dropped.
   Map<String, dynamic> toMap() {
     return {'milliseconds': milliseconds};
-  }
-
-  factory PlaybackDuration.fromMap(Map<String, dynamic> map) {
-    return PlaybackDuration.fromMilliseconds(map['milliseconds'] as int? ?? 0);
   }
 
   @override

@@ -1,8 +1,8 @@
-import 'package:media_core/source/source_type.dart';
-import 'package:media_core/source/source_headers.dart';
-import 'package:media_core/identity/source_id.dart';
-import 'package:media_core/identity/request_id.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/identity/request_id.dart';
+import 'package:media_core/identity/source_id.dart';
+import 'package:media_core/source/source_headers.dart';
+import 'package:media_core/source/source_type.dart';
 
 part 'source_request.freezed.dart';
 

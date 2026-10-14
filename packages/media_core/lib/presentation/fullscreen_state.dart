@@ -15,6 +15,7 @@ part 'fullscreen_state.freezed.dart';
 /// Platform adapters are responsible for applying fullscreen changes.
 @freezed
 abstract class FullscreenState with _$FullscreenState {
+  /// Creates a fullscreen state from its individual flags.
   const factory FullscreenState({
     /// Whether fullscreen is currently active.
     @Default(false) bool active,

@@ -1,11 +1,12 @@
 import 'package:media_core/identity/player_id.dart';
+import 'package:media_core/kernel/player_kernel.dart' show PlayerKernel;
 import 'package:media_core/presentation/presentation_request.dart';
 
 /// Driver interface for presentation capability packages.
 ///
 /// A [KernelPresentationDriver] is attached to a [PlayerKernel]
-/// via `attachPresentation` and performs platform presentation
-/// transitions for a player: fullscreen, picture-in-picture and
+/// by assigning [PlayerKernel.presentationDriver] and performs platform
+/// presentation transitions for a player: fullscreen, picture-in-picture and
 /// floating windows.
 ///
 /// The kernel owns which player requests a transition; the driver

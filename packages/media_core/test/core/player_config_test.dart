@@ -5,7 +5,7 @@ import 'package:media_core/core/player_constants.dart';
 void main() {
   group('PlayerConfig', () {
     test('default values are sensible', () {
-      const config = PlayerConfig();
+      const config = PlayerConfig.defaults;
       expect(config.autoInitialize, isTrue);
       expect(config.autoPlay, isFalse);
       expect(config.loop, isFalse);
@@ -19,25 +19,13 @@ void main() {
     });
 
     test('asserts reject invalid volume', () {
-      expect(
-        () => PlayerConfig(volume: 1.5),
-        throwsA(isA<AssertionError>()),
-      );
-      expect(
-        () => PlayerConfig(volume: -0.1),
-        throwsA(isA<AssertionError>()),
-      );
+      expect(() => PlayerConfig(volume: 1.5), throwsA(isA<AssertionError>()));
+      expect(() => PlayerConfig(volume: -0.1), throwsA(isA<AssertionError>()));
     });
 
     test('asserts reject invalid playback rate', () {
-      expect(
-        () => PlayerConfig(playbackRate: 0),
-        throwsA(isA<AssertionError>()),
-      );
-      expect(
-        () => PlayerConfig(playbackRate: 99),
-        throwsA(isA<AssertionError>()),
-      );
+      expect(() => PlayerConfig(playbackRate: 0), throwsA(isA<AssertionError>()));
+      expect(() => PlayerConfig(playbackRate: 99), throwsA(isA<AssertionError>()));
     });
 
     test('asserts reject negative attempt counts', () {
@@ -46,7 +34,7 @@ void main() {
     });
 
     test('presence helpers', () {
-      const plain = PlayerConfig();
+      const plain = PlayerConfig.defaults;
       expect(plain.hasName, isFalse);
       expect(plain.hasMediaType, isFalse);
       expect(plain.hasSource, isFalse);
@@ -63,7 +51,7 @@ void main() {
       const videoOnly = PlayerConfig(enableAudio: false);
       expect(videoOnly.isVideoOnly, isTrue);
 
-      const both = PlayerConfig();
+      const both = PlayerConfig.defaults;
       expect(both.isAudioVideo, isTrue);
     });
 

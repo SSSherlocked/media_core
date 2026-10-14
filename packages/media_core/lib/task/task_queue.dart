@@ -1,8 +1,8 @@
-import 'package:media_core/task/task_id.dart';
-import 'package:media_core/task/task_state.dart';
-import 'package:media_core/task/player_task.dart';
-import 'package:media_core/task/task_priority.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/task/player_task.dart';
+import 'package:media_core/task/task_id.dart';
+import 'package:media_core/task/task_priority.dart';
+import 'package:media_core/task/task_state.dart';
 
 /// A priority-aware immutable queue for [PlayerTask].
 ///
@@ -17,6 +17,8 @@ import 'package:equatable/equatable.dart';
 ///
 /// [TaskQueue] is immutable. All mutating operations return a new queue.
 final class TaskQueue extends Equatable {
+  /// Creates a queue holding the queued tasks among [tasks], in scheduling
+  /// order.
   TaskQueue({Iterable<PlayerTask> tasks = const <PlayerTask>[]})
     : _tasks = List<PlayerTask>.unmodifiable(_sortTasks(tasks.where((task) => task.isQueued)));
 
@@ -295,9 +297,7 @@ final class TaskQueue extends Equatable {
   // ---------------------------------------------------------------------------
 
   static List<PlayerTask> _sortTasks(Iterable<PlayerTask> tasks) {
-    final result = List<PlayerTask>.from(tasks);
-
-    result.sort(_compareTasks);
+    final result = List<PlayerTask>.from(tasks)..sort(_compareTasks);
 
     return result;
   }
@@ -369,8 +369,10 @@ final class TaskQueue extends Equatable {
 /// This is intentionally a small immutable value object rather than a
 /// Freezed DTO because it is only a runtime result of queue manipulation.
 final class TaskQueueResult extends Equatable {
+  /// Pairs the resulting [queue] with the [task] it removed, if any.
   const TaskQueueResult({required this.queue, this.task});
 
+  /// Pairs the resulting [queue] with no removed task.
   const TaskQueueResult.empty(this.queue) : task = null;
 
   /// Queue after the operation.

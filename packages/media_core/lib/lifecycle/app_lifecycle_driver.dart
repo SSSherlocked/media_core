@@ -1,17 +1,24 @@
 import 'dart:async';
-
 import 'package:flutter/widgets.dart';
-
-import 'package:media_core_logging/media_core_logging.dart';
 import 'package:media_core/kernel/player_handle.dart';
+import 'package:media_core_logging/media_core_logging.dart';
 
 /// Drives a player's lifecycle from the Flutter application lifecycle.
 ///
-/// This is the missing source of truth for the lifecycle module: the
-/// handle's [PlayerHandle.activate] / [PlayerHandle.deactivate] were always
-/// the designed entry points, but nothing connected the platform's
-/// foreground/background transitions to them, so the lifecycle state
-/// machine recorded internal paths only.
+/// The handle's `PlayerHandle.activate` / `PlayerHandle.deactivate` are the
+/// designed entry points for foreground/background; this driver connects the
+/// platform's lifecycle transitions to them for a single live handle resolved
+/// on demand.
+///
+/// ## Wiring status
+///
+/// Background-pause is owned in production by `PlayerKernel`, which registers
+/// itself as a `WidgetsBindingObserver` and deactivates playing handles directly
+/// (gated on `KernelOptions.pauseWhenBackgrounded` and the per-player
+/// `PlayerConfig.pauseWhenBackgrounded`). Nothing in the package constructs this
+/// driver — it is a standalone, per-handle alternative a host may bind to a
+/// controller it owns, and it does nothing until a host instantiates and
+/// disposes it.
 ///
 /// The mapping:
 ///
@@ -32,7 +39,7 @@ import 'package:media_core/kernel/player_handle.dart';
 ///
 /// The driver does not hold a handle. Live playback rebuilds its handle on
 /// every engine switch, so a driver bound to one instance would go stale;
-/// instead [resolve] is asked for the current handle at every transition,
+/// instead `resolve` is asked for the current handle at every transition,
 /// which keeps the wiring correct for whatever player is live.
 ///
 /// Bind once per facade/controller and dispose with it:

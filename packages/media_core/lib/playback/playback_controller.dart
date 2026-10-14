@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'package:media_core/playback/player_transport_state.dart';
 import 'package:media_core/playback/buffer_range.dart';
+import 'package:media_core/playback/playback_buffer.dart' show PlaybackBuffer;
 import 'package:media_core/playback/playback_command.dart';
 import 'package:media_core/playback/playback_request.dart';
 import 'package:media_core/playback/playback_snapshot.dart';
+import 'package:media_core/playback/player_transport_state.dart';
 import 'package:rxdart/rxdart.dart';
 
 /// Controls playback lifecycle.
@@ -23,6 +24,11 @@ import 'package:rxdart/rxdart.dart';
 /// - call platform APIs
 /// - render video
 final class PlaybackController {
+  /// Creates a controller whose state starts at [initialState].
+  ///
+  /// The state stream is seeded rather than empty so a consumer that subscribes
+  /// late — a controls bar built after playback began — still reads a complete
+  /// transport state instead of waiting for the next engine report.
   PlaybackController({PlayerTransportState initialState = const PlayerTransportState.initial()})
     : _stateSubject = BehaviorSubject<PlayerTransportState>.seeded(initialState);
 
@@ -91,8 +97,8 @@ final class PlaybackController {
   }
 
   /// Update buffering state.
-  void setBuffering(bool buffering) {
-    apply(PlaybackCommand.buffering(buffering));
+  void setBuffering({required bool buffering}) {
+    apply(PlaybackCommand.buffering(value: buffering));
   }
 
   /// Update position.

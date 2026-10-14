@@ -1,10 +1,10 @@
-import 'package:media_core/geometry/video_size.dart';
-import 'package:media_core/geometry/pixel_ratio.dart';
-import 'package:media_core/geometry/display_size.dart';
-import 'package:media_core/geometry/aspect_ratio.dart';
-import 'package:media_core/geometry/video_rotation.dart';
-import 'package:media_core/geometry/video_orientation.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/geometry/aspect_ratio.dart';
+import 'package:media_core/geometry/display_size.dart';
+import 'package:media_core/geometry/pixel_ratio.dart';
+import 'package:media_core/geometry/video_orientation.dart';
+import 'package:media_core/geometry/video_rotation.dart';
+import 'package:media_core/geometry/video_size.dart';
 
 /// Complete video geometry information.
 ///
@@ -31,6 +31,12 @@ import 'package:equatable/equatable.dart';
 /// - resize surface
 /// - control renderer
 final class VideoGeometry extends Equatable {
+  /// Creates geometry with every field supplied explicitly.
+  ///
+  /// [VideoGeometry.derived] is the variant that recalculates [aspectRatio]
+  /// and [orientation] from [videoSize] and [rotation]; this constructor
+  /// trusts what it is given, so a caller passing a raw pixel grid plus a
+  /// 90° rotation gets ratio and orientation that disagree with the layout.
   const VideoGeometry({
     required this.videoSize,
     required this.displaySize,
@@ -40,6 +46,18 @@ final class VideoGeometry extends Equatable {
     required this.pixelRatio,
   });
 
+  /// Restores geometry from a map produced by [toMap].
+  factory VideoGeometry.fromMap(Map<String, dynamic> map) {
+    return VideoGeometry(
+      videoSize: VideoSize.fromMap(map['videoSize'] as Map<String, dynamic>),
+      displaySize: DisplaySize.fromMap(map['displaySize'] as Map<String, dynamic>),
+      aspectRatio: AspectRatioValue(map['aspectRatio'] as double? ?? 0),
+      orientation: VideoOrientationInfo.fromMap(map['orientation'] as Map<String, dynamic>),
+      rotation: VideoRotationInfo.fromMap(map['rotation'] as Map<String, dynamic>),
+      pixelRatio: PixelRatioValue(map['pixelRatio'] as double? ?? 1),
+    );
+  }
+
   /// Empty geometry.
   const VideoGeometry.empty()
     : videoSize = const VideoSize.zero(),
@@ -48,6 +66,31 @@ final class VideoGeometry extends Equatable {
       orientation = const VideoOrientationInfo(orientation: VideoOrientation.unknown),
       rotation = const VideoRotationInfo.none(),
       pixelRatio = const PixelRatioValue.one();
+
+  /// Builds geometry whose derived values describe what is displayed.
+  ///
+  /// Every entry point that changes the video size or the rotation funnels
+  /// through here. A phone recording pairs a landscape pixel grid with a 90°
+  /// rotation, so a ratio or orientation derived from the raw grid would
+  /// contradict [effectiveAspectRatio], the orientation accessors and the
+  /// layout the renderer has to produce.
+  factory VideoGeometry.derived({
+    required VideoSize videoSize,
+    required DisplaySize displaySize,
+    required VideoRotationInfo rotation,
+    required PixelRatioValue pixelRatio,
+  }) {
+    final displayed = _displaySize(videoSize, rotation);
+
+    return VideoGeometry(
+      videoSize: videoSize,
+      displaySize: displaySize,
+      aspectRatio: AspectRatioValue.fromSize(displayed),
+      orientation: VideoOrientationInfo.fromSize(displayed.width, displayed.height),
+      rotation: rotation,
+      pixelRatio: pixelRatio,
+    );
+  }
 
   /// Source media size.
   final VideoSize videoSize;
@@ -76,31 +119,6 @@ final class VideoGeometry extends Equatable {
     }
 
     return VideoSize(width: size.height, height: size.width);
-  }
-
-  /// Builds geometry whose derived values describe what is displayed.
-  ///
-  /// Every entry point that changes the video size or the rotation funnels
-  /// through here. A phone recording pairs a landscape pixel grid with a 90°
-  /// rotation, so a ratio or orientation derived from the raw grid would
-  /// contradict [effectiveAspectRatio], the orientation accessors and the
-  /// layout the renderer has to produce.
-  static VideoGeometry derived({
-    required VideoSize videoSize,
-    required DisplaySize displaySize,
-    required VideoRotationInfo rotation,
-    required PixelRatioValue pixelRatio,
-  }) {
-    final displayed = _displaySize(videoSize, rotation);
-
-    return VideoGeometry(
-      videoSize: videoSize,
-      displaySize: displaySize,
-      aspectRatio: AspectRatioValue.fromSize(displayed),
-      orientation: VideoOrientationInfo.fromSize(displayed.width, displayed.height),
-      rotation: rotation,
-      pixelRatio: pixelRatio,
-    );
   }
 
   /// Whether video size is valid.
@@ -183,22 +201,12 @@ final class VideoGeometry extends Equatable {
 
   /// Creates geometry with new video size.
   VideoGeometry copyWithVideoSize(VideoSize size) {
-    return VideoGeometry.derived(
-      videoSize: size,
-      displaySize: displaySize,
-      rotation: rotation,
-      pixelRatio: pixelRatio,
-    );
+    return VideoGeometry.derived(videoSize: size, displaySize: displaySize, rotation: rotation, pixelRatio: pixelRatio);
   }
 
   /// Creates geometry with new display size.
   VideoGeometry copyWithDisplaySize(DisplaySize size) {
-    return VideoGeometry.derived(
-      videoSize: videoSize,
-      displaySize: size,
-      rotation: rotation,
-      pixelRatio: pixelRatio,
-    );
+    return VideoGeometry.derived(videoSize: videoSize, displaySize: size, rotation: rotation, pixelRatio: pixelRatio);
   }
 
   /// Creates geometry with new rotation.
@@ -248,17 +256,6 @@ final class VideoGeometry extends Equatable {
       'rotation': rotation.toMap(),
       'pixelRatio': pixelRatio.value,
     };
-  }
-
-  factory VideoGeometry.fromMap(Map<String, dynamic> map) {
-    return VideoGeometry(
-      videoSize: VideoSize.fromMap(map['videoSize'] as Map<String, dynamic>),
-      displaySize: DisplaySize.fromMap(map['displaySize'] as Map<String, dynamic>),
-      aspectRatio: AspectRatioValue(map['aspectRatio'] as double? ?? 0),
-      orientation: VideoOrientationInfo.fromMap(map['orientation'] as Map<String, dynamic>),
-      rotation: VideoRotationInfo.fromMap(map['rotation'] as Map<String, dynamic>),
-      pixelRatio: PixelRatioValue(map['pixelRatio'] as double? ?? 1),
-    );
   }
 
   @override

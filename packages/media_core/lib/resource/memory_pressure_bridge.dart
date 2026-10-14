@@ -1,6 +1,5 @@
-import 'package:media_core_memory/media_core_memory.dart';
-
 import 'package:media_core/resource/resource_pressure.dart';
+import 'package:media_core_memory/media_core_memory.dart';
 
 /// Translates the memory package's pressure into the resource layer's.
 ///

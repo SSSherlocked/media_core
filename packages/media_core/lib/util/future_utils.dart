@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:media_core/result/result.dart' show Result;
+
 /// Future related utilities.
 abstract final class FutureUtils {
   FutureUtils._();
@@ -21,7 +23,7 @@ abstract final class FutureUtils {
   }) async {
     try {
       return await action();
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       onError?.call(error, stackTrace);
 
       return null;
@@ -66,7 +68,7 @@ abstract final class FutureUtils {
     for (final task in tasks) {
       try {
         return await task();
-      } catch (error, stackTrace) {
+      } on Object catch (error, stackTrace) {
         lastError = error;
         lastStackTrace = stackTrace;
       }
@@ -88,7 +90,7 @@ abstract final class FutureUtils {
   static Future<void> ignore(Future<void> future) async {
     try {
       await future;
-    } catch (_) {}
+    } on Object catch (_) {}
   }
 
   /// Converts `Future<T>` into `Future<void>`.
@@ -117,7 +119,7 @@ abstract final class FutureUtils {
     try {
       await future;
       return true;
-    } catch (_) {
+    } on Object catch (_) {
       return false;
     }
   }
@@ -127,7 +129,7 @@ abstract final class FutureUtils {
     try {
       await future;
       return false;
-    } catch (_) {
+    } on Object catch (_) {
       return true;
     }
   }

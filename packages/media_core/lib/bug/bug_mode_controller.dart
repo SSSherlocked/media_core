@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:media_core/bug/bug_mode.dart';
 import 'package:media_core/bug/bug_mode_config.dart';
+import 'package:media_core/bug/library.dart' show BugHook, FaultInjector;
 
 /// Runtime controller for [BugModeConfig].
 ///
@@ -19,6 +20,7 @@ import 'package:media_core/bug/bug_mode_config.dart';
 ///        └── FaultScheduler
 /// ```
 final class BugModeController {
+  /// Creates a controller for [config], rejecting it immediately when validation fails.
   BugModeController({BugModeConfig config = BugModeConfig.disabled}) : _config = config {
     _config.validateOrThrow();
   }
@@ -158,35 +160,35 @@ final class BugModeController {
   }
 
   /// Enables or disables deterministic faults.
-  BugModeConfig setAllowDeterministicFaults(bool value) {
+  BugModeConfig setAllowDeterministicFaults({required bool value}) {
     _ensureNotDisposed();
 
     return setConfig(_config.copyWith(allowDeterministicFaults: value));
   }
 
   /// Enables or disables random faults.
-  BugModeConfig setAllowRandomFaults(bool value) {
+  BugModeConfig setAllowRandomFaults({required bool value}) {
     _ensureNotDisposed();
 
     return setConfig(_config.copyWith(allowRandomFaults: value));
   }
 
   /// Enables or disables disruptive faults.
-  BugModeConfig setAllowDisruptiveFaults(bool value) {
+  BugModeConfig setAllowDisruptiveFaults({required bool value}) {
     _ensureNotDisposed();
 
     return setConfig(_config.copyWith(allowDisruptiveFaults: value));
   }
 
   /// Enables or disables stress faults.
-  BugModeConfig setAllowStressFaults(bool value) {
+  BugModeConfig setAllowStressFaults({required bool value}) {
     _ensureNotDisposed();
 
     return setConfig(_config.copyWith(allowStressFaults: value));
   }
 
   /// Enables or disables chaos faults.
-  BugModeConfig setAllowChaosFaults(bool value) {
+  BugModeConfig setAllowChaosFaults({required bool value}) {
     _ensureNotDisposed();
 
     return setConfig(_config.copyWith(allowChaosFaults: value));

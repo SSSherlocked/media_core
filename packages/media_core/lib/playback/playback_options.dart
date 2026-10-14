@@ -10,6 +10,11 @@ import 'package:equatable/equatable.dart';
 /// - control player backend
 /// - perform playback operations
 final class PlaybackOptions extends Equatable {
+  /// Creates options declaring how playback should begin.
+  ///
+  /// Every default is the least surprising start: not playing on its own, no
+  /// loop, audible, from the beginning, at full volume and normal speed, and
+  /// nothing carried into the background.
   const PlaybackOptions({
     this.autoPlay = false,
     this.loop = false,
@@ -19,6 +24,30 @@ final class PlaybackOptions extends Equatable {
     this.rate = 1.0,
     this.allowBackgroundPlayback = false,
   });
+
+  /// Reads options written by [toMap].
+  ///
+  /// A key that is absent or null is the constructor's default, so a set of
+  /// options saved by a partial writer still starts playback rather than
+  /// failing. A key present with the wrong type is not forgiven: the cast
+  /// throws, because silently guessing here would change how video begins.
+  factory PlaybackOptions.fromMap(Map<String, dynamic> map) {
+    return PlaybackOptions(
+      autoPlay: map['autoPlay'] as bool? ?? false,
+
+      loop: map['loop'] as bool? ?? false,
+
+      muted: map['muted'] as bool? ?? false,
+
+      startPosition: Duration(milliseconds: map['startPosition'] as int? ?? 0),
+
+      volume: map['volume'] as double? ?? 1.0,
+
+      rate: map['rate'] as double? ?? 1.0,
+
+      allowBackgroundPlayback: map['allowBackgroundPlayback'] as bool? ?? false,
+    );
+  }
 
   /// Default options.
   const PlaybackOptions.defaults()
@@ -99,24 +128,6 @@ final class PlaybackOptions extends Equatable {
       'rate': rate,
       'allowBackgroundPlayback': allowBackgroundPlayback,
     };
-  }
-
-  factory PlaybackOptions.fromMap(Map<String, dynamic> map) {
-    return PlaybackOptions(
-      autoPlay: map['autoPlay'] as bool? ?? false,
-
-      loop: map['loop'] as bool? ?? false,
-
-      muted: map['muted'] as bool? ?? false,
-
-      startPosition: Duration(milliseconds: map['startPosition'] as int? ?? 0),
-
-      volume: map['volume'] as double? ?? 1.0,
-
-      rate: map['rate'] as double? ?? 1.0,
-
-      allowBackgroundPlayback: map['allowBackgroundPlayback'] as bool? ?? false,
-    );
   }
 
   @override

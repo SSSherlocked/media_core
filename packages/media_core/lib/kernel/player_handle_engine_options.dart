@@ -82,9 +82,7 @@ extension PlayerHandleEngineOptions on PlayerHandle {
       }
 
       if (classified.rebuiltFor.isNotEmpty) {
-        await _recreateBackend(
-          reason: 'engine options cannot apply live (${classified.rebuiltFor.length} option(s))',
-        );
+        await _recreateBackend(reason: 'engine options cannot apply live (${classified.rebuiltFor.length} option(s))');
       }
 
       return EngineOptionReport(
@@ -124,11 +122,8 @@ extension PlayerHandleEngineOptions on PlayerHandle {
 
     try {
       await adapter.applyEngineOptions(options);
-    } catch (error) {
-      MediaCoreLog.warning(
-        LogCategory.player,
-        'engine options could not be replayed on ${adapter.id}: $error',
-      );
+    } on Object catch (error) {
+      MediaCoreLog.warning(LogCategory.player, 'engine options could not be replayed on ${adapter.id}: $error');
     }
   }
 
@@ -145,19 +140,17 @@ extension PlayerHandleEngineOptions on PlayerHandle {
     final session = RecoverySession(
       failure: RecoveryFailure.fromMessage(reason),
       source: source,
-      sourceCandidates: const <PlayerSource>[],
-      backendCandidates: const <PlayerAdapterRegistration>[],
       position: current.position,
       // The caller's intent wins over the adapter mirror; see the play
       // intent field for why a buffering session still counts as playing.
-      wasPlaying: _playIntent ??
+      wasPlaying:
+          playIntent ??
           _runtime.session.state.status == SessionStatus.playing ||
               _runtime.session.state.status == SessionStatus.buffering,
       volume: current.volume,
       rate: current.rate,
       backendId: backendId,
       generationId: _runtime.session.generation.id,
-      attempt: 0,
     );
 
     return _enqueue(() async {
@@ -177,7 +170,7 @@ extension PlayerHandleEngineOptions on PlayerHandle {
 
       final nextAdapter = registration.factory.create(registration.id);
 
-      bool committed = false;
+      var committed = false;
 
       try {
         await nextAdapter.initialize(_adapterContext);
@@ -223,13 +216,13 @@ extension PlayerHandleEngineOptions on PlayerHandle {
           'backend': backendId,
           'reason': reason,
         });
-      } catch (error, stackTrace) {
+      } on Object catch (error, stackTrace) {
         if (!committed) {
           // The previous engine is still attached and still owns its
           // subscription: there is nothing to roll back.
           try {
             await nextAdapter.dispose();
-          } catch (_) {
+          } on Object catch (_) {
             // Best-effort cleanup of the failed replacement.
           }
         }

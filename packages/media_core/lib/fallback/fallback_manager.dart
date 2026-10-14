@@ -1,6 +1,7 @@
+import 'package:media_core/fallback/fallback_context.dart';
 import 'package:media_core/fallback/fallback_reason.dart';
 import 'package:media_core/fallback/fallback_result.dart';
-import 'package:media_core/fallback/fallback_context.dart';
+import 'package:media_core/fallback/library.dart' show BackendFallback, LineFallback, QualityFallback;
 
 /// Coordinates a generic fallback lifecycle.
 ///
@@ -20,14 +21,17 @@ import 'package:media_core/fallback/fallback_context.dart';
 /// - [LineFallback]
 /// - [QualityFallback]
 final class FallbackManager {
+  /// Creates an idle manager with no active fallback context.
   FallbackManager();
 
   FallbackContext? _context;
 
   bool _disposed = false;
 
+  /// The active fallback context, or `null` when no fallback is running.
   FallbackContext? get context => _context;
 
+  /// Whether a fallback lifecycle is currently active.
   bool get isActive => _context != null;
 
   /// Starts a fallback lifecycle.

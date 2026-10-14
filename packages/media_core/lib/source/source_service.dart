@@ -1,10 +1,10 @@
-import 'package:media_core/source/player_source.dart';
-import 'package:media_core/source/source_resolved.dart';
 import 'package:media_core/core/player_info.dart';
-import 'package:media_core/source/source_resolver_chain.dart';
+import 'package:media_core/source/player_source.dart';
 import 'package:media_core/source/source_inspect_context.dart';
 import 'package:media_core/source/source_inspector_chain.dart';
 import 'package:media_core/source/source_resolve_context.dart';
+import 'package:media_core/source/source_resolved.dart';
+import 'package:media_core/source/source_resolver_chain.dart';
 
 /// Provides the high-level source workflow.
 ///
@@ -26,6 +26,11 @@ import 'package:media_core/source/source_resolve_context.dart';
 /// - perform fallback
 /// - select a playback backend
 final class SourceService {
+  /// Creates a service wired to the given chains.
+  ///
+  /// Both chains are required: resolution and inspection are separate
+  /// extension points, and a service missing either one would silently
+  /// fail half of the source workflow.
   SourceService({required SourceResolverChain resolverChain, required SourceInspectorChain inspectorChain})
     : _resolverChain = resolverChain,
       _inspectorChain = inspectorChain;
@@ -78,6 +83,7 @@ final class SourceService {
 
 /// Contains the result of resolving and inspecting a source.
 final class SourceInspectionResult {
+  /// Creates the bundle returned by [SourceService.resolveAndInspect].
   const SourceInspectionResult({required this.source, required this.resolvedSource, required this.info});
 
   /// The original source requested by the caller.

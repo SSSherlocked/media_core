@@ -43,6 +43,9 @@ abstract class PlayerCoreState with _$PlayerCoreState {
     @Default(false) bool muted,
   }) = _PlayerState;
 
+  /// Creates a player state from JSON.
+  factory PlayerCoreState.fromJson(Map<String, Object?> json) => _$PlayerStateFromJson(json);
+
   const PlayerCoreState._();
 
   /// The default state of a newly created player.
@@ -277,7 +280,7 @@ abstract class PlayerCoreState with _$PlayerCoreState {
   }
 
   /// Associates or removes a media source.
-  PlayerCoreState withSource(bool value) {
+  PlayerCoreState withSource({required bool value}) {
     if (value) {
       return copyWith(hasSource: true);
     }
@@ -286,22 +289,22 @@ abstract class PlayerCoreState with _$PlayerCoreState {
   }
 
   /// Returns a state with the requested mute state.
-  PlayerCoreState withMuted(bool value) {
+  PlayerCoreState withMuted({required bool value}) {
     return copyWith(muted: value);
   }
 
   /// Returns a state with audio output enabled or disabled.
-  PlayerCoreState withAudioEnabled(bool value) {
+  PlayerCoreState withAudioEnabled({required bool value}) {
     return copyWith(audioEnabled: value);
   }
 
   /// Returns a state with video output enabled or disabled.
-  PlayerCoreState withVideoEnabled(bool value) {
+  PlayerCoreState withVideoEnabled({required bool value}) {
     return copyWith(videoEnabled: value);
   }
 
   /// Returns a state with subtitles enabled or disabled.
-  PlayerCoreState withSubtitlesEnabled(bool value) {
+  PlayerCoreState withSubtitlesEnabled({required bool value}) {
     return copyWith(subtitlesEnabled: value);
   }
 
@@ -322,7 +325,4 @@ abstract class PlayerCoreState with _$PlayerCoreState {
       playback: PlayerPlaybackState.idle,
     );
   }
-
-  /// Creates a player state from JSON.
-  factory PlayerCoreState.fromJson(Map<String, Object?> json) => _$PlayerStateFromJson(json);
 }

@@ -52,7 +52,7 @@ final class _FakeHandle implements PoolPlayerHandle {
   Future<void> setVolume(double value) async => volume = value;
 
   @override
-  Future<void> setMute(bool muted) async => this.muted = muted;
+  Future<void> setMute({required bool muted}) async => this.muted = muted;
 
   @override
   Stream<PlayerTransportState> get playbackStream => const Stream<PlayerTransportState>.empty();
@@ -101,10 +101,7 @@ void main() {
     now = DateTime(2026, 9, 26, 12);
   });
 
-  Future<PlaybackPoolOrchestrator> build({
-    int count = 5,
-    PlayerPoolConfig config = const PlayerPoolConfig(reuseIdlePlayers: true, preloadCount: 1),
-  }) async {
+  Future<PlaybackPoolOrchestrator> build({int count = 5, PlayerPoolConfig config = const PlayerPoolConfig()}) async {
     final orchestrator = PlaybackPoolOrchestrator(host: host, config: config, clock: () => now);
     addTearDown(orchestrator.dispose);
     await orchestrator.setItems(_sources(count));
@@ -175,7 +172,7 @@ void main() {
       await pool.onVisibilityChanged(2, 1);
       final active = host.handles.firstWhere((handle) => handle.openedSource == 'item2');
 
-      final plan = await pool.setViewportVisible(false);
+      final plan = await pool.setViewportVisible(visible: false);
 
       expect(plan.activeIndex, isNull);
       expect(active.isPlaying, isFalse);
@@ -186,13 +183,13 @@ void main() {
       final pool = await build();
       await pool.onVisibilityChanged(1, 1);
 
-      final plan = await pool.setOccluded(true);
+      final plan = await pool.setOccluded(occluded: true);
 
       expect(plan.activeIndex, isNull);
     });
 
     test('an empty list plans nothing', () async {
-      final orchestrator = PlaybackPoolOrchestrator(host: host, config: const PlayerPoolConfig(), clock: () => now);
+      final orchestrator = PlaybackPoolOrchestrator(host: host, clock: () => now);
       addTearDown(orchestrator.dispose);
 
       final plan = await orchestrator.reconcile();
@@ -207,11 +204,7 @@ void main() {
       // Reuse is off here on purpose: with reuse on, the player that scrolled
       // away is re-pointed rather than released, which is a different test.
       final pool = await build(
-        config: const PlayerPoolConfig(
-          reuseIdlePlayers: false,
-          preloadCount: 1,
-          idleTimeout: Duration(seconds: 10),
-        ),
+        config: const PlayerPoolConfig(reuseIdlePlayers: false, idleTimeout: Duration(seconds: 10)),
       );
       await pool.onVisibilityChanged(0, 1);
       expect(pool.heldCount, 2);
@@ -231,13 +224,7 @@ void main() {
     });
 
     test('reuse re-points the player that scrolled away instead of releasing it', () async {
-      final pool = await build(
-        config: const PlayerPoolConfig(
-          reuseIdlePlayers: true,
-          preloadCount: 1,
-          idleTimeout: Duration(seconds: 10),
-        ),
-      );
+      final pool = await build(config: const PlayerPoolConfig(idleTimeout: Duration(seconds: 10)));
       await pool.onVisibilityChanged(0, 1);
       final acquiresAfterFirst = host.acquireCount;
 
@@ -250,13 +237,7 @@ void main() {
     });
 
     test('a warm open that does not finish in time is given back', () async {
-      final pool = await build(
-        config: const PlayerPoolConfig(
-          reuseIdlePlayers: true,
-          preloadCount: 1,
-          preloadTimeout: Duration(milliseconds: 100),
-        ),
-      );
+      final pool = await build(config: const PlayerPoolConfig(preloadTimeout: Duration(milliseconds: 100)));
       // Neighbours never finish opening; the active item still does.
       host.stallOpens = true;
 
@@ -269,13 +250,7 @@ void main() {
 
     test('keepWarm keeps an idle player instead of releasing it', () async {
       final pool = await build(
-        config: const PlayerPoolConfig(
-          reuseIdlePlayers: true,
-          preloadCount: 1,
-          keepWarm: true,
-          warmSize: 4,
-          idleTimeout: Duration(seconds: 1),
-        ),
+        config: const PlayerPoolConfig(keepWarm: true, warmSize: 4, idleTimeout: Duration(seconds: 1)),
       );
       await pool.onVisibilityChanged(0, 1);
       await pool.onVisibilityChanged(4, 1);
@@ -306,9 +281,7 @@ void main() {
     });
 
     test('warmSize bounds how many players stay warm', () async {
-      final pool = await build(
-        config: const PlayerPoolConfig(reuseIdlePlayers: true, preloadCount: 3, warmSize: 1),
-      );
+      final pool = await build(config: const PlayerPoolConfig(preloadCount: 3, warmSize: 1));
 
       final plan = await pool.onVisibilityChanged(2, 1);
 
@@ -319,9 +292,7 @@ void main() {
 
   group('PlaybackPoolOrchestrator pressure', () {
     test('warning halves preloading', () async {
-      final pool = await build(
-        config: const PlayerPoolConfig(reuseIdlePlayers: true, preloadCount: 2),
-      );
+      final pool = await build(config: const PlayerPoolConfig(preloadCount: 2));
 
       final plan = await pool.reportPressure(ResourcePressure.warning);
 
@@ -341,9 +312,7 @@ void main() {
     });
 
     test('returning to no pressure restores preloading', () async {
-      final pool = await build(
-        config: const PlayerPoolConfig(reuseIdlePlayers: true, preloadCount: 1),
-      );
+      final pool = await build();
       await pool.onVisibilityChanged(2, 1);
       await pool.reportPressure(ResourcePressure.critical);
       final reduced = pool.heldCount;
@@ -365,6 +334,22 @@ void main() {
 
       expect(pool.handleFor(1)?.id, handle?.id, reason: 'the playing player must survive a refresh');
       expect(host.handles.where((item) => item.openedSource == 'item1').length, 1);
+    });
+
+    test('an item replaced behind the same index is re-opened, not resumed', () async {
+      final pool = await build(count: 2);
+      await pool.onVisibilityChanged(0, 1);
+      final active = pool.handleFor(0)! as _FakeHandle;
+      expect(active.openedSource, 'item0');
+
+      // Pull-to-refresh with the same length: index 0 now holds a different
+      // video. Resuming the held player would keep playing the old one.
+      await pool.setItems(<PlayerSource>[_source('refreshed0'), _source('refreshed1')]);
+      await pool.onVisibilityChanged(0, 1);
+
+      expect(pool.handleFor(0)?.id, active.id, reason: 'the player is reused, not rebuilt');
+      expect(active.openedSource, 'refreshed0');
+      expect(active.isPlaying, isTrue);
     });
 
     test('removing items releases their players', () async {

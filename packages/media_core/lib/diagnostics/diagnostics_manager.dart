@@ -1,7 +1,7 @@
-import 'package:media_core_memory/media_core_memory.dart';
 import 'package:media_core/diagnostics/network_diagnostics.dart';
 import 'package:media_core/diagnostics/performance_monitor.dart';
 import 'package:media_core/diagnostics/player_debug_snapshot.dart';
+import 'package:media_core_memory/media_core_memory.dart';
 
 /// Coordinates the diagnostic monitors owned by the media core.
 ///

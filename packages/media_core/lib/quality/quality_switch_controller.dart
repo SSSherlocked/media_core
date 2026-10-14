@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
-import 'package:media_core/quality/quality_candidate.dart';
+import 'package:media_core/fallback/quality_fallback.dart' show QualityFallback;
 import 'package:media_core/kernel/player_handle.dart';
+import 'package:media_core/kernel/player_kernel.dart' show PlayerKernel;
+import 'package:media_core/quality/quality_candidate.dart';
 
 /// Result of one quality switch.
 enum QualitySwitchResult {
@@ -73,7 +75,7 @@ final class QualitySwitchOutcome extends Equatable {
 ///
 /// 1. capture [PlayerHandle.position] plus rate/volume and whether
 ///    playback was active — the facts that must survive the change;
-/// 2. [PlayerHandle.openMedia] the new candidate's source;
+/// 2. `PlayerHandle.openMedia` the new candidate's source;
 /// 3. seek back to the captured position, which is only meaningful
 ///    because every candidate here is the *same program* encoded
 ///    differently — a switch between different programs would be a
@@ -108,34 +110,25 @@ final class QualitySwitchOutcome extends Equatable {
 /// - the host
 final class QualitySwitchController {
   /// Creates a controller for [handle] with an initial candidate.
-  QualitySwitchController({
-    required this.handle,
-    QualityCandidate? current,
-  }) : _current = current;
+  QualitySwitchController({required this.handle, this.current});
 
   /// The handle being switched.
   final PlayerHandle handle;
 
-  QualityCandidate? _current;
-
   /// The candidate last known to be open.
-  QualityCandidate? get current => _current;
-
-  /// Records [candidate] as open without playing it.
   ///
-  /// For hosts that opened media through another path (first play via
+  /// Assign this to record a candidate as open without playing it, for
+  /// hosts that opened media through another path (first play via
   /// [PlayerKernel.createFromMedia]) and want subsequent switches to
   /// have a baseline to roll back to.
-  void adoptCurrent(QualityCandidate candidate) {
-    _current = candidate;
-  }
+  QualityCandidate? current;
 
   /// Switches the handle to [candidate].
   ///
   /// No-op-as-[QualitySwitchResult.alreadyCurrent] when [candidate]
   /// is the current one; see the class doc for the full sequence.
   Future<QualitySwitchOutcome> switchTo(QualityCandidate candidate) async {
-    final previous = _current;
+    final previous = current;
 
     if (previous != null && previous.source == candidate.source) {
       return QualitySwitchOutcome(
@@ -153,20 +146,20 @@ final class QualitySwitchController {
 
     try {
       await _apply(candidate, resumeAt, wasPlaying, volume, rate);
-      _current = candidate;
+      current = candidate;
       return QualitySwitchOutcome(
         result: QualitySwitchResult.applied,
         from: previous,
         to: candidate,
         resumedAt: resumeAt,
       );
-    } catch (error) {
+    } on Object catch (error) {
       var restored = false;
       if (previous != null) {
         try {
           await _apply(previous, resumeAt, wasPlaying, volume, rate);
           restored = true;
-        } catch (_) {
+        } on Object catch (_) {
           // The rollback failed too: the handle sits on whatever the
           // last open left it on, and `restored: false` is the whole
           // truth of that.

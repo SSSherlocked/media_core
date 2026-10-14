@@ -7,12 +7,8 @@ part of 'player_core_state.dart';
 // **************************************************************************
 
 _PlayerState _$PlayerStateFromJson(Map<String, dynamic> json) => _PlayerState(
-  lifecycle:
-      $enumDecodeNullable(_$PlayerLifecycleStateEnumMap, json['lifecycle']) ??
-      PlayerLifecycleState.idle,
-  playback:
-      $enumDecodeNullable(_$PlayerPlaybackStateEnumMap, json['playback']) ??
-      PlayerPlaybackState.idle,
+  lifecycle: $enumDecodeNullable(_$PlayerLifecycleStateEnumMap, json['lifecycle']) ?? PlayerLifecycleState.idle,
+  playback: $enumDecodeNullable(_$PlayerPlaybackStateEnumMap, json['playback']) ?? PlayerPlaybackState.idle,
   hasSource: json['hasSource'] as bool? ?? false,
   audioEnabled: json['audioEnabled'] as bool? ?? false,
   videoEnabled: json['videoEnabled'] as bool? ?? false,
@@ -20,16 +16,15 @@ _PlayerState _$PlayerStateFromJson(Map<String, dynamic> json) => _PlayerState(
   muted: json['muted'] as bool? ?? false,
 );
 
-Map<String, dynamic> _$PlayerStateToJson(_PlayerState instance) =>
-    <String, dynamic>{
-      'lifecycle': _$PlayerLifecycleStateEnumMap[instance.lifecycle]!,
-      'playback': _$PlayerPlaybackStateEnumMap[instance.playback]!,
-      'hasSource': instance.hasSource,
-      'audioEnabled': instance.audioEnabled,
-      'videoEnabled': instance.videoEnabled,
-      'subtitlesEnabled': instance.subtitlesEnabled,
-      'muted': instance.muted,
-    };
+Map<String, dynamic> _$PlayerStateToJson(_PlayerState instance) => <String, dynamic>{
+  'lifecycle': _$PlayerLifecycleStateEnumMap[instance.lifecycle]!,
+  'playback': _$PlayerPlaybackStateEnumMap[instance.playback]!,
+  'hasSource': instance.hasSource,
+  'audioEnabled': instance.audioEnabled,
+  'videoEnabled': instance.videoEnabled,
+  'subtitlesEnabled': instance.subtitlesEnabled,
+  'muted': instance.muted,
+};
 
 const _$PlayerLifecycleStateEnumMap = {
   PlayerLifecycleState.idle: 'idle',

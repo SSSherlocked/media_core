@@ -33,6 +33,20 @@ final class PlatformDeviceProfile extends Equatable {
     this.reported = false,
   });
 
+  /// Creates a profile from a map.
+  ///
+  /// Every field falls back to the unknown profile, so a partial payload can
+  /// never turn into a tuned-down device.
+  factory PlatformDeviceProfile.fromMap(Map<String, Object?> map) {
+    return PlatformDeviceProfile(
+      cpuCores: (map['cpuCores'] as num?)?.toInt() ?? 0,
+      totalRamMb: (map['totalRamMb'] as num?)?.toInt(),
+      lowRamDevice: map['lowRamDevice'] as bool? ?? false,
+      supports64BitAbi: map['supports64BitAbi'] as bool? ?? true,
+      reported: map['reported'] as bool? ?? true,
+    );
+  }
+
   /// The profile of a device nobody probed.
   static const PlatformDeviceProfile unknown = PlatformDeviceProfile();
 
@@ -143,20 +157,6 @@ final class PlatformDeviceProfile extends Equatable {
       'supports64BitAbi': supports64BitAbi,
       'reported': reported,
     };
-  }
-
-  /// Creates a profile from a map.
-  ///
-  /// Every field falls back to the unknown profile, so a partial payload can
-  /// never turn into a tuned-down device.
-  factory PlatformDeviceProfile.fromMap(Map<String, Object?> map) {
-    return PlatformDeviceProfile(
-      cpuCores: (map['cpuCores'] as num?)?.toInt() ?? 0,
-      totalRamMb: (map['totalRamMb'] as num?)?.toInt(),
-      lowRamDevice: map['lowRamDevice'] as bool? ?? false,
-      supports64BitAbi: map['supports64BitAbi'] as bool? ?? true,
-      reported: map['reported'] as bool? ?? true,
-    );
   }
 
   @override

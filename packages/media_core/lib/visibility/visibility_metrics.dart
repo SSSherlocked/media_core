@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 
 /// Visibility statistics.
 final class VisibilityMetrics extends Equatable {
+  /// Creates visibility statistics from explicit totals.
   const VisibilityMetrics({
     this.visibleDuration = Duration.zero,
 
@@ -19,6 +20,7 @@ final class VisibilityMetrics extends Equatable {
   /// Visibility changes.
   final int changeCount;
 
+  /// Creates a copy with the supplied values replaced.
   VisibilityMetrics copyWith({Duration? visibleDuration, Duration? hiddenDuration, int? changeCount}) {
     return VisibilityMetrics(
       visibleDuration: visibleDuration ?? this.visibleDuration,

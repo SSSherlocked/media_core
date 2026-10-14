@@ -78,10 +78,12 @@ final class MediaTimeline extends Equatable {
       }
     }
 
-    final aligned = sourceTracks.map((track) {
-      final raw = track.startOffset ?? Duration.zero;
-      return TimelineTrack(track: track, offset: raw - minimum);
-    }).toList(growable: false);
+    final aligned = sourceTracks
+        .map((track) {
+          final raw = track.startOffset ?? Duration.zero;
+          return TimelineTrack(track: track, offset: raw - minimum);
+        })
+        .toList(growable: false);
 
     return MediaTimeline(tracks: aligned, originShift: minimum);
   }

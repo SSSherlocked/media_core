@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:media_core/error/player_error_code.dart' show PlayerErrorCode;
 
 /// Broad classification of errors produced by the media player core.
 ///
@@ -35,8 +36,10 @@ final class PlayerErrorCategory extends Equatable implements Comparable<PlayerEr
   // General
   // ===========================================================================
 
+  /// The failure could not be assigned to any other category.
   static const PlayerErrorCategory unknown = PlayerErrorCategory._('unknown', 'unknown');
 
+  /// A supplied argument was invalid, independent of which subsystem was involved.
   static const PlayerErrorCategory invalidArgument = PlayerErrorCategory._('invalidArgument', 'invalidArgument');
 
   /// The requested operation or capability is not supported.
@@ -48,86 +51,115 @@ final class PlayerErrorCategory extends Equatable implements Comparable<PlayerEr
   ///   player, platform, adapter, backend, or capability does not support it.
   static const PlayerErrorCategory unsupported = PlayerErrorCategory._('unsupported', 'unsupported');
 
+  /// The player was in a state that cannot accept the requested operation.
   static const PlayerErrorCategory state = PlayerErrorCategory._('state', 'state');
 
+  /// The operation was cancelled or invalidated rather than failing on its own.
   static const PlayerErrorCategory cancellation = PlayerErrorCategory._('cancellation', 'cancellation');
 
+  /// An operation exceeded its time budget.
   static const PlayerErrorCategory timeout = PlayerErrorCategory._('timeout', 'timeout');
 
+  /// A defect inside the core rather than caller input or the environment.
   static const PlayerErrorCategory internal = PlayerErrorCategory._('internal', 'internal');
 
   // ===========================================================================
   // Source / Network
   // ===========================================================================
 
+  /// The media source, its URI, or its validation is at fault.
   static const PlayerErrorCategory source = PlayerErrorCategory._('source', 'source');
 
+  /// Transport below HTTP failed while reaching the media.
   static const PlayerErrorCategory network = PlayerErrorCategory._('network', 'network');
 
+  /// The server responded to the media request with an error status.
   static const PlayerErrorCategory http = PlayerErrorCategory._('http', 'http');
 
+  /// Credentials for the media request were missing or rejected.
   static const PlayerErrorCategory authentication = PlayerErrorCategory._('authentication', 'authentication');
 
+  /// Transport security, such as TLS, rejected the media connection.
   static const PlayerErrorCategory security = PlayerErrorCategory._('security', 'security');
 
   // ===========================================================================
   // Playback backend
   // ===========================================================================
 
+  /// The player adapter layer failed to serve the request.
   static const PlayerErrorCategory adapter = PlayerErrorCategory._('adapter', 'adapter');
 
+  /// The platform playback backend failed to carry out a command.
   static const PlayerErrorCategory backend = PlayerErrorCategory._('backend', 'backend');
 
+  /// Compressed media could not be decoded into frames or samples.
   static const PlayerErrorCategory decoder = PlayerErrorCategory._('decoder', 'decoder');
 
+  /// The container could not be split into elementary streams.
   static const PlayerErrorCategory demuxer = PlayerErrorCategory._('demuxer', 'demuxer');
 
+  /// The media content itself is unusable or inconsistent.
   static const PlayerErrorCategory media = PlayerErrorCategory._('media', 'media');
 
+  /// Progressing playback, including position and rate, failed.
   static const PlayerErrorCategory playback = PlayerErrorCategory._('playback', 'playback');
 
   // ===========================================================================
   // Resource
   // ===========================================================================
 
+  /// A system resource needed for playback was unavailable or limited.
   static const PlayerErrorCategory resource = PlayerErrorCategory._('resource', 'resource');
 
+  /// The device ran low on memory while playing.
   static const PlayerErrorCategory memory = PlayerErrorCategory._('memory', 'memory');
 
+  /// The device throttled or stopped playback for thermal reasons.
   static const PlayerErrorCategory thermal = PlayerErrorCategory._('thermal', 'thermal');
 
+  /// The connection could not sustain the stream bitrate.
   static const PlayerErrorCategory bandwidth = PlayerErrorCategory._('bandwidth', 'bandwidth');
 
+  /// Too many operations or components of this kind were active at once.
   static const PlayerErrorCategory concurrency = PlayerErrorCategory._('concurrency', 'concurrency');
 
   // ===========================================================================
   // Presentation
   // ===========================================================================
 
+  /// Frames could not be drawn for presentation.
   static const PlayerErrorCategory renderer = PlayerErrorCategory._('renderer', 'renderer');
 
+  /// The surface or layer geometry was unusable.
   static const PlayerErrorCategory geometry = PlayerErrorCategory._('geometry', 'geometry');
 
+  /// Presenting video to the user failed, including window modes.
   static const PlayerErrorCategory presentation = PlayerErrorCategory._('presentation', 'presentation');
 
   // ===========================================================================
   // Features
   // ===========================================================================
 
+  /// The audio path, including focus and routing, failed.
   static const PlayerErrorCategory audio = PlayerErrorCategory._('audio', 'audio');
 
+  /// Recording the media failed.
   static const PlayerErrorCategory recording = PlayerErrorCategory._('recording', 'recording');
 
+  /// Reading or writing cached media failed.
   static const PlayerErrorCategory cache = PlayerErrorCategory._('cache', 'cache');
 
   // ===========================================================================
   // Lifecycle / Recovery
   // ===========================================================================
 
+  /// The app or player lifecycle prevented playback.
   static const PlayerErrorCategory lifecycle = PlayerErrorCategory._('lifecycle', 'lifecycle');
 
+  /// The recovery machinery could not restore playback.
   static const PlayerErrorCategory recovery = PlayerErrorCategory._('recovery', 'recovery');
 
+  /// Switching to an alternate source or path failed.
   static const PlayerErrorCategory fallback = PlayerErrorCategory._('fallback', 'fallback');
 
   // ===========================================================================
@@ -244,7 +276,7 @@ final class PlayerErrorCategory extends Equatable implements Comparable<PlayerEr
   ///
   /// Unknown values resolve to [unknown].
   ///
-  /// Use [custom] when custom category preservation is required.
+  /// Use [PlayerErrorCategory.custom] when custom category preservation is required.
   static PlayerErrorCategory fromValue(String value) {
     final normalized = value.trim();
 
@@ -269,7 +301,7 @@ final class PlayerErrorCategory extends Equatable implements Comparable<PlayerEr
   /// Unknown values resolve to [unknown].
   static PlayerErrorCategory fromJson(Object? json) {
     if (json is! String) {
-      throw FormatException('PlayerErrorCategory JSON value must be a String.');
+      throw const FormatException('PlayerErrorCategory JSON value must be a String.');
     }
 
     return fromValue(json);

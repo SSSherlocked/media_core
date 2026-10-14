@@ -1,5 +1,7 @@
+import 'package:media_core/adapter/player_adapter_capabilities.dart' show PlayerAdapterCapabilities;
 import 'package:media_core/source/media_track.dart';
 import 'package:media_core/source/media_track_type.dart';
+import 'package:meta/meta.dart';
 
 part 'progressive_media_source.dart';
 part 'composite_media_source.dart';

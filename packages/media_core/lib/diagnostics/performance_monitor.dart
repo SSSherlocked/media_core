@@ -1,5 +1,5 @@
-import 'package:media_core/diagnostics/performance_sample.dart';
 import 'package:clock/clock.dart';
+import 'package:media_core/diagnostics/performance_sample.dart';
 
 /// Collects and retains performance measurements for the media core.
 ///
@@ -30,7 +30,7 @@ final class PerformanceMonitor {
   /// Creates a performance monitor.
   ///
   /// [maxSamples] controls the maximum number of samples retained in memory.
-  PerformanceMonitor({this.maxSamples = 200}) : assert(maxSamples > 0);
+  PerformanceMonitor({this.maxSamples = 200}) : assert(maxSamples > 0, 'maxSamples must be positive');
 
   /// Maximum number of performance samples retained.
   final int maxSamples;

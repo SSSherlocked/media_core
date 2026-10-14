@@ -37,9 +37,7 @@ extension CastTransportStateX on CastTransportState {
   bool get isPlaying => this == CastTransportState.playing;
 
   /// Whether playback can be resumed from here.
-  bool get canResume =>
-      this == CastTransportState.paused ||
-      this == CastTransportState.stopped;
+  bool get canResume => this == CastTransportState.paused || this == CastTransportState.stopped;
 
   /// Whether the state says anything about the device at all.
   bool get isKnown => this != CastTransportState.unknown;

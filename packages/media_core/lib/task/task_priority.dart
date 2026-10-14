@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:media_core/task/player_task.dart' show PlayerTask;
 
 /// Defines the priority of a [PlayerTask].
 ///
@@ -25,7 +26,85 @@ import 'package:equatable/equatable.dart';
 /// Equality is determined only by [value]. The [name] is descriptive and
 /// does not participate in equality.
 final class TaskPriority extends Equatable implements Comparable<TaskPriority> {
+  /// Creates a custom task priority.
+  ///
+  /// Higher [value] means higher scheduling priority.
+  ///
+  /// If [name] is omitted or empty, a name in the form
+  /// `custom:<value>` is generated.
+  factory TaskPriority.custom(int value, {String? name}) {
+    final normalizedName = name?.trim();
+
+    return TaskPriority._(value, normalizedName == null || normalizedName.isEmpty ? 'custom:$value' : normalizedName);
+  }
   const TaskPriority._(this.value, this.name);
+
+  /// Returns the canonical built-in priority for [value].
+  ///
+  /// Unknown values are represented as custom priorities.
+  factory TaskPriority.fromValue(int value) {
+    switch (value) {
+      case -100:
+        return lowest;
+      case -10:
+        return low;
+      case 0:
+        return normal;
+      case 10:
+        return high;
+      case 100:
+        return highest;
+      default:
+        return TaskPriority.custom(value);
+    }
+  }
+
+  /// Creates a priority from a JSON-compatible value.
+  ///
+  /// The canonical JSON representation is an integer.
+  ///
+  /// Integer-valued [num] and numeric [String] values are also accepted for
+  /// tolerant deserialization.
+  factory TaskPriority.fromJson(Object? json) {
+    if (json is int) {
+      return TaskPriority.fromValue(json);
+    }
+
+    if (json is num) {
+      if (!json.isFinite || json != json.truncateToDouble()) {
+        throw ArgumentError.value(json, 'json', 'Task priority must be an integer.');
+      }
+
+      return TaskPriority.fromValue(json.toInt());
+    }
+
+    if (json is String) {
+      final value = int.tryParse(json.trim());
+
+      if (value != null) {
+        return TaskPriority.fromValue(value);
+      }
+    }
+
+    throw ArgumentError.value(json, 'json', 'Task priority must be an integer.');
+  }
+
+  factory TaskPriority._fromValueWithName(int value, {String? name}) {
+    switch (value) {
+      case -100:
+        return lowest;
+      case -10:
+        return low;
+      case 0:
+        return normal;
+      case 10:
+        return high;
+      case 100:
+        return highest;
+      default:
+        return TaskPriority.custom(value, name: name);
+    }
+  }
 
   /// Lowest built-in task priority.
   static const TaskPriority lowest = TaskPriority._(-100, 'lowest');
@@ -46,18 +125,6 @@ final class TaskPriority extends Equatable implements Comparable<TaskPriority> {
   static const List<TaskPriority> builtIns = <TaskPriority>[lowest, low, normal, high, highest];
 
   static const Set<int> _builtInValues = <int>{-100, -10, 0, 10, 100};
-
-  /// Creates a custom task priority.
-  ///
-  /// Higher [value] means higher scheduling priority.
-  ///
-  /// If [name] is omitted or empty, a name in the form
-  /// `custom:<value>` is generated.
-  factory TaskPriority.custom(int value, {String? name}) {
-    final normalizedName = name?.trim();
-
-    return TaskPriority._(value, normalizedName == null || normalizedName.isEmpty ? 'custom:$value' : normalizedName);
-  }
 
   /// Numeric priority value.
   ///
@@ -162,58 +229,8 @@ final class TaskPriority extends Equatable implements Comparable<TaskPriority> {
   }
 
   // ---------------------------------------------------------------------------
-  // Factory
+  // Conversion
   // ---------------------------------------------------------------------------
-
-  /// Returns the canonical built-in priority for [value].
-  ///
-  /// Unknown values are represented as custom priorities.
-  static TaskPriority fromValue(int value) {
-    switch (value) {
-      case -100:
-        return lowest;
-      case -10:
-        return low;
-      case 0:
-        return normal;
-      case 10:
-        return high;
-      case 100:
-        return highest;
-      default:
-        return TaskPriority.custom(value);
-    }
-  }
-
-  /// Creates a priority from a JSON-compatible value.
-  ///
-  /// The canonical JSON representation is an integer.
-  ///
-  /// Integer-valued [num] and numeric [String] values are also accepted for
-  /// tolerant deserialization.
-  static TaskPriority fromJson(Object? json) {
-    if (json is int) {
-      return fromValue(json);
-    }
-
-    if (json is num) {
-      if (!json.isFinite || json != json.truncateToDouble()) {
-        throw ArgumentError.value(json, 'json', 'Task priority must be an integer.');
-      }
-
-      return fromValue(json.toInt());
-    }
-
-    if (json is String) {
-      final value = int.tryParse(json.trim());
-
-      if (value != null) {
-        return fromValue(value);
-      }
-    }
-
-    throw ArgumentError.value(json, 'json', 'Task priority must be an integer.');
-  }
 
   /// Serializes this priority.
   ///
@@ -239,24 +256,7 @@ final class TaskPriority extends Equatable implements Comparable<TaskPriority> {
       return this;
     }
 
-    return _fromValueWithName(value, name: name);
-  }
-
-  static TaskPriority _fromValueWithName(int value, {String? name}) {
-    switch (value) {
-      case -100:
-        return lowest;
-      case -10:
-        return low;
-      case 0:
-        return normal;
-      case 10:
-        return high;
-      case 100:
-        return highest;
-      default:
-        return TaskPriority.custom(value, name: name);
-    }
+    return TaskPriority._fromValueWithName(value, name: name);
   }
 
   // ---------------------------------------------------------------------------

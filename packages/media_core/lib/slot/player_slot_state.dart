@@ -1,8 +1,8 @@
-import 'package:media_core/slot/player_slot_status.dart';
-import 'package:media_core/identity/slot_id.dart';
+import 'package:equatable/equatable.dart';
 import 'package:media_core/identity/player_id.dart';
 import 'package:media_core/identity/session_id.dart';
-import 'package:equatable/equatable.dart';
+import 'package:media_core/identity/slot_id.dart';
+import 'package:media_core/slot/player_slot_status.dart';
 
 /// Represents runtime state of a player slot.
 ///
@@ -23,6 +23,11 @@ import 'package:equatable/equatable.dart';
 final class PlayerSlotState extends Equatable {
   /// Creates slot state.
   const PlayerSlotState({required this.slotId, this.status = PlayerSlotStatus.empty, this.playerId, this.sessionId});
+
+  /// Creates empty slot state.
+  factory PlayerSlotState.empty(SlotId slotId) {
+    return PlayerSlotState(slotId: slotId);
+  }
 
   /// Slot identity.
   final SlotId slotId;
@@ -64,11 +69,6 @@ final class PlayerSlotState extends Equatable {
       playerId: playerId ?? this.playerId,
       sessionId: sessionId ?? this.sessionId,
     );
-  }
-
-  /// Creates empty slot state.
-  factory PlayerSlotState.empty(SlotId slotId) {
-    return PlayerSlotState(slotId: slotId);
   }
 
   /// Whether this state belongs to slot.

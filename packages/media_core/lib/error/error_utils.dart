@@ -1,7 +1,7 @@
 import 'package:media_core/error/error_context.dart';
-import 'package:media_core/error/player_failure.dart';
-import 'package:media_core/error/player_error_code.dart';
 import 'package:media_core/error/player_error_category.dart';
+import 'package:media_core/error/player_error_code.dart';
+import 'package:media_core/error/player_failure.dart';
 
 /// Utility functions for working with player errors.
 ///

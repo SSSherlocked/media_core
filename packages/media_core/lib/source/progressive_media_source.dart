@@ -25,6 +25,7 @@ part of 'media_source.dart';
 ///
 /// - CompositeMediaSource
 /// - MediaSourcePlanner
+@immutable
 final class ProgressiveMediaSource extends MediaSource {
   /// Creates a progressive source backed by a single [track].
   ///
@@ -39,11 +40,7 @@ final class ProgressiveMediaSource extends MediaSource {
   /// a video file; audio-only or subtitle-only inputs should pass the
   /// kind explicitly. Any extra context (headers, mime type, codec)
   /// belongs on the constructed [track] via [MediaTrack.copyWith].
-  factory ProgressiveMediaSource.url(
-    Object uri, {
-    MediaTrackType kind = MediaTrackType.video,
-    bool live = false,
-  }) {
+  factory ProgressiveMediaSource.url(Object uri, {MediaTrackType kind = MediaTrackType.video, bool live = false}) {
     return ProgressiveMediaSource(
       track: MediaTrack(uri: _coerceUri(uri), kind: kind),
       live: live,
@@ -64,18 +61,12 @@ final class ProgressiveMediaSource extends MediaSource {
     if (track == null && (live == null || live == this.live)) {
       return this;
     }
-    return ProgressiveMediaSource(
-      track: track ?? this.track,
-      live: live ?? this.live,
-    );
+    return ProgressiveMediaSource(track: track ?? this.track, live: live ?? this.live);
   }
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ProgressiveMediaSource &&
-          other.track == track &&
-          other.live == live;
+      identical(this, other) || other is ProgressiveMediaSource && other.track == track && other.live == live;
 
   @override
   int get hashCode => Object.hash(MediaSourceType.progressive, track, live);
@@ -91,9 +82,5 @@ Uri _coerceUri(Object value) {
   if (value is String) {
     return Uri.parse(value);
   }
-  throw ArgumentError.value(
-    value,
-    'uri',
-    'ProgressiveMediaSource.url accepts Uri or String.',
-  );
+  throw ArgumentError.value(value, 'uri', 'ProgressiveMediaSource.url accepts Uri or String.');
 }

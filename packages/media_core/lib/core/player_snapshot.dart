@@ -1,17 +1,17 @@
-import 'package:media_core/core/player_media_type.dart';
+import 'package:clock/clock.dart';
+import 'package:equatable/equatable.dart';
+import 'package:media_core/core/media_capabilities.dart';
+import 'package:media_core/core/player_capabilities.dart';
 import 'package:media_core/core/player_core_state.dart';
-import 'package:media_core/core/player_status.dart';
+import 'package:media_core/core/player_media_type.dart';
 import 'package:media_core/core/player_metrics.dart';
 import 'package:media_core/core/player_options.dart';
-import 'package:media_core/core/media_capabilities.dart';
-import 'package:clock/clock.dart';
-import 'package:media_core/core/player_capabilities.dart';
+import 'package:media_core/core/player_status.dart';
+import 'package:media_core/identity/generation_id.dart';
 import 'package:media_core/identity/player_id.dart';
-import 'package:media_core/identity/source_id.dart';
 import 'package:media_core/identity/request_id.dart';
 import 'package:media_core/identity/session_id.dart';
-import 'package:media_core/identity/generation_id.dart';
-import 'package:equatable/equatable.dart';
+import 'package:media_core/identity/source_id.dart';
 
 /// Represents the complete immutable observable state of a player at a
 /// specific point in time.
@@ -48,6 +48,42 @@ final class PlayerSnapshot extends Equatable {
     this.metrics,
     this.timestamp,
   });
+
+  /// Creates an empty snapshot for [playerId].
+  factory PlayerSnapshot.empty(PlayerId playerId) {
+    return PlayerSnapshot(playerId: playerId, timestamp: clock.now());
+  }
+
+  /// Creates a snapshot for [playerId] using the supplied state.
+  factory PlayerSnapshot.fromState({
+    required PlayerId playerId,
+    required PlayerCoreState state,
+    SessionId? sessionId,
+    RequestId? requestId,
+    GenerationId? generationId,
+    SourceId? sourceId,
+    PlayerMediaType? mediaType,
+    MediaCapabilities? mediaCapabilities,
+    PlayerOptions options = PlayerOptions.defaults,
+    PlayerCapabilities capabilities = PlayerCapabilities.basic,
+    PlayerMetrics? metrics,
+    DateTime? timestamp,
+  }) {
+    return PlayerSnapshot(
+      playerId: playerId,
+      sessionId: sessionId,
+      requestId: requestId,
+      generationId: generationId,
+      sourceId: sourceId,
+      mediaType: mediaType,
+      mediaCapabilities: mediaCapabilities,
+      state: state,
+      options: options,
+      capabilities: capabilities,
+      metrics: metrics,
+      timestamp: timestamp ?? clock.now(),
+    );
+  }
 
   /// Unique stable identifier of the player.
   final PlayerId playerId;
@@ -433,10 +469,7 @@ final class PlayerSnapshot extends Equatable {
       sessionId: sessionId,
       requestId: requestId,
       generationId: generationId,
-      sourceId: null,
-      mediaType: null,
-      mediaCapabilities: null,
-      state: state.withSource(false),
+      state: state.withSource(value: false),
       options: options.withoutSource(),
       capabilities: capabilities,
       metrics: metrics,
@@ -546,9 +579,6 @@ final class PlayerSnapshot extends Equatable {
       sessionId: sessionId,
       requestId: requestId,
       generationId: generationId,
-      sourceId: null,
-      mediaType: null,
-      mediaCapabilities: null,
       state: state.disposedState(),
       options: options,
       capabilities: capabilities,
@@ -613,42 +643,6 @@ final class PlayerSnapshot extends Equatable {
     }
 
     return current.isBefore(previous);
-  }
-
-  /// Creates an empty snapshot for [playerId].
-  static PlayerSnapshot empty(PlayerId playerId) {
-    return PlayerSnapshot(playerId: playerId, timestamp: clock.now());
-  }
-
-  /// Creates a snapshot for [playerId] using the supplied state.
-  static PlayerSnapshot fromState({
-    required PlayerId playerId,
-    required PlayerCoreState state,
-    SessionId? sessionId,
-    RequestId? requestId,
-    GenerationId? generationId,
-    SourceId? sourceId,
-    PlayerMediaType? mediaType,
-    MediaCapabilities? mediaCapabilities,
-    PlayerOptions options = PlayerOptions.defaults,
-    PlayerCapabilities capabilities = PlayerCapabilities.basic,
-    PlayerMetrics? metrics,
-    DateTime? timestamp,
-  }) {
-    return PlayerSnapshot(
-      playerId: playerId,
-      sessionId: sessionId,
-      requestId: requestId,
-      generationId: generationId,
-      sourceId: sourceId,
-      mediaType: mediaType,
-      mediaCapabilities: mediaCapabilities,
-      state: state,
-      options: options,
-      capabilities: capabilities,
-      metrics: metrics,
-      timestamp: timestamp ?? clock.now(),
-    );
   }
 
   @override

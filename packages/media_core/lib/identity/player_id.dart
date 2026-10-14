@@ -36,7 +36,7 @@ final class PlayerId extends Equatable implements Comparable<PlayerId> {
 
   /// Creates a new unique runtime player identifier.
   ///
-  /// [clock.now] is used instead of [DateTime.now] so the identifier
+  /// `clock.now()` is used instead of [DateTime.now] so the identifier
   /// generation can be controlled in tests.
   factory PlayerId.generate() {
     final timestamp = clock.now().microsecondsSinceEpoch;
@@ -46,6 +46,22 @@ final class PlayerId extends Equatable implements Comparable<PlayerId> {
   }
 
   const PlayerId._(this.value);
+
+  /// Parses an existing player identifier.
+  ///
+  /// Throws [ArgumentError] when [value] is empty.
+  factory PlayerId.parse(String value) => PlayerId(value);
+
+  /// Creates a [PlayerId] from its JSON representation.
+  ///
+  /// The JSON representation is simply the raw string value.
+  factory PlayerId.fromJson(Object? json) {
+    if (json is! String) {
+      throw const FormatException('PlayerId JSON value must be a String.');
+    }
+
+    return PlayerId(json);
+  }
 
   static int _counter = 0;
 
@@ -63,27 +79,9 @@ final class PlayerId extends Equatable implements Comparable<PlayerId> {
   /// Returns whether the identifier is not empty.
   bool get isNotEmpty => value.isNotEmpty;
 
-  /// Parses an existing player identifier.
-  ///
-  /// Throws [ArgumentError] when [value] is empty.
-  static PlayerId parse(String value) {
-    return PlayerId(value);
-  }
-
   /// Returns whether [value] can be used as a valid player identifier.
   static bool isValid(String value) {
     return value.trim().isNotEmpty;
-  }
-
-  /// Creates a [PlayerId] from its JSON representation.
-  ///
-  /// The JSON representation is simply the raw string value.
-  static PlayerId fromJson(Object? json) {
-    if (json is! String) {
-      throw FormatException('PlayerId JSON value must be a String.');
-    }
-
-    return PlayerId(json);
   }
 
   /// Converts this identifier to its JSON representation.

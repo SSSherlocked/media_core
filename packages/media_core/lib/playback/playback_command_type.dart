@@ -69,7 +69,13 @@ enum PlaybackCommandType {
       case PlaybackCommandType.stop:
         return true;
 
-      default:
+      case PlaybackCommandType.idle:
+      case PlaybackCommandType.buffering:
+      case PlaybackCommandType.position:
+      case PlaybackCommandType.duration:
+      case PlaybackCommandType.seek:
+      case PlaybackCommandType.volume:
+      case PlaybackCommandType.rate:
         return false;
     }
   }
@@ -82,7 +88,13 @@ enum PlaybackCommandType {
       case PlaybackCommandType.seek:
         return true;
 
-      default:
+      case PlaybackCommandType.idle:
+      case PlaybackCommandType.play:
+      case PlaybackCommandType.pause:
+      case PlaybackCommandType.stop:
+      case PlaybackCommandType.buffering:
+      case PlaybackCommandType.volume:
+      case PlaybackCommandType.rate:
         return false;
     }
   }

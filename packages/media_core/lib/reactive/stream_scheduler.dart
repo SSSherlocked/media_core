@@ -5,6 +5,7 @@ import 'dart:async';
 /// The scheduler does not depend on Flutter and can be used by controllers,
 /// repositories, services, and player managers.
 class StreamScheduler {
+  /// Creates an idle scheduler with no timers and no disposal.
   StreamScheduler();
 
   final Set<Timer> _timers = <Timer>{};
@@ -55,9 +56,7 @@ class StreamScheduler {
       throw StateError('StreamScheduler has been disposed.');
     }
 
-    final task = StreamPeriodicTask(interval: interval, action: action, onCancel: _removeTimer);
-
-    task.start();
+    final task = StreamPeriodicTask(interval: interval, action: action, onCancel: _removeTimer)..start();
 
     _timers.add(task.timer);
 
@@ -105,10 +104,17 @@ class StreamScheduler {
 /// Unlike [Timer.periodic], this class does not start the next invocation
 /// while the previous async callback is still running.
 class StreamPeriodicTask {
+  /// Creates a task that runs [action] every [interval] and reports its timer
+  /// to [onCancel] so the owner can drop it once the task is cancelled.
   StreamPeriodicTask({required this.interval, required this.action, this.onCancel});
 
+  /// Delay between two invocations of [action].
   final Duration interval;
+
+  /// Work performed on every tick.
   final FutureOr<void> Function() action;
+
+  /// Hook the owner installs to unregister this task's timer.
   final void Function(Timer timer)? onCancel;
 
   Timer? _timer;
@@ -147,7 +153,9 @@ class StreamPeriodicTask {
     }
 
     _timer = Timer.periodic(interval, (_) {
-      _execute();
+      // A tick must not wait for the previous callback: `_running` inside
+      // `_execute` skips overlapping ticks instead of queueing them.
+      unawaited(_execute());
     });
   }
 

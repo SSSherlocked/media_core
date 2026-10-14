@@ -36,19 +36,13 @@ void main() {
   final low = QualityCandidate(
     label: '480P',
     source: ProgressiveMediaSource(
-      track: MediaTrack(
-        uri: Uri.parse('https://example.com/low.mp4'),
-        kind: MediaTrackType.video,
-      ),
+      track: MediaTrack(uri: Uri.parse('https://example.com/low.mp4'), kind: MediaTrackType.video),
     ),
   );
   final high = QualityCandidate(
     label: '1080P',
     source: ProgressiveMediaSource(
-      track: MediaTrack(
-        uri: Uri.parse('https://example.com/high.mp4'),
-        kind: MediaTrackType.video,
-      ),
+      track: MediaTrack(uri: Uri.parse('https://example.com/high.mp4'), kind: MediaTrackType.video),
     ),
     bitrate: 4_000_000,
   );
@@ -59,8 +53,7 @@ void main() {
       final handle = _handle(adapter);
       await handle.initialize();
 
-      final controller = QualitySwitchController(handle: handle)
-        ..adoptCurrent(low);
+      final controller = QualitySwitchController(handle: handle, current: low);
 
       await handle.openMedia(low.source, autoPlay: false);
       await handle.seek(const Duration(seconds: 42));
@@ -101,8 +94,7 @@ void main() {
       final handle = _handle(adapter);
       await handle.initialize();
 
-      final controller = QualitySwitchController(handle: handle)
-        ..adoptCurrent(low);
+      final controller = QualitySwitchController(handle: handle, current: low);
       await handle.openMedia(low.source, autoPlay: false);
       await handle.seek(const Duration(seconds: 10));
 
@@ -138,20 +130,16 @@ void main() {
 
   group('QualityCandidate builders', () {
     test('fromProgressive labels from bitrate when declared, uri otherwise', () {
-      final bare = QualityCandidate.fromProgressive([
-        _source('https://example.com/a.mp4'),
-      ]);
-      final withBitrate = QualityCandidate.fromProgressive(
-        [
-          ProgressiveMediaSource(
-            track: MediaTrack(
-              uri: Uri.parse('https://example.com/b.mp4'),
-              kind: MediaTrackType.video,
-              bitrate: 2_400_000,
-            ),
+      final bare = QualityCandidate.fromProgressive([_source('https://example.com/a.mp4')]);
+      final withBitrate = QualityCandidate.fromProgressive([
+        ProgressiveMediaSource(
+          track: MediaTrack(
+            uri: Uri.parse('https://example.com/b.mp4'),
+            kind: MediaTrackType.video,
+            bitrate: 2_400_000,
           ),
-        ],
-      );
+        ),
+      ]);
 
       // No bitrate is not a 0 bps claim — the uri is what the host can
       // actually show, so the label says where the media lives.
@@ -165,9 +153,7 @@ void main() {
           MediaTrack(uri: Uri.parse('https://example.com/v720.m4s'), kind: MediaTrackType.video, bitrate: 1_200_000),
           MediaTrack(uri: Uri.parse('https://example.com/v1080.m4s'), kind: MediaTrackType.video, bitrate: 4_000_000),
         ],
-        audioTracks: [
-          MediaTrack(uri: Uri.parse('https://example.com/a.m4s'), kind: MediaTrackType.audio),
-        ],
+        audioTracks: [MediaTrack(uri: Uri.parse('https://example.com/a.m4s'), kind: MediaTrackType.audio)],
       );
 
       expect(candidates, hasLength(2));
@@ -175,12 +161,9 @@ void main() {
       expect(composite.audioTracks, hasLength(1));
       expect(candidates.last.label, '4000000 bps');
 
-      final labelled = QualityCandidate.fromCompositeTracks(
-        [
-          MediaTrack(uri: Uri.parse('https://example.com/v1080.m4s'), kind: MediaTrackType.video, bitrate: 4_000_000),
-        ],
-        labelOf: (track) => '${(track.bitrate! / 1000000).toStringAsFixed(1)} Mbps',
-      );
+      final labelled = QualityCandidate.fromCompositeTracks([
+        MediaTrack(uri: Uri.parse('https://example.com/v1080.m4s'), kind: MediaTrackType.video, bitrate: 4_000_000),
+      ], labelOf: (track) => '${(track.bitrate! / 1000000).toStringAsFixed(1)} Mbps');
       expect(labelled.single.label, '4.0 Mbps');
     });
   });

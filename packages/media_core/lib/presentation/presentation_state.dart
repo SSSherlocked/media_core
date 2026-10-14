@@ -1,7 +1,8 @@
-import 'package:media_core/geometry/video_orientation.dart';
-import 'package:media_core/presentation/presentation_mode.dart';
-import 'package:media_core/presentation/presentation_capabilities.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/geometry/video_orientation.dart';
+import 'package:media_core/presentation/presentation_adapter.dart' show PresentationAdapter;
+import 'package:media_core/presentation/presentation_capabilities.dart';
+import 'package:media_core/presentation/presentation_mode.dart';
 
 part 'presentation_state.freezed.dart';
 
@@ -33,6 +34,7 @@ part 'presentation_state.freezed.dart';
 /// [PresentationAdapter].
 @freezed
 abstract class PresentationState with _$PresentationState {
+  /// Creates a presentation state from its fields.
   const factory PresentationState({
     /// Current active presentation mode.
     ///
@@ -125,15 +127,7 @@ abstract class PresentationState with _$PresentationState {
   ///
   /// The player starts in normal presentation mode.
   factory PresentationState.initial() {
-    return const PresentationState(
-      mode: PresentationMode.normal,
-      targetMode: null,
-      transitioning: false,
-      enabled: true,
-      available: true,
-      generation: 0,
-      error: null,
-    );
+    return const PresentationState();
   }
 
   /// Whether fullscreen presentation is active.

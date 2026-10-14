@@ -15,6 +15,7 @@ part 'pip_state.freezed.dart';
 /// - listening to native PiP callbacks
 @freezed
 abstract class PipState with _$PipState {
+  /// Creates a PiP state from its individual flags.
   const factory PipState({
     /// Whether PiP is currently active.
     @Default(false) bool active,
@@ -44,7 +45,7 @@ abstract class PipState with _$PipState {
 
   /// Initial PiP state.
   factory PipState.initial() {
-    return const PipState(active: false, transitioning: false, available: false, enabled: true, generation: 0);
+    return const PipState();
   }
 
   /// Whether PiP is active.

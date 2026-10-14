@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:media_core/casting/media_cast_backend.dart' show MediaCastBackend;
 
 /// A discovered render device a cast can be sent to.
 ///

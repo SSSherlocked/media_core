@@ -1,8 +1,9 @@
-import 'package:media_core/operation/operation_type.dart';
-import 'package:media_core/operation/operation_state.dart';
-import 'package:media_core/operation/operation_context.dart';
 import 'package:clock/clock.dart';
 import 'package:media_core/identity/operation_id.dart';
+import 'package:media_core/operation/operation_context.dart';
+import 'package:media_core/operation/operation_state.dart';
+import 'package:media_core/operation/operation_type.dart';
+import 'package:meta/meta.dart';
 
 /// Represents a single player operation.
 ///
@@ -34,6 +35,7 @@ import 'package:media_core/identity/operation_id.dart';
 /// - perform recovery;
 /// - perform fallback;
 /// - classify errors.
+@immutable
 final class Operation {
   /// Creates an operation.
   const Operation({
@@ -252,7 +254,6 @@ final class Operation {
       context: context,
       createdAt: createdAt ?? timestamp,
       startedAt: timestamp,
-      completedAt: null,
     );
   }
 
@@ -326,7 +327,6 @@ final class Operation {
       id: id,
       type: type,
       state: state,
-      context: null,
       createdAt: createdAt,
       startedAt: startedAt,
       completedAt: completedAt,

@@ -1,10 +1,10 @@
+import 'package:equatable/equatable.dart';
+import 'package:media_core/identity/generation_id.dart';
+import 'package:media_core/identity/request_id.dart';
+import 'package:media_core/result/operation_result.dart';
 import 'package:media_core/result/result.dart';
 import 'package:media_core/result/result_error.dart';
 import 'package:media_core/result/result_status.dart';
-import 'package:media_core/result/operation_result.dart';
-import 'package:media_core/identity/request_id.dart';
-import 'package:media_core/identity/generation_id.dart';
-import 'package:equatable/equatable.dart';
 
 /// Represents the lifecycle state of an asynchronous player operation.
 ///
@@ -296,24 +296,22 @@ final class AsyncResult<T> extends Equatable {
 
   /// Executes [action] when the operation succeeds.
   ///
-  /// Returns this result unchanged.
-  AsyncResult<T> onSuccess(void Function(T value) action) {
+  /// The result is immutable, so nothing is produced; callers keep using the
+  /// original value.
+  void onSuccess(void Function(T value) action) {
     if (isSuccess) {
       action(value);
     }
-
-    return this;
   }
 
   /// Executes [action] when the operation fails.
   ///
-  /// Returns this result unchanged.
-  AsyncResult<T> onFailure(void Function(ResultError error) action) {
+  /// The result is immutable, so nothing is produced; callers keep using the
+  /// original value.
+  void onFailure(void Function(ResultError error) action) {
     if (isFailure) {
       action(error);
     }
-
-    return this;
   }
 
   /// Maps the successful value to another type.
@@ -498,7 +496,6 @@ final class AsyncResult<T> extends Equatable {
     return AsyncResult<T>(
       status: status,
       operationResult: operationResult,
-      operation: null,
       requestId: requestId,
       generationId: generationId,
     );
@@ -521,7 +518,6 @@ final class AsyncResult<T> extends Equatable {
       status: status,
       operationResult: operationResult,
       operation: operation,
-      requestId: null,
       generationId: generationId,
     );
   }
@@ -539,13 +535,7 @@ final class AsyncResult<T> extends Equatable {
 
   /// Returns a copy without a generation ID.
   AsyncResult<T> withoutGenerationId() {
-    return AsyncResult<T>(
-      status: status,
-      operationResult: operationResult,
-      operation: operation,
-      requestId: requestId,
-      generationId: null,
-    );
+    return AsyncResult<T>(status: status, operationResult: operationResult, operation: operation, requestId: requestId);
   }
 
   /// Returns a copy with [duration] attached to the terminal result.
@@ -699,7 +689,7 @@ final class AsyncResultStatus extends Equatable {
   ///
   /// Unknown values are mapped to [idle].
   ///
-  /// Use [custom] when custom status preservation is required.
+  /// Use [AsyncResultStatus.custom] when custom status preservation is required.
   static AsyncResultStatus fromValue(String value) {
     final normalized = value.trim();
 
@@ -717,7 +707,7 @@ final class AsyncResultStatus extends Equatable {
   /// Unknown values are resolved to [idle], matching [fromValue].
   static AsyncResultStatus fromJson(Object? json) {
     if (json is! String) {
-      throw FormatException('AsyncResultStatus JSON value must be a String.');
+      throw const FormatException('AsyncResultStatus JSON value must be a String.');
     }
 
     return fromValue(json);

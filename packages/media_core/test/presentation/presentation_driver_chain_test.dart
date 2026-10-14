@@ -51,7 +51,7 @@ void main() {
     });
 
     test('capabilities treat window fullscreen as its own ability', () {
-      const capabilities = PresentationCapabilities(fullscreen: false, windowFullscreen: true);
+      const capabilities = PresentationCapabilities(fullscreen: false);
 
       expect(capabilities.supports(PresentationMode.fullscreen), isFalse);
       expect(capabilities.supports(PresentationMode.windowFullscreen), isTrue);
@@ -61,7 +61,7 @@ void main() {
     });
 
     test('policy separates allowing the window from allowing the screen', () {
-      const policy = PresentationPolicy(allowFullscreen: false, allowWindowFullscreen: true);
+      const policy = PresentationPolicy(allowFullscreen: false);
 
       expect(policy.canEnter(PresentationMode.fullscreen), isFalse);
       expect(policy.canEnter(PresentationMode.windowFullscreen), isTrue);
@@ -82,7 +82,10 @@ void main() {
       final pip = _RecordingDriver('pip');
       final chain = PresentationDriverChain(
         bindings: [
-          PresentationDriverBinding(modes: {PresentationMode.fullscreen, PresentationMode.windowFullscreen}, driver: fullscreen),
+          PresentationDriverBinding(
+            modes: {PresentationMode.fullscreen, PresentationMode.windowFullscreen},
+            driver: fullscreen,
+          ),
           PresentationDriverBinding(modes: {PresentationMode.pip}, driver: pip),
         ],
       );
@@ -99,10 +102,7 @@ void main() {
         PresentationMode.normal,
         PresentationMode.windowFullscreen,
       ]);
-      expect(pip.applied, <PresentationMode>[
-        PresentationMode.pip,
-        PresentationMode.normal,
-      ]);
+      expect(pip.applied, <PresentationMode>[PresentationMode.pip, PresentationMode.normal]);
     });
 
     test('releases the outgoing driver before activating the next one', () async {
@@ -125,7 +125,9 @@ void main() {
     test('normal releases the active driver and is a no-op when idle', () async {
       final fullscreen = _RecordingDriver('fullscreen');
       final chain = PresentationDriverChain(
-        bindings: [PresentationDriverBinding(modes: {PresentationMode.fullscreen}, driver: fullscreen)],
+        bindings: [
+          PresentationDriverBinding(modes: {PresentationMode.fullscreen}, driver: fullscreen),
+        ],
       );
 
       await chain.apply(player, PresentationRequest.normal());
@@ -141,7 +143,9 @@ void main() {
     test('repeating the same mode does not release and re-enter it', () async {
       final fullscreen = _RecordingDriver('fullscreen');
       final chain = PresentationDriverChain(
-        bindings: [PresentationDriverBinding(modes: {PresentationMode.fullscreen}, driver: fullscreen)],
+        bindings: [
+          PresentationDriverBinding(modes: {PresentationMode.fullscreen}, driver: fullscreen),
+        ],
       );
 
       await chain.apply(player, PresentationRequest.fullscreen());
@@ -152,13 +156,12 @@ void main() {
 
     test('refuses a mode no installed driver serves', () async {
       final chain = PresentationDriverChain(
-        bindings: [PresentationDriverBinding(modes: {PresentationMode.pip}, driver: _RecordingDriver('pip'))],
+        bindings: [
+          PresentationDriverBinding(modes: {PresentationMode.pip}, driver: _RecordingDriver('pip')),
+        ],
       );
 
-      await expectLater(
-        chain.apply(player, PresentationRequest.fullscreen()),
-        throwsA(isA<UnsupportedError>()),
-      );
+      await expectLater(chain.apply(player, PresentationRequest.fullscreen()), throwsA(isA<UnsupportedError>()));
       expect(chain.canServe(PresentationMode.fullscreen), isFalse);
       expect(chain.canServe(PresentationMode.normal), isTrue);
     });
@@ -179,7 +182,9 @@ void main() {
       final failing = _RecordingDriver(
         'failing',
         onApply: (mode) async {
-          if (mode == PresentationMode.normal) throw StateError('release failed');
+          if (mode == PresentationMode.normal) {
+            throw StateError('release failed');
+          }
         },
       );
       final pip = _RecordingDriver('pip');
@@ -222,18 +227,15 @@ void main() {
       final seen = <VideoOrientation>[];
       controller.state.listen((state) => seen.add(state.orientation));
 
-      controller.updateOrientation(VideoOrientation.portrait);
-      controller.updateOrientation(VideoOrientation.portrait);
-      controller.updateOrientation(VideoOrientation.landscape);
+      controller
+        ..updateOrientation(VideoOrientation.portrait)
+        ..updateOrientation(VideoOrientation.portrait)
+        ..updateOrientation(VideoOrientation.landscape);
 
       // The state subject delivers asynchronously.
       await Future<void>.delayed(Duration.zero);
 
-      expect(seen, <VideoOrientation>[
-        VideoOrientation.unknown,
-        VideoOrientation.portrait,
-        VideoOrientation.landscape,
-      ]);
+      expect(seen, <VideoOrientation>[VideoOrientation.unknown, VideoOrientation.portrait, VideoOrientation.landscape]);
       expect(controller.current.orientation, VideoOrientation.landscape);
     });
   });

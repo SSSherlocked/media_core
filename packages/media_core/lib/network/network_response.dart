@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/network/network_manager.dart' show NetworkManager;
 
 part 'network_response.freezed.dart';
 

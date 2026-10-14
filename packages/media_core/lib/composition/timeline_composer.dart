@@ -1,6 +1,6 @@
 import 'package:media_core/composition/composed_schedule.dart';
-import 'package:media_core/composition/schedule_clip.dart';
 import 'package:media_core/composition/playback_schedule.dart';
+import 'package:media_core/composition/schedule_clip.dart';
 
 /// The pure placement engine of the composition layer.
 ///
@@ -44,14 +44,7 @@ final class TimelineComposer {
       if (clip.duration <= Duration.zero) {
         return;
       }
-      segments.add(
-        ScheduledSegment(
-          clip: clip,
-          start: cursor,
-          end: cursor + clip.duration,
-          programTime: programTime,
-        ),
-      );
+      segments.add(ScheduledSegment(clip: clip, start: cursor, end: cursor + clip.duration, programTime: programTime));
       cursor += clip.duration;
     }
 
@@ -74,18 +67,13 @@ final class TimelineComposer {
       final contentSlice = cutAt - programConsumed;
       if (contentSlice > Duration.zero) {
         place(
-          schedule.clipCoveringProgram(
-            from: programConsumed,
-            duration: contentSlice,
-          ),
+          schedule.clipCoveringProgram(from: programConsumed, duration: contentSlice),
           programTime: programConsumed,
         );
         programConsumed += contentSlice;
       }
 
-      for (final clip in mediaBreak.clips) {
-        place(clip);
-      }
+      mediaBreak.clips.forEach(place);
     }
 
     // The program tail after the last break — or the whole program

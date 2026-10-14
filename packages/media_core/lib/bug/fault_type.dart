@@ -46,23 +46,23 @@ final class FaultType extends Equatable implements Comparable<FaultType> {
   /// Creates a fault type from JSON.
   factory FaultType.fromJson(Object? json) {
     if (json is! String) {
-      throw FormatException('FaultType JSON value must be a String.');
+      throw const FormatException('FaultType JSON value must be a String.');
     }
 
     return FaultType.fromValue(json);
   }
 
   /// Attempts to parse a fault type.
+  ///
+  /// Returns `null` for a missing or blank value; any other value resolves
+  /// through [FaultType.fromValue], which turns unknown values into custom
+  /// fault types.
   static FaultType? tryParse(String? value) {
     if (value == null || value.trim().isEmpty) {
       return null;
     }
 
-    try {
-      return FaultType.fromValue(value);
-    } on ArgumentError {
-      return null;
-    }
+    return FaultType.fromValue(value);
   }
 
   /// Whether the supplied value can represent a fault type.

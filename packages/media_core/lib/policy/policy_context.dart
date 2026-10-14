@@ -1,17 +1,17 @@
 import 'package:media_core/policy/audio_policy.dart';
 import 'package:media_core/policy/cache_policy.dart';
-import 'package:media_core/policy/player_policy.dart';
-import 'package:media_core/policy/memory_policy.dart';
-import 'package:media_core/policy/preload_policy.dart';
-import 'package:media_core/policy/thermal_policy.dart';
-import 'package:media_core/policy/playback_policy.dart';
-import 'package:media_core/policy/recovery_policy.dart';
-import 'package:media_core/policy/resource_policy.dart';
+import 'package:media_core/policy/concurrency_policy.dart';
 import 'package:media_core/policy/fallback_policy.dart';
 import 'package:media_core/policy/lifecycle_policy.dart';
-import 'package:media_core/policy/visibility_policy.dart';
-import 'package:media_core/policy/concurrency_policy.dart';
+import 'package:media_core/policy/memory_policy.dart';
+import 'package:media_core/policy/playback_policy.dart';
+import 'package:media_core/policy/player_policy.dart';
+import 'package:media_core/policy/preload_policy.dart';
 import 'package:media_core/policy/presentation_policy.dart';
+import 'package:media_core/policy/recovery_policy.dart';
+import 'package:media_core/policy/resource_policy.dart';
+import 'package:media_core/policy/thermal_policy.dart';
+import 'package:media_core/policy/visibility_policy.dart';
 
 /// Runtime policy container.
 ///
@@ -63,7 +63,7 @@ final class PolicyContext {
 
   /// Creates default policies.
   factory PolicyContext.defaults() {
-    return PolicyContext(
+    return const PolicyContext(
       player: PlayerPolicy(),
 
       playback: PlaybackPolicy(),

@@ -1,5 +1,6 @@
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/state_machine/state_transition.dart' show StateTransition;
 
 /// Base abstraction for state machine events.
 ///

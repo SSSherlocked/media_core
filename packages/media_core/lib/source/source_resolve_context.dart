@@ -1,16 +1,16 @@
-import 'package:media_core/source/source_headers.dart';
 import 'package:media_core/identity/request_id.dart';
+import 'package:media_core/source/source_headers.dart';
 
 /// Context used when resolving a media source.
 ///
 /// [SourceResolveContext] contains request-scoped information needed during
 /// source resolution. It does not contain player state or backend state.
 class SourceResolveContext {
-  const SourceResolveContext({
-    this.requestId,
-    this.headers,
-    this.metadata = const <String, Object?>{},
-  });
+  /// Creates a resolve context.
+  ///
+  /// Every field is optional: a resolver that needs no request identity,
+  /// headers or metadata can use [SourceResolveContext.empty].
+  const SourceResolveContext({this.requestId, this.headers, this.metadata = const <String, Object?>{}});
 
   /// Optional identifier of the resolve request.
   final RequestId? requestId;
@@ -51,17 +51,11 @@ class SourceResolveContext {
   }
 
   /// Returns a new context with a metadata value.
-  SourceResolveContext withMetadata(
-    String key,
-    Object? value,
-  ) {
+  SourceResolveContext withMetadata(String key, Object? value) {
     return SourceResolveContext(
       requestId: requestId,
       headers: headers,
-      metadata: <String, Object?>{
-        ...metadata,
-        key: value,
-      },
+      metadata: <String, Object?>{...metadata, key: value},
     );
   }
 
@@ -73,10 +67,6 @@ class SourceResolveContext {
 
     final next = <String, Object?>{...metadata}..remove(key);
 
-    return SourceResolveContext(
-      requestId: requestId,
-      headers: headers,
-      metadata: next,
-    );
+    return SourceResolveContext(requestId: requestId, headers: headers, metadata: next);
   }
 }

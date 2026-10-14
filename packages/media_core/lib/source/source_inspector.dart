@@ -1,6 +1,7 @@
-import 'package:media_core/source/source_resolved.dart';
 import 'package:media_core/core/player_info.dart';
 import 'package:media_core/source/source_inspect_context.dart';
+import 'package:media_core/source/source_resolved.dart';
+import 'package:media_core/source/source_resolver.dart' show SourceResolver;
 
 /// Inspects a resolved media source and extracts media information.
 ///

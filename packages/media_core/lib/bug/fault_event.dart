@@ -1,7 +1,8 @@
-import 'package:media_core/bug/fault_type.dart';
-import 'package:media_core/bug/fault_config.dart';
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/bug/fault_config.dart';
+import 'package:media_core/bug/fault_injector.dart' show FaultInjector;
+import 'package:media_core/bug/fault_type.dart';
 
 /// Represents an actual fault injection event.
 ///
@@ -10,6 +11,7 @@ import 'package:equatable/equatable.dart';
 /// [FaultEvent] does not execute faults. It records the result of a fault
 /// injection performed by [FaultInjector] or another runtime component.
 final class FaultEvent extends Equatable {
+  /// Records that the fault of [config] actually occurred, rejecting a [type] that disagrees with it.
   FaultEvent({
     required String faultId,
     required this.type,

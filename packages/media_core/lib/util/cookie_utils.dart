@@ -68,9 +68,7 @@ abstract final class CookieUtils {
 
   /// Removes a cookie.
   static String remove(String? cookieHeader, String name) {
-    final cookies = parse(cookieHeader);
-
-    cookies.remove(name);
+    final cookies = parse(cookieHeader)..remove(name);
 
     return serialize(cookies);
   }
@@ -79,10 +77,9 @@ abstract final class CookieUtils {
   ///
   /// Cookies from [second] override cookies from [first].
   static String merge(String? first, String? second) {
-    final result = <String, String>{};
-
-    result.addAll(parse(first));
-    result.addAll(parse(second));
+    final result = <String, String>{}
+      ..addAll(parse(first))
+      ..addAll(parse(second));
 
     return serialize(result);
   }

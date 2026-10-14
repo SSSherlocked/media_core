@@ -1,10 +1,9 @@
-import 'package:media_core/state_machine/state.dart';
-import 'package:media_core/state_machine/state_transition.dart';
 import 'package:clock/clock.dart';
-import 'package:media_core/state_machine/state_machine_event.dart';
+import 'package:media_core/state_machine/state.dart';
 import 'package:media_core/state_machine/state_machine_context.dart';
+import 'package:media_core/state_machine/state_machine_event.dart';
+import 'package:media_core/state_machine/state_transition.dart';
 import 'package:media_core/state_machine/state_transition_result.dart';
-
 
 /// Generic asynchronous state machine execution engine.
 ///
@@ -36,12 +35,9 @@ final class StateMachine<S extends StateMachineState> {
   ///
   /// [transitions] defines all allowed state changes.
   StateMachine({required S initialState, required List<StateTransition<S>> transitions, StateMachineContext? context})
-    : _state = initialState,
+    : state = initialState,
       _transitions = List.unmodifiable(transitions),
       context = context ?? const StateMachineContext();
-
-  /// Current state.
-  S _state;
 
   /// Registered transitions.
   final List<StateTransition<S>> _transitions;
@@ -49,14 +45,18 @@ final class StateMachine<S extends StateMachineState> {
   /// Runtime execution context.
   final StateMachineContext context;
 
-  /// Returns current state.
-  S get state => _state;
+  /// Current state.
+  ///
+  /// Mutable on purpose: `machine.state = next` is how initialization, restore
+  /// and recovery push a state in without playing a transition. Guarded event
+  /// driven changes stay in [dispatch].
+  S state;
 
   /// Returns current state identifier.
-  String get stateId => _state.id;
+  String get stateId => state.id;
 
   /// Whether machine reached terminal state.
-  bool get isTerminal => _state.isTerminal;
+  bool get isTerminal => state.isTerminal;
 
   /// Returns all registered transitions.
   List<StateTransition<S>> get transitions => _transitions;
@@ -67,23 +67,22 @@ final class StateMachine<S extends StateMachineState> {
   ///
   /// Higher priority transitions are returned first.
   List<StateTransition<S>> findTransitions(StateMachineEvent event) {
-    final result = _transitions.where((transition) => transition.matches(_state, event)).toList();
-
-    result.sort((a, b) => b.priority.compareTo(a.priority));
+    final result = _transitions.where((transition) => transition.matches(state, event)).toList()
+      ..sort((a, b) => b.priority.compareTo(a.priority));
 
     return result;
   }
 
   /// Checks whether an event can be handled.
   Future<bool> canHandle(StateMachineEvent event) async {
-    if (!_state.acceptsEvents) {
+    if (!state.acceptsEvents) {
       return false;
     }
 
     final candidates = findTransitions(event);
 
     for (final transition in candidates) {
-      final allowed = await transition.canExecute(context, _state, event);
+      final allowed = await transition.canExecute(context, state, event);
 
       if (allowed) {
         return true;
@@ -106,9 +105,9 @@ final class StateMachine<S extends StateMachineState> {
   Future<StateTransitionResult<S>> dispatch(StateMachineEvent event) async {
     final start = clock.now();
 
-    if (!_state.acceptsEvents) {
+    if (!state.acceptsEvents) {
       return StateTransitionResult.rejected(
-        state: _state,
+        state: state,
         event: event,
         reason: 'State does not accept events',
         duration: clock.now().difference(start),
@@ -117,7 +116,7 @@ final class StateMachine<S extends StateMachineState> {
 
     if (isTerminal) {
       return StateTransitionResult.rejected(
-        state: _state,
+        state: state,
         event: event,
         reason: 'State is terminal',
         duration: clock.now().difference(start),
@@ -128,7 +127,7 @@ final class StateMachine<S extends StateMachineState> {
 
     if (candidates.isEmpty) {
       return StateTransitionResult.rejected(
-        state: _state,
+        state: state,
         event: event,
         reason: 'No transition matches event',
         duration: clock.now().difference(start),
@@ -136,26 +135,26 @@ final class StateMachine<S extends StateMachineState> {
     }
 
     for (final transition in candidates) {
-      final allowed = await transition.canExecute(context, _state, event);
+      final allowed = await transition.canExecute(context, state, event);
 
       if (!allowed) {
         continue;
       }
 
-      final previous = _state;
+      final previous = state;
 
       try {
-        await transition.execute(context, _state, event);
+        await transition.execute(context, state, event);
 
-        _state = transition.to;
+        state = transition.to;
 
         return StateTransitionResult.success(
           previous: previous,
-          current: _state,
+          current: state,
           event: event,
           duration: clock.now().difference(start),
         );
-      } catch (error, stackTrace) {
+      } on Object catch (error, stackTrace) {
         return StateTransitionResult.failed(
           state: previous,
           event: event,
@@ -167,22 +166,11 @@ final class StateMachine<S extends StateMachineState> {
     }
 
     return StateTransitionResult.rejected(
-      state: _state,
+      state: state,
       event: event,
       reason: 'All transition guards rejected',
       duration: clock.now().difference(start),
     );
-  }
-
-  /// Force updates current state.
-  ///
-  /// Intended for:
-  ///
-  /// - initialization
-  /// - restore
-  /// - recovery
-  void setState(S state) {
-    _state = state;
   }
 
   /// Creates a new machine instance with another state.
@@ -198,8 +186,10 @@ final class StateMachine<S extends StateMachineState> {
 
   @override
   String toString() {
-    return '$runtimeType('
-        'state=${_state.id}, '
+    // The state id already identifies the state type, so the description does
+    // not need the runtime type of the machine.
+    return 'StateMachine('
+        'state=${state.id}, '
         'transitions=${_transitions.length}'
         ')';
   }

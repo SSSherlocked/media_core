@@ -1,17 +1,17 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:media_core/adapter/engine_option.dart';
+import 'package:media_core/adapter/player_adapter.dart';
+import 'package:media_core/adapter/player_adapter_capabilities.dart';
+import 'package:media_core/adapter/player_adapter_context.dart';
+import 'package:media_core/adapter/player_adapter_event.dart';
+import 'package:media_core/adapter/player_adapter_metrics.dart';
 import 'package:media_core/core/player_core_state.dart';
 import 'package:media_core/core/player_lifecycle_state.dart';
 import 'package:media_core/core/player_playback_state.dart';
-import 'package:media_core/source/player_source.dart';
-import 'package:media_core/adapter/player_adapter.dart';
 import 'package:media_core/screenshot/screenshot_request.dart';
-import 'package:media_core/adapter/player_adapter_event.dart';
-import 'package:media_core/adapter/player_adapter_context.dart';
-import 'package:media_core/adapter/player_adapter_metrics.dart';
-import 'package:media_core/adapter/player_adapter_capabilities.dart';
-import 'package:media_core/adapter/engine_option.dart';
+import 'package:media_core/source/player_source.dart';
 
 /// Sentinel used by [PlayerAdapterStateMirror.copyWith] to distinguish
 /// "parameter omitted" from "parameter explicitly set to null".
@@ -60,9 +60,18 @@ final class FakePlayerAdapter implements PlayerAdapter {
   /// Positions passed to [seek].
   final List<Duration> seeks = <Duration>[];
 
+  /// Holds named engine calls until the test lets them go.
+  ///
+  /// A real engine takes time on a property set, and some ordering questions
+  /// only exist while a call is genuinely in flight — this is the seam that
+  /// makes "while X was still running" testable.
+  Future<void> Function(String call)? gate;
+
+  Future<void> _gate(String call) => gate?.call(call) ?? Future<void>.value();
+
   bool _initialized = false;
   PlayerSource? _currentSource;
-  PlayerAdapterStateMirror _mirror = PlayerAdapterStateMirror.initial();
+  PlayerAdapterStateMirror _mirror = const PlayerAdapterStateMirror.initial();
   int _generation = 0;
 
   @override
@@ -70,6 +79,7 @@ final class FakePlayerAdapter implements PlayerAdapter {
 
   @override
   PlayerAdapterCapabilities get capabilities => behavior.capabilities;
+
   /// Scriptable engine-option outcomes for tests.
   ///
   /// Null answers [EngineOptionOutcome.appliedLive] for everything.
@@ -86,7 +96,6 @@ final class FakePlayerAdapter implements PlayerAdapter {
       for (final option in options) engineOptionHandler?.call(option) ?? EngineOptionOutcome.appliedLive,
     ];
   }
-
 
   @override
   PlayerCoreState get state => _mirror.toPlayerState();
@@ -154,6 +163,7 @@ final class FakePlayerAdapter implements PlayerAdapter {
   Future<void> play() async {
     calls.add('play');
     behavior.maybeFail('play');
+    await _gate('play');
     _mirror = _mirror.copyWith(playing: true, paused: false);
     _emit(const PlayerAdapterEvent.playing());
   }
@@ -187,6 +197,7 @@ final class FakePlayerAdapter implements PlayerAdapter {
   Future<void> setVolume(double volume) async {
     calls.add('setVolume');
     behavior.maybeFail('setVolume');
+    await _gate('setVolume');
     volumes.add(volume);
     _mirror = _mirror.copyWith(volume: volume.clamp(0.0, 1.0));
     _emit(PlayerAdapterEvent.volumeChanged(volume: _mirror.volume));
@@ -196,13 +207,14 @@ final class FakePlayerAdapter implements PlayerAdapter {
   Future<void> setRate(double rate) async {
     calls.add('setRate');
     behavior.maybeFail('setRate');
+    await _gate('setRate');
     rates.add(rate);
     _mirror = _mirror.copyWith(rate: rate);
     _emit(PlayerAdapterEvent.rateChanged(rate: rate));
   }
 
   @override
-  Future<void> setAudioOnly(bool audioOnly) async {
+  Future<void> setAudioOnly({required bool audioOnly}) async {
     calls.add('setAudioOnly');
     behavior.maybeFail('setAudioOnly');
     audioOnlyValues.add(audioOnly);
@@ -228,7 +240,7 @@ final class FakePlayerAdapter implements PlayerAdapter {
     calls.add('close');
     behavior.maybeFail('close');
     _currentSource = null;
-    _mirror = PlayerAdapterStateMirror.initial().copyWith(
+    _mirror = const PlayerAdapterStateMirror.initial().copyWith(
       initialized: _initialized,
       volume: _mirror.volume,
       rate: _mirror.rate,
@@ -287,6 +299,16 @@ final class FakePlayerAdapter implements PlayerAdapter {
   void emitCompleted() {
     _mirror = _mirror.copyWith(completed: true, playing: false);
     _emit(const PlayerAdapterEvent.completed());
+  }
+
+  /// Reports a playback position, as an engine's position stream would.
+  ///
+  /// Used by tests that need the transport state to move without any of the
+  /// structural signals changing (a UI that rebuilds its whole control bar on a
+  /// position tick is a jank bug, and this is how to prove it is not one).
+  void emitPosition(Duration position) {
+    _mirror = _mirror.copyWith(position: position);
+    _emit(PlayerAdapterEvent.positionChanged(position: position));
   }
 
   /// Emits a decoded-video-frame heartbeat.
@@ -363,6 +385,7 @@ final class FakePlayerAdapter implements PlayerAdapter {
 
 /// Mutable mirror of adapter runtime state used by [FakePlayerAdapter].
 final class PlayerAdapterStateMirror {
+  /// Creates a state mirror with explicit values for every field.
   const PlayerAdapterStateMirror({
     this.initialized = false,
     this.opened = false,
@@ -381,24 +404,52 @@ final class PlayerAdapterStateMirror {
     this.errorMessage,
   });
 
+  /// Creates a mirror in the default idle state.
   const PlayerAdapterStateMirror.initial() : this();
 
+  /// Whether the adapter has been initialized.
   final bool initialized;
+
+  /// Whether a source is currently opened.
   final bool opened;
+
+  /// Whether playback is currently running.
   final bool playing;
+
+  /// Whether playback is currently paused.
   final bool paused;
+
+  /// Whether the adapter is currently buffering.
   final bool buffering;
+
+  /// Whether playback reached the end of the opened source.
   final bool completed;
+
+  /// Whether a terminal error has been reported.
   final bool hasError;
+
+  /// Last reported playback position.
   final Duration position;
+
+  /// Last reported media duration, or null when the duration is unknown.
   final Duration? duration;
+
+  /// Last reported volume, in the range `0.0..1.0`.
   final double volume;
+
+  /// Last reported playback rate.
   final double rate;
+
+  /// Last reported video width in pixels, or null when no video is decoded.
   final int? width;
+
+  /// Last reported video height in pixels, or null when no video is decoded.
   final int? height;
 
   /// Whether playback is restricted to the audio track.
   final bool audioOnly;
+
+  /// Last reported error message, or null when no error has been emitted.
   final String? errorMessage;
 
   /// Maps the mirror onto the semantic core [PlayerCoreState].
@@ -498,49 +549,15 @@ final class FakePlayerAdapterBehavior {
     supportsStop: true,
     supportsRateControl: true,
     supportsVolumeControl: true,
-    supportsMuteControl: false,
-    supportsAudioOnly: true,    supportsEngineOptions: true,
-
+    supportsAudioOnly: true,
+    supportsEngineOptions: true,
 
     // Video and rendering.
     supportsVideoFrameProgress: true,
     supportsVideoSizeChanged: true,
-    supportsVideoReconfig: false,
-    supportsHwdecInfo: false,
-    supportsVideoFilters: false,
-    supportsScreenshot: false,
-
-    // Audio.
-    supportsAudioReconfig: false,
-    supportsAudioDeviceSelection: false,
-    supportsAudioFilters: false,
-
-    // Tracks and subtitles.
-    supportsTrackSelection: false,
-    supportsSubtitleTrack: false,
-    supportsExternalSubtitle: false,
-
-    // Playback state and buffering.
-    supportsCacheState: false,
-    supportsBufferingProgress: false,
-    supportsChapterControl: false,
-    supportsLoop: false,
-
-    // Metadata and playlist.
-    supportsMetadata: false,
-    supportsPlaylist: false,
-    supportsPlaylistControl: false,
-
-    // Diagnostics and integration.
-    supportsClientMessage: false,
-    supportsLogMessages: false,
 
     // Decoders.
     supportsHardwareDecoder: true,
-    supportsSoftwareDecoder: true,
-
-    // Presentation.
-    supportsPictureInPicture: false,
     supportsFullscreen: true,
 
     // Source matching.
@@ -583,7 +600,7 @@ final class FakePlayerAdapterBehavior {
   /// Video height reported after open.
   final int? openHeight;
 
-  /// Whether [initialize] applies context config volume/rate.
+  /// Whether [FakePlayerAdapter.initialize] applies context config volume/rate.
   final bool applyInitialConfig;
 
   /// Error object thrown on failing methods.
@@ -600,7 +617,12 @@ final class FakePlayerAdapterBehavior {
   /// Throws when [method] is configured to fail.
   void maybeFail(String method) {
     if (failOn.contains(method)) {
-      throw failureError ?? StateError('FakePlayerAdapter failure on $method');
+      final error = failureError;
+      if (error is Error) throw error;
+      if (error is Exception) throw error;
+      throw StateError(
+        error == null ? 'FakePlayerAdapter failure on $method' : 'FakePlayerAdapter failure on $method: $error',
+      );
     }
   }
 

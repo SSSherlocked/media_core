@@ -51,12 +51,7 @@ abstract class PlayerAdapterError with _$PlayerAdapterError {
 
   /// Creates an unknown error.
   factory PlayerAdapterError.unknown(Object error) {
-    return PlayerAdapterError(
-      type: PlayerAdapterErrorType.unknown,
-      message: error.toString(),
-      cause: error,
-      recoverable: false,
-    );
+    return PlayerAdapterError(type: PlayerAdapterErrorType.unknown, message: error.toString(), cause: error);
   }
 }
 

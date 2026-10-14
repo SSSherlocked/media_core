@@ -26,9 +26,7 @@ final class PageCoordinator {
 
   /// Registers player for page.
   void attachPlayer({required String pageId, required PlayerId playerId}) {
-    final players = _pagePlayers.putIfAbsent(pageId, () => <PlayerId>{});
-
-    players.add(playerId);
+    _pagePlayers.putIfAbsent(pageId, () => <PlayerId>{}).add(playerId);
   }
 
   /// Removes player from page.

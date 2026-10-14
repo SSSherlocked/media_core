@@ -1,8 +1,8 @@
-import 'package:media_core/source/source_service.dart';
-import 'package:media_core/source/source_resolver.dart';
 import 'package:media_core/source/source_inspector.dart';
-import 'package:media_core/source/source_resolver_chain.dart';
 import 'package:media_core/source/source_inspector_chain.dart';
+import 'package:media_core/source/source_resolver.dart';
+import 'package:media_core/source/source_resolver_chain.dart';
+import 'package:media_core/source/source_service.dart';
 
 /// Registry for source-layer implementations.
 ///
@@ -11,6 +11,10 @@ import 'package:media_core/source/source_inspector_chain.dart';
 ///
 /// It does not perform source resolution or inspection itself.
 final class SourceRegistry {
+  /// Creates a registry seeded with [resolvers] and [inspectors].
+  ///
+  /// Both lists keep insertion order, because the chains they build
+  /// pick the first implementation that supports a source.
   SourceRegistry({Iterable<SourceResolver> resolvers = const [], Iterable<SourceInspector> inspectors = const []})
     : _resolvers = List<SourceResolver>.from(resolvers),
       _inspectors = List<SourceInspector>.from(inspectors);

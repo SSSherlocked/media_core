@@ -6,22 +6,22 @@
 /// modifying these constants.
 abstract final class PlayerConstants {
   /// Default player volume.
-  static const double defaultVolume = 1.0;
+  static const double defaultVolume = 1;
 
   /// Minimum supported volume.
-  static const double minVolume = 0.0;
+  static const double minVolume = 0;
 
   /// Maximum supported volume.
-  static const double maxVolume = 1.0;
+  static const double maxVolume = 1;
 
   /// Default playback rate.
-  static const double defaultPlaybackRate = 1.0;
+  static const double defaultPlaybackRate = 1;
 
   /// Minimum supported playback rate.
   static const double minPlaybackRate = 0.25;
 
   /// Maximum supported playback rate.
-  static const double maxPlaybackRate = 4.0;
+  static const double maxPlaybackRate = 4;
 
   /// Default video width used when actual dimensions are unavailable.
   static const int defaultVideoWidth = 1920;

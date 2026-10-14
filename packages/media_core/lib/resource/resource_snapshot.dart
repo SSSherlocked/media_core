@@ -1,9 +1,8 @@
-import 'package:media_core/resource/resource_state.dart';
-import 'package:media_core/resource/resource_metrics.dart';
-import 'package:media_core/resource/resource_pressure.dart';
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
-
+import 'package:media_core/resource/resource_metrics.dart';
+import 'package:media_core/resource/resource_pressure.dart';
+import 'package:media_core/resource/resource_state.dart';
 
 /// Immutable snapshot of resource runtime state.
 ///
@@ -48,6 +47,16 @@ import 'package:equatable/equatable.dart';
 final class ResourceSnapshot extends Equatable {
   /// Creates resource snapshot.
   const ResourceSnapshot({required this.state, required this.createdAt});
+
+  /// Creates an empty snapshot.
+  factory ResourceSnapshot.empty() {
+    return ResourceSnapshot.fromState(ResourceState.initial);
+  }
+
+  /// Creates snapshot from state.
+  factory ResourceSnapshot.fromState(ResourceState state) {
+    return ResourceSnapshot(state: state, createdAt: clock.now());
+  }
 
   /// Resource runtime state.
   final ResourceState state;
@@ -98,16 +107,6 @@ final class ResourceSnapshot extends Equatable {
   /// Current bandwidth usage.
   double get bandwidthMbps {
     return metrics.bandwidthMbps;
-  }
-
-  /// Creates snapshot from state.
-  factory ResourceSnapshot.fromState(ResourceState state) {
-    return ResourceSnapshot(state: state, createdAt: clock.now());
-  }
-
-  /// Creates an empty snapshot.
-  static ResourceSnapshot empty() {
-    return ResourceSnapshot.fromState(ResourceState.initial);
   }
 
   /// Creates modified snapshot.

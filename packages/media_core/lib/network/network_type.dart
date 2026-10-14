@@ -1,3 +1,5 @@
+import 'package:media_core/network/library.dart' show NetworkManager, NetworkMonitor;
+
 /// Represents the type of network connection.
 ///
 /// This enum describes the current transport type

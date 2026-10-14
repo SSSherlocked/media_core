@@ -1,4 +1,5 @@
 import 'package:media_core/presentation/presentation_mode.dart';
+import 'package:meta/meta.dart';
 
 /// Defines player presentation policies.
 ///
@@ -24,6 +25,7 @@ import 'package:media_core/presentation/presentation_mode.dart';
 /// - PresentationController
 /// - FullscreenController
 /// - PipController
+@immutable
 final class PresentationPolicy {
   /// Creates presentation policy.
   const PresentationPolicy({
@@ -46,6 +48,58 @@ final class PresentationPolicy {
 
     this.restoreSystemUiAfterExit = true,
   });
+
+  /// Mobile default policy.
+  const PresentationPolicy.mobile()
+    : enabled = true,
+      allowFullscreen = true,
+      allowWindowFullscreen = true,
+      allowPictureInPicture = true,
+      allowFloatingWindow = false,
+      autoFullscreenOnLandscape = true,
+      autoExitFullscreenOnPortrait = true,
+      lockOrientationInFullscreen = true,
+      hideSystemUiInFullscreen = true,
+      restoreSystemUiAfterExit = true;
+
+  /// Desktop default policy.
+  const PresentationPolicy.desktop()
+    : enabled = true,
+      allowFullscreen = true,
+      allowWindowFullscreen = true,
+      allowPictureInPicture = false,
+      allowFloatingWindow = true,
+      autoFullscreenOnLandscape = false,
+      autoExitFullscreenOnPortrait = false,
+      lockOrientationInFullscreen = false,
+      hideSystemUiInFullscreen = false,
+      restoreSystemUiAfterExit = true;
+
+  /// TV default policy.
+  const PresentationPolicy.tv()
+    : enabled = true,
+      allowFullscreen = true,
+      allowWindowFullscreen = true,
+      allowPictureInPicture = false,
+      allowFloatingWindow = false,
+      autoFullscreenOnLandscape = false,
+      autoExitFullscreenOnPortrait = false,
+      lockOrientationInFullscreen = false,
+      hideSystemUiInFullscreen = false,
+      restoreSystemUiAfterExit = false;
+
+  /// Allows every presentation mode.
+  const PresentationPolicy.unrestricted()
+    : enabled = true,
+      allowFullscreen = true,
+      allowWindowFullscreen = true,
+      allowPictureInPicture = true,
+      allowFloatingWindow = true,
+      autoFullscreenOnLandscape = true,
+      autoExitFullscreenOnPortrait = true,
+      lockOrientationInFullscreen = true,
+      hideSystemUiInFullscreen = true,
+      restoreSystemUiAfterExit = true;
 
   /// Whether presentation management is enabled.
   final bool enabled;
@@ -203,63 +257,12 @@ final class PresentationPolicy {
     );
   }
 
-  /// Mobile default policy.
-  const PresentationPolicy.mobile()
-    : enabled = true,
-      allowFullscreen = true,
-      allowWindowFullscreen = true,
-      allowPictureInPicture = true,
-      allowFloatingWindow = false,
-      autoFullscreenOnLandscape = true,
-      autoExitFullscreenOnPortrait = true,
-      lockOrientationInFullscreen = true,
-      hideSystemUiInFullscreen = true,
-      restoreSystemUiAfterExit = true;
-
-  /// Desktop default policy.
-  const PresentationPolicy.desktop()
-    : enabled = true,
-      allowFullscreen = true,
-      allowWindowFullscreen = true,
-      allowPictureInPicture = false,
-      allowFloatingWindow = true,
-      autoFullscreenOnLandscape = false,
-      autoExitFullscreenOnPortrait = false,
-      lockOrientationInFullscreen = false,
-      hideSystemUiInFullscreen = false,
-      restoreSystemUiAfterExit = true;
-
-  /// TV default policy.
-  const PresentationPolicy.tv()
-    : enabled = true,
-      allowFullscreen = true,
-      allowWindowFullscreen = true,
-      allowPictureInPicture = false,
-      allowFloatingWindow = false,
-      autoFullscreenOnLandscape = false,
-      autoExitFullscreenOnPortrait = false,
-      lockOrientationInFullscreen = false,
-      hideSystemUiInFullscreen = false,
-      restoreSystemUiAfterExit = false;
-
-  /// Allows every presentation mode.
-  const PresentationPolicy.unrestricted()
-    : enabled = true,
-      allowFullscreen = true,
-      allowWindowFullscreen = true,
-      allowPictureInPicture = true,
-      allowFloatingWindow = true,
-      autoFullscreenOnLandscape = true,
-      autoExitFullscreenOnPortrait = true,
-      lockOrientationInFullscreen = true,
-      hideSystemUiInFullscreen = true,
-      restoreSystemUiAfterExit = true;
-
   @override
   bool operator ==(Object other) {
     return other is PresentationPolicy &&
         other.enabled == enabled &&
         other.allowFullscreen == allowFullscreen &&
+        other.allowWindowFullscreen == allowWindowFullscreen &&
         other.allowPictureInPicture == allowPictureInPicture &&
         other.allowFloatingWindow == allowFloatingWindow &&
         other.autoFullscreenOnLandscape == autoFullscreenOnLandscape &&
@@ -274,6 +277,7 @@ final class PresentationPolicy {
     return Object.hash(
       enabled,
       allowFullscreen,
+      allowWindowFullscreen,
       allowPictureInPicture,
       allowFloatingWindow,
       autoFullscreenOnLandscape,

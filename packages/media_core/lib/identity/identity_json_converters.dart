@@ -1,13 +1,17 @@
-import 'package:media_core/identity/slot_id.dart';
+import 'package:json_annotation/json_annotation.dart';
+import 'package:media_core/identity/generation_id.dart';
+import 'package:media_core/identity/operation_id.dart';
 import 'package:media_core/identity/player_id.dart';
-import 'package:media_core/identity/source_id.dart';
 import 'package:media_core/identity/request_id.dart';
 import 'package:media_core/identity/session_id.dart';
-import 'package:media_core/identity/operation_id.dart';
-import 'package:media_core/identity/generation_id.dart';
-import 'package:json_annotation/json_annotation.dart';
+import 'package:media_core/identity/slot_id.dart';
+import 'package:media_core/identity/source_id.dart';
 
+/// Reads and writes a [PlayerId] as the plain string it wraps, so
+/// `json_serializable` models can hold a typed id without hand-written
+/// parsing in every field.
 class PlayerIdJsonConverter extends JsonConverter<PlayerId, String> {
+  /// Creates the converter.
   const PlayerIdJsonConverter();
 
   @override
@@ -17,7 +21,9 @@ class PlayerIdJsonConverter extends JsonConverter<PlayerId, String> {
   String toJson(PlayerId object) => object.toJson();
 }
 
+/// Reads and writes a [SessionId] as the plain string it wraps.
 class SessionIdJsonConverter extends JsonConverter<SessionId, String> {
+  /// Creates the converter.
   const SessionIdJsonConverter();
 
   @override
@@ -27,7 +33,9 @@ class SessionIdJsonConverter extends JsonConverter<SessionId, String> {
   String toJson(SessionId object) => object.toJson();
 }
 
+/// Reads and writes a [SlotId] as the plain string it wraps.
 class SlotIdJsonConverter extends JsonConverter<SlotId, String> {
+  /// Creates the converter.
   const SlotIdJsonConverter();
 
   @override
@@ -37,7 +45,9 @@ class SlotIdJsonConverter extends JsonConverter<SlotId, String> {
   String toJson(SlotId object) => object.toJson();
 }
 
+/// Reads and writes a [SourceId] as the plain string it wraps.
 class SourceIdJsonConverter extends JsonConverter<SourceId, String> {
+  /// Creates the converter.
   const SourceIdJsonConverter();
 
   @override
@@ -47,7 +57,9 @@ class SourceIdJsonConverter extends JsonConverter<SourceId, String> {
   String toJson(SourceId object) => object.toJson();
 }
 
+/// Reads and writes an [OperationId] as the plain string it wraps.
 class OperationIdJsonConverter extends JsonConverter<OperationId, String> {
+  /// Creates the converter.
   const OperationIdJsonConverter();
 
   @override
@@ -57,7 +69,9 @@ class OperationIdJsonConverter extends JsonConverter<OperationId, String> {
   String toJson(OperationId object) => object.toJson();
 }
 
+/// Reads and writes a [RequestId] as the plain string it wraps.
 class RequestIdJsonConverter extends JsonConverter<RequestId, String> {
+  /// Creates the converter.
   const RequestIdJsonConverter();
 
   @override
@@ -67,7 +81,9 @@ class RequestIdJsonConverter extends JsonConverter<RequestId, String> {
   String toJson(RequestId object) => object.toJson();
 }
 
+/// Reads and writes a [GenerationId] as the plain string it wraps.
 class GenerationIdJsonConverter extends JsonConverter<GenerationId, String> {
+  /// Creates the converter.
   const GenerationIdJsonConverter();
 
   @override

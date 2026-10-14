@@ -1,12 +1,12 @@
-import 'package:media_core/source/source_type.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/identity/source_id.dart';
 import 'package:media_core/source/source_format.dart';
 import 'package:media_core/source/source_headers.dart';
 import 'package:media_core/source/source_location.dart';
+import 'package:media_core/source/source_media_type.dart';
 import 'package:media_core/source/source_metadata.dart';
 import 'package:media_core/source/source_protocol.dart';
-import 'package:media_core/source/source_media_type.dart';
-import 'package:media_core/identity/source_id.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/source/source_type.dart';
 
 part 'source_descriptor.freezed.dart';
 

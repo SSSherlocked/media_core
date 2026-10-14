@@ -1,18 +1,21 @@
 import 'package:media_core/composition/composed_schedule.dart';
 import 'package:media_core/composition/schedule_clip.dart';
+import 'package:meta/meta.dart';
 
 /// Something the host must do to keep a composed schedule honest.
 ///
 /// The navigator never touches a player — it observes the playhead
-/// and says when the clip under the playhead changes. [openClip]
+/// and says when the clip under the playhead changes. [OpenClip]
 /// means "call `handle.openMedia` with this clip's source (and seek
-/// to [seekTo] if non-null)"; [complete] means the timeline ended.
+/// to its `seekTo` if non-null)"; [ScheduleComplete] means the
+/// timeline ended.
 sealed class ScheduleAction {
   /// Creates an action.
   const ScheduleAction();
 }
 
 /// Enter or resume a clip whose media is not yet the open one.
+@immutable
 final class OpenClip extends ScheduleAction {
   /// Creates an open instruction.
   const OpenClip(this.clip, {this.seekTo});
@@ -29,8 +32,7 @@ final class OpenClip extends ScheduleAction {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is OpenClip && other.clip == clip && other.seekTo == seekTo;
+      identical(this, other) || other is OpenClip && other.clip == clip && other.seekTo == seekTo;
 
   @override
   int get hashCode => Object.hash(OpenClip, clip, seekTo);
@@ -40,6 +42,7 @@ final class OpenClip extends ScheduleAction {
 }
 
 /// The combined timeline has been played through.
+@immutable
 final class ScheduleComplete extends ScheduleAction {
   /// Creates a completion.
   const ScheduleComplete();
@@ -57,17 +60,14 @@ final class ScheduleComplete extends ScheduleAction {
 /// The decision the navigator makes for one playhead observation.
 ///
 /// [actions] is what must happen between the last observation and
-/// now; [adElapsed]/[adTotal] carry the ad-clock facts a host needs
-/// to render "this ad will be skippable in 5s" without reaching into
-/// segment internals, and [skipAvailable] answers the one question
+/// now; [position] carries the ad-clock facts a host needs to render
+/// "this ad will be skippable in 5s" (its `localTime` against the
+/// clip's `skipAfter` and `duration`) without reaching into segment
+/// internals, and [skipAvailable] answers the one question
 /// the schedule forbids the host to guess.
 final class ScheduleObservation {
   /// Creates an observation.
-  const ScheduleObservation({
-    required this.position,
-    required this.actions,
-    this.skipAvailable = false,
-  });
+  const ScheduleObservation({required this.position, required this.actions, this.skipAvailable = false});
 
   /// Where the playhead landed, or null when the schedule is empty.
   final SchedulePosition? position;
@@ -139,10 +139,7 @@ final class ScheduleNavigator {
   /// [ScheduleComplete] once past the end.
   ScheduleObservation observe(Duration time) {
     if (schedule.segments.isEmpty) {
-      return const ScheduleObservation(
-        position: null,
-        actions: <ScheduleAction>[ScheduleComplete()],
-      );
+      return const ScheduleObservation(position: null, actions: <ScheduleAction>[ScheduleComplete()]);
     }
 
     final position = schedule.positionAt(time);
@@ -152,15 +149,15 @@ final class ScheduleNavigator {
     final segment = position.segment;
 
     if (!atEnd && !_sameSegment(_opened, segment)) {
-      final seekTo = segment.clip.kind == ClipKind.content &&
-              segment.programTime != null
+      final seekTo = segment.clip.kind == ClipKind.content && segment.programTime != null
           ? segment.programTimeAt(time) ?? segment.programTime
           : null;
       actions.add(OpenClip(segment.clip, seekTo: seekTo));
       _opened = segment;
     }
 
-    final skip = position.kind == ClipKind.advertisement &&
+    final skip =
+        position.kind == ClipKind.advertisement &&
         segment.clip.skipAfter != null &&
         position.localTime >= segment.clip.skipAfter!;
 
@@ -169,11 +166,7 @@ final class ScheduleNavigator {
       _opened = null;
     }
 
-    return ScheduleObservation(
-      position: position,
-      actions: actions,
-      skipAvailable: skip,
-    );
+    return ScheduleObservation(position: position, actions: actions, skipAvailable: skip);
   }
 
   /// The next boundary time at or after [time], for hosts that want

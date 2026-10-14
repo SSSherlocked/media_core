@@ -15,6 +15,35 @@ import 'package:equatable/equatable.dart';
 /// - PlatformProvider
 /// - PlatformInfo
 final class PlatformType extends Equatable {
+  /// Creates from string.
+  factory PlatformType.fromString(String value) {
+    switch (value.toLowerCase()) {
+      case 'android':
+        return android;
+
+      case 'ios':
+        return ios;
+
+      case 'windows':
+        return windows;
+
+      case 'macos':
+        return macos;
+
+      case 'linux':
+        return linux;
+
+      case 'web':
+        return web;
+
+      case 'tv':
+        return tv;
+
+      default:
+        return unknown;
+    }
+  }
+
   /// Creates platform type.
   const PlatformType._(this.value);
 
@@ -49,35 +78,6 @@ final class PlatformType extends Equatable {
 
   /// Raw platform value.
   final String value;
-
-  /// Creates from string.
-  factory PlatformType.fromString(String value) {
-    switch (value.toLowerCase()) {
-      case 'android':
-        return android;
-
-      case 'ios':
-        return ios;
-
-      case 'windows':
-        return windows;
-
-      case 'macos':
-        return macos;
-
-      case 'linux':
-        return linux;
-
-      case 'web':
-        return web;
-
-      case 'tv':
-        return tv;
-
-      default:
-        return unknown;
-    }
-  }
 
   /// Whether this is mobile platform.
   bool get isMobile {

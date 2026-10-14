@@ -1,8 +1,7 @@
-import 'package:media_core/playback/playback_buffer.dart';
-import 'package:media_core/playback/playback_command.dart';
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
-
+import 'package:media_core/playback/playback_buffer.dart';
+import 'package:media_core/playback/playback_command.dart';
 
 /// Current playback runtime state.
 ///
@@ -22,6 +21,11 @@ import 'package:equatable/equatable.dart';
 /// - call platform APIs
 /// - manage decoder
 final class PlayerTransportState extends Equatable {
+  /// Creates the transport mirror straight from the fields an engine reports.
+  ///
+  /// Every field is a statement about what the player is doing now; only
+  /// [reduce] moves it forward, and `PlayerTransportState.initial()` is where a
+  /// session starts.
   const PlayerTransportState({
     required this.command,
     required this.position,
@@ -90,24 +94,48 @@ final class PlayerTransportState extends Equatable {
   // Status
   // ---------------------------------------------------------------------------
 
+  /// Whether the transport is at rest, before any play command.
   bool get isIdle => command.isIdle;
 
+  /// Whether the transport is in the reserved loading state.
+  ///
+  /// No engine report produces that command yet, so this reads false.
   bool get isLoading => command.isLoading;
 
+  /// Whether the playhead is meant to be advancing.
+  ///
+  /// Independent of [isBuffering]: a player that is stalled is still playing,
+  /// which is exactly the distinction a controls bar has to get right.
   bool get isPlaying => command.isPlaying;
 
+  /// Whether the user or the app suspended playback without leaving the session.
   bool get isPaused => command.isPaused;
 
+  /// Whether the session has been torn down and the playhead rewound.
   bool get isStopped => command.isStopped;
 
+  /// Whether playback ran to the end of the media.
+  ///
+  /// Always false: reaching the end is not a command, so a consumer that needs
+  /// completion has to compare [position] against [duration] itself.
   bool get isCompleted => command.isCompleted;
 
+  /// Whether the engine is short of data at this moment.
   bool get isBuffering => buffering;
 
+  /// Whether the media length is known.
+  ///
+  /// A live stream or a not-yet-ready asset reports [Duration.zero], so this is
+  /// the test for "can a total be displayed" rather than for "is it nonzero".
   bool get hasDuration => duration > Duration.zero;
 
+  /// Whether the playhead has left the very start.
   bool get hasPosition => position > Duration.zero;
 
+  /// Fraction of the media that has been played, `0` while the length is unknown.
+  ///
+  /// Deliberately unclamped, so a position past a shrinking live duration reads
+  /// above 1; a bar that cannot overdraw must clamp it.
   double get progress {
     if (!hasDuration) {
       return 0;
@@ -120,6 +148,11 @@ final class PlayerTransportState extends Equatable {
   // Update
   // ---------------------------------------------------------------------------
 
+  /// The same transport with the named fields replaced.
+  ///
+  /// A null argument keeps the current value — so this cannot clear
+  /// [updatedAt] — and no field is re-derived: engine commands go through
+  /// [reduce], which decides what each report implies.
   PlayerTransportState copyWith({
     PlaybackCommand? command,
     Duration? position,
@@ -173,7 +206,7 @@ final class PlayerTransportState extends Equatable {
       case PlaybackCommandDuration():
         return copyWith(duration: command.duration, updatedAt: clock.now());
 
-      case PlaybackCommandBuffered(ranges: final ranges):
+      case PlaybackCommandBuffered(:final ranges):
         // A report, not an intention: the transport command is
         // untouched, because playing/paused is exactly what it was
         // when the buffer advanced. Normalized on the way in so every

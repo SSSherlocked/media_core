@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:media_core/source/library.dart' show CompositeMediaSource, PlayerSource, ProgressiveMediaSource;
 import 'package:media_core/source/media_track_type.dart';
 import 'package:media_core/source/source_format.dart';
 import 'package:media_core/source/source_headers.dart';
@@ -128,8 +129,7 @@ final class MediaTrack extends Equatable {
   bool get hasLanguage => language != null && language!.trim().isNotEmpty;
 
   /// Whether the track declares a non-zero presentation start offset.
-  bool get hasStartOffset =>
-      startOffset != null && startOffset != Duration.zero;
+  bool get hasStartOffset => startOffset != null && startOffset != Duration.zero;
 
   /// Protocol inferred from [uri].
   ///
@@ -214,15 +214,5 @@ final class MediaTrack extends Equatable {
   }
 
   @override
-  List<Object?> get props => <Object?>[
-    uri,
-    kind,
-    headers,
-    mimeType,
-    codec,
-    bitrate,
-    language,
-    startOffset,
-    metadata,
-  ];
+  List<Object?> get props => <Object?>[uri, kind, headers, mimeType, codec, bitrate, language, startOffset, metadata];
 }

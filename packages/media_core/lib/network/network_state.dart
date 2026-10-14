@@ -1,6 +1,7 @@
-import 'package:media_core/network/network_type.dart';
-import 'package:media_core/network/network_quality.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/network/library.dart' show NetworkManager, NetworkMonitor;
+import 'package:media_core/network/network_quality.dart';
+import 'package:media_core/network/network_type.dart';
 
 part 'network_state.freezed.dart';
 

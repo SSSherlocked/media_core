@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:media_core/result/result.dart' show Result;
 
 /// Describes the terminal status of a [Result].
 ///
@@ -65,7 +66,7 @@ final class ResultStatus extends Equatable {
   /// Unknown values are mapped to [failure] rather than creating a custom
   /// status implicitly.
   ///
-  /// Use [custom] when custom status preservation is required.
+  /// Use [ResultStatus.custom] when custom status preservation is required.
   static ResultStatus fromValue(String value) {
     final normalized = value.trim();
 
@@ -85,7 +86,7 @@ final class ResultStatus extends Equatable {
   /// Unknown values are resolved to [failure], matching [fromValue].
   static ResultStatus fromJson(Object? json) {
     if (json is! String) {
-      throw FormatException('ResultStatus JSON value must be a String.');
+      throw const FormatException('ResultStatus JSON value must be a String.');
     }
 
     return fromValue(json);

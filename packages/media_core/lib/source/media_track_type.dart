@@ -1,3 +1,5 @@
+import 'package:media_core/source/library.dart' show MediaTrack, PlayerSource, SourceMediaType;
+
 /// Describes what kind of media a [MediaTrack] carries.
 ///
 /// [MediaTrackType] is a track-level classification, distinct from the

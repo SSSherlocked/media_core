@@ -47,9 +47,7 @@ abstract final class DisposeUtils {
 
   /// Disposes multiple timers.
   static void cancelTimers(Iterable<Timer?> timers) {
-    for (final timer in timers) {
-      cancelTimer(timer);
-    }
+    timers.forEach(cancelTimer);
   }
 
   /// Runs dispose callback safely.
@@ -97,7 +95,10 @@ final class Disposable {
   /// Adds a dispose action.
   void add(FutureOr<void> Function() action) {
     if (_disposed) {
-      action();
+      // `add` is a synchronous API, so the caller cannot await an action that
+      // runs on the already-disposed path; let the future complete on its own.
+      final result = action();
+      if (result is Future<void>) unawaited(result);
       return;
     }
 

@@ -24,12 +24,8 @@ import 'package:equatable/equatable.dart';
 final class MediaSegment extends Equatable {
   /// Creates a segment starting at [start] on the presentation
   /// timeline.
-  MediaSegment({
-    required this.start,
-    required this.duration,
-    this.label,
-    this.attributes = const <String, Object?>{},
-  }) : assert(!duration.isNegative, 'Segment duration must not be negative.');
+  MediaSegment({required this.start, required this.duration, this.label, this.attributes = const <String, Object?>{}})
+    : assert(!duration.isNegative, 'Segment duration must not be negative.');
 
   /// Where the segment begins on the presentation timeline.
   final Duration start;
@@ -50,16 +46,11 @@ final class MediaSegment extends Equatable {
   bool covers(Duration time) => time >= start && time < end;
 
   /// Whether this segment overlaps [other].
-  bool intersects(MediaSegment other) =>
-      start < other.end && other.start < end;
+  bool intersects(MediaSegment other) => start < other.end && other.start < end;
 
   /// The segment shifted by [delta] on the timeline.
-  MediaSegment shiftedBy(Duration delta) => MediaSegment(
-    start: start + delta,
-    duration: duration,
-    label: label,
-    attributes: attributes,
-  );
+  MediaSegment shiftedBy(Duration delta) =>
+      MediaSegment(start: start + delta, duration: duration, label: label, attributes: attributes);
 
   @override
   List<Object?> get props => <Object?>[start, duration, label, attributes];

@@ -1,6 +1,6 @@
-import 'package:media_core/recovery/recovery_action.dart';
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/recovery/recovery_action.dart';
 
 /// Immutable recovery state.
 ///
@@ -20,9 +20,10 @@ import 'package:equatable/equatable.dart';
 ///   └── exhaust
 /// ```
 ///
-/// The retry attempt counter belongs to the recovery lifecycle and is updated
-/// by [RecoveryManager] when a retry is actually started.
+/// The retry attempt counter belongs to the recovery lifecycle and changes only
+/// through [recordAttempt], which is called when a retry actually starts.
 final class RecoveryState extends Equatable {
+  /// Records one point of the recovery lifecycle with all of its fields supplied at once.
   const RecoveryState({
     required this.action,
     required this.attempt,
@@ -32,6 +33,21 @@ final class RecoveryState extends Equatable {
     required this.updatedAt,
   });
 
+  /// Rebuilds a state from a persisted map, treating missing or malformed fields as idle.
+  ///
+  /// The action is not round-tripped, so a restored state always reports [RecoveryAction.none].
+  factory RecoveryState.fromMap(Map<String, dynamic> map) {
+    return RecoveryState(
+      action: const RecoveryAction.none(),
+      attempt: (map['attempt'] as num?)?.toInt() ?? 0,
+      active: map['active'] as bool? ?? false,
+      completed: map['completed'] as bool? ?? false,
+      exhausted: map['exhausted'] as bool? ?? false,
+      updatedAt: _parseDateTime(map['updatedAt']),
+    );
+  }
+
+  /// The state before any failure has been considered: idle, with no attempts recorded.
   const RecoveryState.initial()
     : action = const RecoveryAction.none(),
       attempt = 0,
@@ -167,6 +183,9 @@ final class RecoveryState extends Equatable {
     );
   }
 
+  /// Serialises the lifecycle for diagnostics and persistence.
+  ///
+  /// The action is written as its text form, which [RecoveryState.fromMap] does not read back.
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'action': action.toString(),
@@ -176,17 +195,6 @@ final class RecoveryState extends Equatable {
       'exhausted': exhausted,
       'updatedAt': updatedAt?.toIso8601String(),
     };
-  }
-
-  factory RecoveryState.fromMap(Map<String, dynamic> map) {
-    return RecoveryState(
-      action: const RecoveryAction.none(),
-      attempt: (map['attempt'] as num?)?.toInt() ?? 0,
-      active: map['active'] as bool? ?? false,
-      completed: map['completed'] as bool? ?? false,
-      exhausted: map['exhausted'] as bool? ?? false,
-      updatedAt: _parseDateTime(map['updatedAt']),
-    );
   }
 
   static DateTime? _parseDateTime(Object? value) {

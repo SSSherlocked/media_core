@@ -29,6 +29,7 @@ part of 'media_source.dart';
 /// - PlayerAdapter, through `CompositeSupport.native` or
 ///   `CompositeSupport.externalAudio`
 /// - MediaSourcePlanner
+@immutable
 final class CompositeMediaSource extends MediaSource {
   /// Creates a composite source.
   ///
@@ -70,24 +71,17 @@ final class CompositeMediaSource extends MediaSource {
 
   @override
   List<MediaTrack> get tracks {
-    return <MediaTrack>[
-      ...videoTracks,
-      ...audioTracks,
-      ...subtitleTracks,
-    ];
+    return <MediaTrack>[...videoTracks, ...audioTracks, ...subtitleTracks];
   }
 
   /// The preferred video track, if any.
-  MediaTrack? get primaryVideo =>
-      videoTracks.isEmpty ? null : videoTracks.first;
+  MediaTrack? get primaryVideo => videoTracks.isEmpty ? null : videoTracks.first;
 
   /// The preferred audio track, if any.
-  MediaTrack? get primaryAudio =>
-      audioTracks.isEmpty ? null : audioTracks.first;
+  MediaTrack? get primaryAudio => audioTracks.isEmpty ? null : audioTracks.first;
 
   /// The preferred subtitle track, if any.
-  MediaTrack? get primarySubtitle =>
-      subtitleTracks.isEmpty ? null : subtitleTracks.first;
+  MediaTrack? get primarySubtitle => subtitleTracks.isEmpty ? null : subtitleTracks.first;
 
   /// Whether this composite has a video essence at all.
   ///

@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:media_core/kernel/player_handle.dart';
-import 'package:media_core/playback/player_transport_state.dart';
 import 'package:media_core/kernel/player_kernel.dart';
+import 'package:media_core/playback/player_transport_state.dart';
 import 'package:media_core/source/player_source.dart';
 
 /// A player the pool drives.
@@ -38,7 +38,7 @@ abstract interface class PoolPlayerHandle {
   Future<void> setVolume(double volume);
 
   /// Mutes or unmutes the player.
-  Future<void> setMute(bool muted);
+  Future<void> setMute({required bool muted});
 
   /// Playback state stream of the player.
   Stream<PlayerTransportState> get playbackStream;
@@ -58,6 +58,7 @@ abstract interface class PoolPlayerHost {
 
 /// [PoolPlayerHandle] backed by a kernel [PlayerHandle].
 final class KernelPoolPlayerHandle implements PoolPlayerHandle {
+  /// Drives the kernel [handle] through the pool.
   KernelPoolPlayerHandle(this.handle);
 
   /// Handle being driven.
@@ -85,7 +86,7 @@ final class KernelPoolPlayerHandle implements PoolPlayerHandle {
   Future<void> setVolume(double volume) => handle.setVolume(volume);
 
   @override
-  Future<void> setMute(bool muted) => handle.setMute(muted);
+  Future<void> setMute({required bool muted}) => handle.setMute(muted: muted);
 
   @override
   Stream<PlayerTransportState> get playbackStream => handle.playbackStream;
@@ -98,6 +99,7 @@ final class KernelPoolPlayerHandle implements PoolPlayerHandle {
 /// pooling still gets correct behaviour, it just pays for a cold player on each
 /// take.
 final class KernelPoolPlayerHost implements PoolPlayerHost {
+  /// Takes and returns players through [kernel].
   KernelPoolPlayerHost(this.kernel);
 
   /// Kernel the pool takes players from.

@@ -123,7 +123,7 @@ abstract final class StreamTransform {
 
   /// Ignores errors and completes the stream.
   static Stream<T> ignoreErrors<T>(Stream<T> source) {
-    return source.onErrorResume((Object error, StackTrace stackTrace) {
+    return source.onErrorResume((error, stackTrace) {
       return Stream<T>.empty();
     });
   }

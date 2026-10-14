@@ -13,6 +13,8 @@ import 'package:equatable/equatable.dart';
 /// - manage video geometry
 /// - control playback
 final class RendererConfig extends Equatable {
+  /// Declares how video should be presented: rendering on, aspect ratio
+  /// preserved, mirrored off and hardware acceleration preferred.
   const RendererConfig({
     this.enabled = true,
     this.keepAspectRatio = true,
@@ -21,6 +23,18 @@ final class RendererConfig extends Equatable {
     this.hardwareAcceleration = true,
     this.lowLatency = false,
   });
+
+  /// Creates a configuration from a map.
+  factory RendererConfig.fromMap(Map<String, dynamic> map) {
+    return RendererConfig(
+      enabled: map['enabled'] as bool? ?? true,
+      keepAspectRatio: map['keepAspectRatio'] as bool? ?? true,
+      fill: map['fill'] as bool? ?? false,
+      mirror: map['mirror'] as bool? ?? false,
+      hardwareAcceleration: map['hardwareAcceleration'] as bool? ?? true,
+      lowLatency: map['lowLatency'] as bool? ?? false,
+    );
+  }
 
   /// Default renderer configuration.
   const RendererConfig.defaults()
@@ -78,18 +92,6 @@ final class RendererConfig extends Equatable {
       'hardwareAcceleration': hardwareAcceleration,
       'lowLatency': lowLatency,
     };
-  }
-
-  /// Creates a configuration from a map.
-  factory RendererConfig.fromMap(Map<String, dynamic> map) {
-    return RendererConfig(
-      enabled: map['enabled'] as bool? ?? true,
-      keepAspectRatio: map['keepAspectRatio'] as bool? ?? true,
-      fill: map['fill'] as bool? ?? false,
-      mirror: map['mirror'] as bool? ?? false,
-      hardwareAcceleration: map['hardwareAcceleration'] as bool? ?? true,
-      lowLatency: map['lowLatency'] as bool? ?? false,
-    );
   }
 
   @override

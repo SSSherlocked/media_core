@@ -8,13 +8,11 @@ import 'package:media_core/composition/schedule_navigator.dart';
 import 'package:media_core/composition/timeline_composer.dart';
 import 'package:media_core/source/media_source.dart';
 
-MediaSource _source(String url) =>
-    ProgressiveMediaSource.url(Uri.parse(url));
+MediaSource _source(String url) => ProgressiveMediaSource.url(Uri.parse(url));
 
 ScheduleClip content(String url, int seconds) => ScheduleClip(
   source: _source(url),
   duration: Duration(seconds: seconds),
-  kind: ClipKind.content,
 );
 
 ScheduleClip ad(String url, int seconds, {Duration? skipAfter}) => ScheduleClip(
@@ -30,15 +28,12 @@ ScheduleClip filler(String url, int seconds) => ScheduleClip(
   kind: ClipKind.filler,
 );
 
-MediaBreak pod(BreakPosition position, List<ScheduleClip> clips) =>
-    MediaBreak(position: position, clips: clips);
+MediaBreak pod(BreakPosition position, List<ScheduleClip> clips) => MediaBreak(position: position, clips: clips);
 
 void main() {
   group('TimelineComposer placement', () {
     test('no breaks: the program is the whole timeline', () {
-      final composed = const TimelineComposer().compose(
-        PlaybackSchedule(program: content('https://e.com/p.mp4', 100)),
-      );
+      final composed = const TimelineComposer().compose(PlaybackSchedule(program: content('https://e.com/p.mp4', 100)));
 
       expect(composed.segments, hasLength(1));
       expect(composed.totalDuration, const Duration(seconds: 100));
@@ -49,7 +44,9 @@ void main() {
       final composed = const TimelineComposer().compose(
         PlaybackSchedule(
           program: content('https://e.com/p.mp4', 100),
-          breaks: [pod(const PreRoll(), [ad('https://e.com/a1.mp4', 15)])],
+          breaks: [
+            pod(const PreRoll(), [ad('https://e.com/a1.mp4', 15)]),
+          ],
         ),
       );
 
@@ -67,10 +64,10 @@ void main() {
         PlaybackSchedule(
           program: content('https://e.com/p.mp4', 100),
           breaks: [
-            pod(
-              AtProgramOffset(Duration(seconds: 40)),
-              [ad('https://e.com/a1.mp4', 10), ad('https://e.com/a2.mp4', 5)],
-            ),
+            pod(AtProgramOffset(const Duration(seconds: 40)), [
+              ad('https://e.com/a1.mp4', 10),
+              ad('https://e.com/a2.mp4', 5),
+            ]),
           ],
         ),
       );
@@ -92,7 +89,7 @@ void main() {
           program: content('https://e.com/p.mp4', 100),
           breaks: [
             pod(AtProgramOffset(const Duration(seconds: 60)), [ad('mid', 5)]),
-            pod(PostRoll(Duration(seconds: 100)), [ad('post', 10)]),
+            pod(PostRoll(const Duration(seconds: 100)), [ad('post', 10)]),
             pod(const PreRoll(), [ad('pre', 15)]),
           ],
         ),
@@ -111,7 +108,9 @@ void main() {
       final composed = const TimelineComposer().compose(
         PlaybackSchedule(
           program: content('https://e.com/p.mp4', 100),
-          breaks: [pod(const PreRoll(), [ad('https://e.com/zero.mp4', 0)])],
+          breaks: [
+            pod(const PreRoll(), [ad('https://e.com/zero.mp4', 0)]),
+          ],
         ),
       );
 
@@ -153,7 +152,9 @@ void main() {
       expect(
         () => PlaybackSchedule(
           program: content('https://e.com/p.mp4', 100),
-          breaks: [pod(const PreRoll(), [content('other', 10)])],
+          breaks: [
+            pod(const PreRoll(), [content('other', 10)]),
+          ],
         ),
         throwsA(isA<AssertionError>()),
       );
@@ -165,11 +166,8 @@ void main() {
       PlaybackSchedule(
         program: content('https://e.com/p.mp4', 100),
         breaks: [
-          pod(const PreRoll(), [ad('https://e.com/a1.mp4', 15, skipAfter: Duration(seconds: 5))]),
-          pod(
-            AtProgramOffset(const Duration(seconds: 40)),
-            [ad('https://e.com/a2.mp4', 10)],
-          ),
+          pod(const PreRoll(), [ad('https://e.com/a1.mp4', 15, skipAfter: const Duration(seconds: 5))]),
+          pod(AtProgramOffset(const Duration(seconds: 40)), [ad('https://e.com/a2.mp4', 10)]),
         ],
       ),
     );
@@ -200,9 +198,9 @@ void main() {
     });
 
     test('a user seek across a break re-opens with the right program time', () {
-      final navigator = ScheduleNavigator(composed());
-      navigator.observe(Duration.zero); // pre-roll open
-      navigator.observe(const Duration(seconds: 20)); // content at program 5s
+      final navigator = ScheduleNavigator(composed())
+        ..observe(Duration.zero) // pre-roll open
+        ..observe(const Duration(seconds: 20)); // content at program 5s
 
       // Seek forward across the 40s mid-roll cut: combined 60s = program 45s.
       final jumped = navigator.observe(const Duration(seconds: 60));
@@ -217,8 +215,7 @@ void main() {
     });
 
     test('completion fires once past the end and clears the open clip', () {
-      final navigator = ScheduleNavigator(composed());
-      navigator.observe(Duration.zero);
+      final navigator = ScheduleNavigator(composed())..observe(Duration.zero);
 
       final done = navigator.observe(const Duration(seconds: 130));
       expect(done.actions, contains(const ScheduleComplete()));

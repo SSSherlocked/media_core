@@ -7,6 +7,7 @@ import 'package:equatable/equatable.dart';
 /// [exhausted] means that no candidate remains after a failed attempt.
 /// Selecting the final candidate does not itself make the state exhausted.
 final class BackendFallbackState extends Equatable {
+  /// Creates backend fallback state from explicit field values.
   const BackendFallbackState({
     required this.currentBackend,
     required this.candidates,
@@ -16,6 +17,24 @@ final class BackendFallbackState extends Equatable {
     required this.exhausted,
   });
 
+  /// Reconstructs state from its [toMap] serialization, tolerating
+  /// missing or malformed entries by falling back to idle defaults.
+  factory BackendFallbackState.fromMap(Map<String, dynamic> map) {
+    final Object? candidatesValue = map['candidates'];
+
+    return BackendFallbackState(
+      currentBackend: map['currentBackend'] as String?,
+      candidates: candidatesValue is List
+          ? List<String>.unmodifiable(candidatesValue.whereType<String>())
+          : const <String>[],
+      attempt: (map['attempt'] as num?)?.toInt() ?? 0,
+      active: map['active'] as bool? ?? false,
+      completed: map['completed'] as bool? ?? false,
+      exhausted: map['exhausted'] as bool? ?? false,
+    );
+  }
+
+  /// Creates the idle starting state with no attempt made yet.
   const BackendFallbackState.initial({String? currentBackend, List<String> candidates = const <String>[]})
     : this(
         currentBackend: currentBackend,
@@ -26,22 +45,30 @@ final class BackendFallbackState extends Equatable {
         exhausted: false,
       );
 
+  /// The backend currently selected, or `null` before one is chosen.
   final String? currentBackend;
 
+  /// The backends that have not yet been selected, in fallback order.
   final List<String> candidates;
 
+  /// How many backends have been selected so far.
   final int attempt;
 
+  /// Whether a fallback lifecycle is currently in progress.
   final bool active;
 
+  /// Whether a backend succeeded, ending fallback.
   final bool completed;
 
+  /// Whether no candidate remains after a failed attempt.
   final bool exhausted;
 
+  /// Whether another candidate is still available to fall back to.
   bool get canFallback {
     return !completed && !exhausted && candidates.isNotEmpty;
   }
 
+  /// The candidate to try next, or `null` when fallback cannot continue.
   String? get nextBackend {
     if (!canFallback) {
       return null;
@@ -50,6 +77,8 @@ final class BackendFallbackState extends Equatable {
     return candidates.first;
   }
 
+  /// Begins a new fallback lifecycle over [candidates], optionally
+  /// recording [currentBackend] as already in use.
   BackendFallbackState start({required List<String> candidates, String? currentBackend}) {
     return BackendFallbackState(
       currentBackend: currentBackend,
@@ -61,6 +90,9 @@ final class BackendFallbackState extends Equatable {
     );
   }
 
+  /// Marks [backend] as the chosen candidate, removing it from the pool
+  /// and bumping [attempt]; returns this state unchanged when selecting
+  /// is not permitted (inactive, completed, exhausted, or unknown backend).
   BackendFallbackState select(String backend) {
     if (!active || completed || exhausted) {
       return this;
@@ -70,7 +102,7 @@ final class BackendFallbackState extends Equatable {
       return this;
     }
 
-    final List<String> remaining = List<String>.from(candidates)..remove(backend);
+    final remaining = List<String>.from(candidates)..remove(backend);
 
     return BackendFallbackState(
       currentBackend: backend,
@@ -82,6 +114,8 @@ final class BackendFallbackState extends Equatable {
     );
   }
 
+  /// Records the current attempt as failed, deactivating the lifecycle and
+  /// marking [exhausted] when no candidate is left to try.
   BackendFallbackState markFailed() {
     return BackendFallbackState(
       currentBackend: currentBackend,
@@ -93,6 +127,7 @@ final class BackendFallbackState extends Equatable {
     );
   }
 
+  /// Marks the current backend as successfully completed, ending fallback.
   BackendFallbackState complete() {
     return BackendFallbackState(
       currentBackend: currentBackend,
@@ -104,6 +139,7 @@ final class BackendFallbackState extends Equatable {
     );
   }
 
+  /// Discards the remaining candidates and marks fallback exhausted.
   BackendFallbackState exhaust() {
     return BackendFallbackState(
       currentBackend: currentBackend,
@@ -115,10 +151,12 @@ final class BackendFallbackState extends Equatable {
     );
   }
 
+  /// Returns to the idle initial state.
   BackendFallbackState reset() {
     return const BackendFallbackState.initial();
   }
 
+  /// Returns a copy with the given fields replaced.
   BackendFallbackState copyWith({
     String? currentBackend,
     List<String>? candidates,
@@ -137,6 +175,7 @@ final class BackendFallbackState extends Equatable {
     );
   }
 
+  /// Serializes the state for persistence, readable back via `fromMap`.
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'currentBackend': currentBackend,
@@ -146,21 +185,6 @@ final class BackendFallbackState extends Equatable {
       'completed': completed,
       'exhausted': exhausted,
     };
-  }
-
-  factory BackendFallbackState.fromMap(Map<String, dynamic> map) {
-    final Object? candidatesValue = map['candidates'];
-
-    return BackendFallbackState(
-      currentBackend: map['currentBackend'] as String?,
-      candidates: candidatesValue is List
-          ? List<String>.unmodifiable(candidatesValue.whereType<String>())
-          : const <String>[],
-      attempt: (map['attempt'] as num?)?.toInt() ?? 0,
-      active: map['active'] as bool? ?? false,
-      completed: map['completed'] as bool? ?? false,
-      exhausted: map['exhausted'] as bool? ?? false,
-    );
   }
 
   @override

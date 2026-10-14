@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'package:media_core/state_machine/state.dart';
 import 'dart:collection';
+
+import 'package:media_core/state_machine/state.dart';
 import 'package:media_core/state_machine/state_machine.dart';
-import 'package:media_core/state_machine/state_machine_event.dart';
 import 'package:media_core/state_machine/state_machine_context.dart';
+import 'package:media_core/state_machine/state_machine_event.dart';
 import 'package:media_core/state_machine/state_transition_result.dart';
 
 /// Runtime controller for a StateMachine.
@@ -123,7 +124,7 @@ final class StateMachineController<S extends StateMachineState> {
           }
 
           pending.complete();
-        } catch (error, stackTrace) {
+        } on Object catch (error, stackTrace) {
           // A throwing guard or action must not strand the rest of the queue,
           // and the caller of this event still needs an answer.
           pending.completeError(error, stackTrace);
@@ -155,7 +156,7 @@ final class StateMachineController<S extends StateMachineState> {
       return;
     }
 
-    _machine.setState(state);
+    _machine.state = state;
   }
 
   /// Removes all pending events.
@@ -189,7 +190,7 @@ final class StateMachineController<S extends StateMachineState> {
 
   @override
   String toString() {
-    return '$runtimeType('
+    return 'StateMachineController('
         'state=${state.id}, '
         'queue=${_queue.length}, '
         'processing=$_processing, '

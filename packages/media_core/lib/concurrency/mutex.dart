@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:media_core/concurrency/library.dart' show AsyncLock;
 
 /// A mutual exclusion lock.
 ///
@@ -118,6 +119,7 @@ class ReentrantMutex {
 
   int _depth = 0;
 
+  /// Whether the mutex is currently held by an operation.
   bool get locked => _owner != null;
 
   /// Number of nested acquisitions currently held.
@@ -130,6 +132,7 @@ class ReentrantMutex {
     return marker is _Ownership && marker.isLive && identical(marker.owner, _identity);
   }
 
+  /// Acquires the mutex, re-entering when the current zone already owns it.
   Future<void> acquire() async {
     if (isOwnedByCurrentZone) {
       _depth++;
@@ -144,6 +147,7 @@ class ReentrantMutex {
     _depth = 1;
   }
 
+  /// Releases one nested acquisition; the lock is only freed at depth zero.
   void release() {
     final owner = _owner;
 
@@ -184,10 +188,7 @@ class ReentrantMutex {
     final ownership = _Ownership(_identity);
 
     try {
-      return await runZoned(
-        action,
-        zoneValues: <Object, Object>{_ownershipKey: ownership},
-      );
+      return await runZoned(action, zoneValues: <Object, Object>{_ownershipKey: ownership});
     } finally {
       ownership.revoke();
       release();
@@ -226,6 +227,7 @@ final class _Ownership {
 class KeyedMutex<K> {
   final Map<K, Mutex> _mutexes = {};
 
+  /// Runs [action] while holding the mutex dedicated to [key].
   Future<T> protect<T>(K key, Future<T> Function() action) async {
     final mutex = _mutexes.putIfAbsent(key, Mutex.new);
 
@@ -241,12 +243,15 @@ class KeyedMutex<K> {
     }
   }
 
+  /// Number of keys that currently have a mutex.
   int get length => _mutexes.length;
 
+  /// Drops mutexes no operation is holding or waiting on.
   void cleanup() {
     _mutexes.removeWhere((_, mutex) => mutex.isIdle);
   }
 
+  /// Drops every mutex, ignoring whether it is currently held.
   void clear() {
     _mutexes.clear();
   }

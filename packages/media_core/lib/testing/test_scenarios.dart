@@ -1,8 +1,8 @@
-import 'package:media_core/testing/fake_player_adapter.dart';
-import 'package:media_core/testing/test_source_factory.dart';
-import 'package:media_core/source/player_source.dart';
 import 'package:media_core/adapter/player_adapter.dart';
 import 'package:media_core/adapter/player_adapter_event.dart';
+import 'package:media_core/source/player_source.dart';
+import 'package:media_core/testing/fake_player_adapter.dart';
+import 'package:media_core/testing/test_source_factory.dart';
 
 /// Reusable playback scenarios executed against a [PlayerAdapter].
 ///
@@ -51,7 +51,7 @@ final class TestScenarios {
     return events;
   }
 
-  /// Opens [source] and verifies volume and rate round trips.
+  /// Opens a fresh source and verifies volume and rate round trips.
   static Future<void> volumeAndRate(PlayerAdapter adapter, {double volume = 0.5, double rate = 1.5}) async {
     await adapter.open(TestSourceFactory.httpMp4());
     await adapter.setVolume(volume);
@@ -68,7 +68,7 @@ final class TestScenarios {
     }
   }
 
-  /// Opens [source], seeks, and completes.
+  /// Opens a fresh source, seeks, and completes.
   static Future<List<PlayerAdapterEvent>> seekAndComplete(
     PlayerAdapter adapter, {
     Duration target = const Duration(seconds: 30),
@@ -81,8 +81,9 @@ final class TestScenarios {
     await adapter.play();
 
     if (adapter is FakePlayerAdapter) {
-      adapter.updatePosition(const Duration(minutes: 3));
-      adapter.emitCompleted();
+      adapter
+        ..updatePosition(const Duration(minutes: 3))
+        ..emitCompleted();
     }
 
     await subscription.cancel();

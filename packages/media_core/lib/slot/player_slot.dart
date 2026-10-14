@@ -1,8 +1,8 @@
-import 'package:media_core/slot/player_slot_state.dart';
-import 'package:media_core/slot/player_slot_status.dart';
-import 'package:media_core/identity/slot_id.dart';
 import 'package:media_core/identity/player_id.dart';
 import 'package:media_core/identity/session_id.dart';
+import 'package:media_core/identity/slot_id.dart';
+import 'package:media_core/slot/player_slot_state.dart';
+import 'package:media_core/slot/player_slot_status.dart';
 
 /// Represents a logical player slot.
 ///
@@ -61,39 +61,31 @@ final class PlayerSlot {
   }
 
   /// Assigns player and session.
-  PlayerSlot assign({required PlayerId playerId, required SessionId sessionId}) {
+  void assign({required PlayerId playerId, required SessionId sessionId}) {
     this.playerId = playerId;
 
     this.sessionId = sessionId;
 
     status = PlayerSlotStatus.assigned;
-
-    return this;
   }
 
   /// Marks slot active.
-  PlayerSlot activate() {
+  void activate() {
     status = PlayerSlotStatus.active;
-
-    return this;
   }
 
   /// Marks slot releasing.
-  PlayerSlot release() {
+  void release() {
     status = PlayerSlotStatus.releasing;
-
-    return this;
   }
 
   /// Clears slot assignment.
-  PlayerSlot clear() {
+  void clear() {
     playerId = null;
 
     sessionId = null;
 
     status = PlayerSlotStatus.empty;
-
-    return this;
   }
 
   /// Creates state snapshot.

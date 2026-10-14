@@ -1,7 +1,7 @@
-import 'package:media_core/source/source_resolved.dart';
-import 'package:media_core/source/source_inspector.dart';
 import 'package:media_core/core/player_info.dart';
 import 'package:media_core/source/source_inspect_context.dart';
+import 'package:media_core/source/source_inspector.dart';
+import 'package:media_core/source/source_resolved.dart';
 
 /// Inspects a [ResolvedSource] by selecting the first compatible inspector.
 ///
@@ -11,6 +11,7 @@ import 'package:media_core/source/source_inspect_context.dart';
 /// Inspector order is significant: the first inspector that supports the
 /// source is selected.
 final class SourceInspectorChain implements SourceInspector {
+  /// Creates a chain seeded with [inspectors], in inspection order.
   SourceInspectorChain({Iterable<SourceInspector> inspectors = const []})
     : _inspectors = List<SourceInspector>.from(inspectors);
 
@@ -75,8 +76,9 @@ final class SourceInspectorChain implements SourceInspector {
       return true;
     }
 
-    _inspectors.removeAt(index);
-    _inspectors.insert(0, inspector);
+    _inspectors
+      ..removeAt(index)
+      ..insert(0, inspector);
     return true;
   }
 
@@ -107,11 +109,13 @@ final class SourceInspectorChain implements SourceInspector {
   }
 
   @override
-  Future<PlayerInfo> inspect(ResolvedSource source, {SourceInspectContext context = SourceInspectContext.empty}) async {
+  Future<PlayerInfo> inspect(ResolvedSource source, {SourceInspectContext context = SourceInspectContext.empty}) {
     final inspector = findInspector(source);
 
     if (inspector == null) {
-      throw StateError('No source inspector supports source: ${source.uri}');
+      // Delivered through the returned Future, as an `async` body did, so
+      // no caller ever sees this failure thrown synchronously.
+      return Future<PlayerInfo>.error(StateError('No source inspector supports source: ${source.uri}'));
     }
 
     return inspector.inspect(source, context: context);

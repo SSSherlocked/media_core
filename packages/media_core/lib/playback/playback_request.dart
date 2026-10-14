@@ -1,5 +1,5 @@
-import 'package:media_core/playback/playback_command.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/playback/playback_command.dart';
 
 /// Playback request.
 ///
@@ -16,6 +16,7 @@ import 'package:equatable/equatable.dart';
 /// - call backend player
 /// - mutate state
 final class PlaybackRequest extends Equatable {
+  /// Wraps [command] with the [source] that issued it.
   const PlaybackRequest({required this.command, this.source = 'unknown'});
 
   /// Creates play request.
@@ -39,8 +40,11 @@ final class PlaybackRequest extends Equatable {
   }
 
   /// Creates buffering update.
-  factory PlaybackRequest.buffering(bool value, {String source = 'unknown'}) {
-    return PlaybackRequest(command: PlaybackCommand.buffering(value), source: source);
+  factory PlaybackRequest.buffering({required bool value, String source = 'unknown'}) {
+    return PlaybackRequest(
+      command: PlaybackCommand.buffering(value: value),
+      source: source,
+    );
   }
 
   /// Creates position update.
@@ -85,6 +89,10 @@ final class PlaybackRequest extends Equatable {
     return command is PlaybackCommandSeek || command is PlaybackCommandPosition || command is PlaybackCommandDuration;
   }
 
+  /// Log form: the command's runtime type name and the requesting [source].
+  ///
+  /// The command's payload is left out, so this cannot be read back as a
+  /// request — it records who asked for what, which is all a log needs.
   Map<String, dynamic> toMap() {
     return {'command': command.runtimeType.toString(), 'source': source};
   }

@@ -1,15 +1,16 @@
 import 'dart:async';
-import 'package:media_core/visibility/visibility_event.dart';
-import 'package:media_core/visibility/visibility_state.dart';
-import 'package:media_core/visibility/visibility_metrics.dart';
+
 import 'package:clock/clock.dart';
+import 'package:media_core/visibility/visibility_event.dart';
+import 'package:media_core/visibility/visibility_metrics.dart';
 import 'package:media_core/visibility/visibility_observer.dart';
 import 'package:media_core/visibility/visibility_snapshot.dart';
+import 'package:media_core/visibility/visibility_state.dart';
 import 'package:rxdart/rxdart.dart';
-
 
 /// Controls player visibility state.
 final class VisibilityController {
+  /// Creates a controller starting from the default hidden state.
   VisibilityController();
 
   VisibilityState _state = const VisibilityState();
@@ -24,29 +25,37 @@ final class VisibilityController {
 
   final List<VisibilityObserver> _observers = [];
 
+  /// Snapshot stream, one event per published visibility change.
   Stream<VisibilitySnapshot> get snapshots => _snapshotSubject.stream;
 
+  /// Event stream carrying every visibility transition.
   Stream<VisibilityEvent> get events => _eventSubject.stream;
 
+  /// Latest snapshot.
   VisibilitySnapshot get snapshot => _snapshotSubject.value;
 
+  /// Cumulative visible/hidden time and change count.
   VisibilityMetrics get metrics => _metrics;
 
+  /// Registers [observer] to receive subsequent events.
   void addObserver(VisibilityObserver observer) {
     _observers.add(observer);
   }
 
+  /// Unregisters a previously added [observer].
   void removeObserver(VisibilityObserver observer) {
     _observers.remove(observer);
   }
 
   /// Updates visibility ratio.
+  ///
+  /// The ratio is clamped to the 0.0 - 1.0 range before it is applied.
   void update(double ratio) {
-    ratio = ratio.clamp(0.0, 1.0);
+    final clamped = ratio.clamp(0.0, 1.0);
 
     final oldVisible = _state.visible;
 
-    _state = _state.update(ratio);
+    _state = _state.update(clamped);
 
     final eventType = _resolveEvent(oldVisible, _state.visible);
 
@@ -55,13 +64,15 @@ final class VisibilityController {
     _publish(eventType);
   }
 
-  void setViewport(bool value) {
+  /// Records whether the player is inside the viewport.
+  void setViewport({required bool value}) {
     _state = _state.copyWith(inViewport: value);
 
     _publish(VisibilityEventType.changed);
   }
 
-  void setOccluded(bool value) {
+  /// Records whether the player is covered by other content.
+  void setOccluded({required bool value}) {
     _state = _state.copyWith(occluded: value);
 
     _publish(VisibilityEventType.changed);
@@ -125,6 +136,7 @@ final class VisibilityController {
     }
   }
 
+  /// Closes the streams and drops every registered observer.
   Future<void> dispose() async {
     await _snapshotSubject.close();
 

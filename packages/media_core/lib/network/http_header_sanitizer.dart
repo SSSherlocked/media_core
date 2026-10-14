@@ -66,7 +66,7 @@ abstract final class HttpHeaderSanitizer {
         throw HttpHeaderError(
           entry.key,
           'the name is not a token (letters, digits and "-" only); sending it '
-              'would let one map entry forge additional header lines',
+          'would let one map entry forge additional header lines',
         );
       }
 
@@ -78,7 +78,7 @@ abstract final class HttpHeaderSanitizer {
         throw HttpHeaderError(
           entry.key,
           'the value contains CR, LF or NUL, which would inject another '
-              'header line into the request',
+          'header line into the request',
         );
       }
 
@@ -103,8 +103,6 @@ abstract final class HttpHeaderSanitizer {
 
   /// The `Name: value` lines mpv's `http-header-fields` list takes.
   static List<String> mpvFields(Map<String, String> sanitized) {
-    return sanitized.entries
-        .map((entry) => '${entry.key}: ${entry.value}')
-        .toList(growable: false);
+    return sanitized.entries.map((entry) => '${entry.key}: ${entry.value}').toList(growable: false);
   }
 }

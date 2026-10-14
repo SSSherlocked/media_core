@@ -1,7 +1,28 @@
 import 'dart:async';
 
 /// Lifecycle states used by stream-based services and controllers.
-enum StreamLifecycleState { created, initializing, ready, active, inactive, disposing, disposed }
+enum StreamLifecycleState {
+  /// Built but not initialized yet.
+  created,
+
+  /// An initialization operation is in flight.
+  initializing,
+
+  /// Initialization succeeded and the service is usable.
+  ready,
+
+  /// In use, for example a visible page or an attached player.
+  active,
+
+  /// Temporarily out of use but still restorable.
+  inactive,
+
+  /// Teardown has begun; new operations are no longer accepted.
+  disposing,
+
+  /// Teardown finished and the instance may never be reused.
+  disposed,
+}
 
 /// Lightweight lifecycle manager.
 ///
@@ -12,6 +33,7 @@ enum StreamLifecycleState { created, initializing, ready, active, inactive, disp
 /// - initialization protection
 /// - disposal protection
 class StreamLifecycle {
+  /// Starts in [initialState], by default [StreamLifecycleState.created].
   StreamLifecycle({StreamLifecycleState initialState = StreamLifecycleState.created}) : _state = initialState;
 
   StreamLifecycleState _state;
@@ -20,26 +42,40 @@ class StreamLifecycle {
   bool _disposed = false;
   bool _initializing = false;
 
+  /// Current lifecycle state.
   StreamLifecycleState get state => _state;
 
+  /// Generation the running operations were started in.
   int get generation => _generation;
 
+  /// Whether nothing has been initialized yet.
   bool get isCreated => _state == StreamLifecycleState.created;
 
+  /// Whether an initialization operation is in flight.
   bool get isInitializing => _state == StreamLifecycleState.initializing;
 
+  /// Whether initialization finished and the service is usable.
   bool get isReady => _state == StreamLifecycleState.ready;
 
+  /// Whether the lifecycle is currently in use.
   bool get isActive => _state == StreamLifecycleState.active;
 
+  /// Whether the lifecycle is temporarily out of use.
   bool get isInactive => _state == StreamLifecycleState.inactive;
 
+  /// Whether teardown has begun.
   bool get isDisposing => _state == StreamLifecycleState.disposing;
 
+  /// Whether teardown finished.
   bool get isDisposed => _state == StreamLifecycleState.disposed;
 
+  /// Whether operations may still be started.
   bool get isAlive => !_disposed;
 
+  /// Whether an operation may run right now.
+  ///
+  /// [StreamLifecycleState.disposing] is excluded because a service that is
+  /// winding down must not accept work it cannot finish cleanly.
   bool get canOperate => !_disposed && _state != StreamLifecycleState.disposing;
 
   /// Move to a new lifecycle state.
@@ -84,7 +120,7 @@ class StreamLifecycle {
   Future<T> run<T>(Future<T> Function() action) async {
     _ensureAlive();
 
-    return action();
+    return await action();
   }
 
   /// Run an operation and ensure that its generation is still current
@@ -197,18 +233,24 @@ class StreamLifecycle {
 
 /// Lifecycle scope that automatically owns cleanup callbacks.
 class StreamLifecycleScope {
+  /// Creates a live scope with an empty cleanup list.
   StreamLifecycleScope();
 
+  /// Lifecycle this scope drives; cleanups run when it is disposed.
   final StreamLifecycle lifecycle = StreamLifecycle();
 
   final List<FutureOr<void> Function()> _cleanups = <FutureOr<void> Function()>[];
 
+  /// Whether the scope still accepts work and cleanups.
   bool get isAlive => lifecycle.isAlive;
 
+  /// Whether [dispose] already ran.
   bool get isDisposed => lifecycle.isDisposed;
 
+  /// Current state of the owned [lifecycle].
   StreamLifecycleState get state => lifecycle.state;
 
+  /// Generation the owned [lifecycle] is on, used to detect stale results.
   int get generation => lifecycle.generation;
 
   /// Register a cleanup callback.
@@ -248,7 +290,7 @@ class StreamLifecycleScope {
     for (final cleanup in cleanups.reversed) {
       try {
         await cleanup();
-      } catch (error, stackTrace) {
+      } on Object catch (error, stackTrace) {
         firstError ??= error;
         firstStackTrace ??= stackTrace;
       }

@@ -61,7 +61,7 @@ class StateMachineContext extends Equatable {
 
   @override
   String toString() {
-    return '$runtimeType('
+    return 'StateMachineContext('
         'metadata=$metadata'
         ')';
   }

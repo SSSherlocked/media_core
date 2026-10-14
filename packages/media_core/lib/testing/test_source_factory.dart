@@ -1,10 +1,10 @@
+import 'package:media_core/identity/source_id.dart';
 import 'package:media_core/source/player_source.dart';
 import 'package:media_core/source/source_format.dart';
 import 'package:media_core/source/source_headers.dart';
 import 'package:media_core/source/source_media_type.dart';
 import 'package:media_core/source/source_protocol.dart';
 import 'package:media_core/source/source_type.dart';
-import 'package:media_core/identity/source_id.dart';
 
 /// Builds sample [PlayerSource] values for tests.
 ///
@@ -32,10 +32,7 @@ final class TestSourceFactory {
   }
 
   /// An http mp3 audio source.
-  static PlayerSource httpAudio({
-    String id = 'src-http-audio',
-    String url = 'https://example.com/audio.mp3',
-  }) {
+  static PlayerSource httpAudio({String id = 'src-http-audio', String url = 'https://example.com/audio.mp3'}) {
     return PlayerSource(
       id: SourceId(id),
       uri: Uri.parse(url),
@@ -47,10 +44,7 @@ final class TestSourceFactory {
   }
 
   /// An HLS live source.
-  static PlayerSource hlsLive({
-    String id = 'src-hls-live',
-    String url = 'https://example.com/live/index.m3u8',
-  }) {
+  static PlayerSource hlsLive({String id = 'src-hls-live', String url = 'https://example.com/live/index.m3u8'}) {
     return PlayerSource(
       id: SourceId(id),
       uri: Uri.parse(url),
@@ -62,10 +56,7 @@ final class TestSourceFactory {
   }
 
   /// A DASH source.
-  static PlayerSource dash({
-    String id = 'src-dash',
-    String url = 'https://example.com/stream.mpd',
-  }) {
+  static PlayerSource dash({String id = 'src-dash', String url = 'https://example.com/stream.mpd'}) {
     return PlayerSource(
       id: SourceId(id),
       uri: Uri.parse(url),
@@ -77,23 +68,12 @@ final class TestSourceFactory {
   }
 
   /// An RTMP live source.
-  static PlayerSource rtmp({
-    String id = 'src-rtmp',
-    String url = 'rtmp://example.com/live/stream',
-  }) {
-    return PlayerSource(
-      id: SourceId(id),
-      uri: Uri.parse(url),
-      type: SourceType.live,
-      protocol: SourceProtocol.rtmp,
-    );
+  static PlayerSource rtmp({String id = 'src-rtmp', String url = 'rtmp://example.com/live/stream'}) {
+    return PlayerSource(id: SourceId(id), uri: Uri.parse(url), type: SourceType.live, protocol: SourceProtocol.rtmp);
   }
 
   /// A local file source.
-  static PlayerSource file({
-    String id = 'src-file',
-    String path = '/tmp/video.mp4',
-  }) {
+  static PlayerSource file({String id = 'src-file', String path = '/tmp/video.mp4'}) {
     return PlayerSource(
       id: SourceId(id),
       uri: Uri.file(path),
@@ -105,10 +85,7 @@ final class TestSourceFactory {
   }
 
   /// An asset source.
-  static PlayerSource asset({
-    String id = 'src-asset',
-    String path = 'assets/sample.mp4',
-  }) {
+  static PlayerSource asset({String id = 'src-asset', String path = 'assets/sample.mp4'}) {
     return PlayerSource(
       id: SourceId(id),
       uri: Uri.parse('asset:///$path'),
@@ -123,14 +100,6 @@ final class TestSourceFactory {
 
   /// All valid sample sources.
   static List<PlayerSource> all() {
-    return [
-      httpMp4(),
-      httpAudio(),
-      hlsLive(),
-      dash(),
-      rtmp(),
-      file(),
-      asset(),
-    ];
+    return [httpMp4(), httpAudio(), hlsLive(), dash(), rtmp(), file(), asset()];
   }
 }

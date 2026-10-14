@@ -45,13 +45,15 @@ final class QualityCandidate extends Equatable {
     String Function(MediaSource source)? labelOf,
     int Function(MediaSource source)? bitrateOf,
   }) {
-    return sources.map((source) {
-      return QualityCandidate(
-        label: labelOf?.call(source) ?? _defaultLabel(source),
-        source: source,
-        bitrate: bitrateOf?.call(source),
-      );
-    }).toList(growable: false);
+    return sources
+        .map((source) {
+          return QualityCandidate(
+            label: labelOf?.call(source) ?? _defaultLabel(source),
+            source: source,
+            bitrate: bitrateOf?.call(source),
+          );
+        })
+        .toList(growable: false);
   }
 
   /// Builds one candidate per video track of a composite source,
@@ -73,18 +75,20 @@ final class QualityCandidate extends Equatable {
     bool live = false,
     String Function(MediaTrack track)? labelOf,
   }) {
-    return videoTracks.map((track) {
-      return QualityCandidate(
-        label: labelOf?.call(track) ?? '${track.bitrate ?? 0} bps',
-        source: CompositeMediaSource(
-          videoTracks: [track],
-          audioTracks: audioTracks,
-          subtitleTracks: subtitleTracks,
-          live: live,
-        ),
-        bitrate: track.bitrate,
-      );
-    }).toList(growable: false);
+    return videoTracks
+        .map((track) {
+          return QualityCandidate(
+            label: labelOf?.call(track) ?? '${track.bitrate ?? 0} bps',
+            source: CompositeMediaSource(
+              videoTracks: [track],
+              audioTracks: audioTracks,
+              subtitleTracks: subtitleTracks,
+              live: live,
+            ),
+            bitrate: track.bitrate,
+          );
+        })
+        .toList(growable: false);
   }
 
   static String _defaultLabel(MediaSource source) {

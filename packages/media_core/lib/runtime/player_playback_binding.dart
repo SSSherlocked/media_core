@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'package:media_core/adapter/player_adapter.dart';
-import 'package:media_core/playback/playback_command.dart';
 import 'package:media_core/adapter/player_adapter_event.dart';
+import 'package:media_core/playback/playback_command.dart';
 import 'package:media_core/playback/playback_controller.dart';
+import 'package:media_core/runtime/player_runtime.dart' show PlayerRuntime;
 
 /// Bridges [PlayerAdapter] playback events into a [PlaybackController].
 ///
@@ -30,7 +31,7 @@ final class PlayerPlaybackBinding {
         _playback.apply(const PlaybackCommand.stop());
 
       case PlayerAdapterBuffering(:final buffering):
-        _playback.setBuffering(buffering);
+        _playback.setBuffering(buffering: buffering);
 
       case PlayerAdapterPositionChanged(:final position):
         _playback.updatePosition(position);

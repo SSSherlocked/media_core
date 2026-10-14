@@ -18,7 +18,15 @@ import 'package:equatable/equatable.dart';
 /// - scale video pixels
 /// - control renderer
 final class PixelRatioValue extends Equatable {
+  /// Creates a pixel ratio from a raw density value.
   const PixelRatioValue(this.value);
+
+  /// Restores a pixel ratio from a map produced by [toMap].
+  ///
+  /// Falls back to density 1.0 when the map carries no usable value.
+  factory PixelRatioValue.fromMap(Map<String, dynamic> map) {
+    return PixelRatioValue((map['value'] as num?)?.toDouble() ?? 1.0);
+  }
 
   /// Default pixel ratio.
   const PixelRatioValue.one() : value = 1.0;
@@ -92,12 +100,9 @@ final class PixelRatioValue extends Equatable {
     return PixelRatioValue(value);
   }
 
+  /// Converts to a simple map.
   Map<String, dynamic> toMap() {
     return {'value': value};
-  }
-
-  factory PixelRatioValue.fromMap(Map<String, dynamic> map) {
-    return PixelRatioValue((map['value'] as num?)?.toDouble() ?? 1.0);
   }
 
   static double _pow10(int value) {

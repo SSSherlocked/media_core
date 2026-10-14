@@ -52,7 +52,7 @@ final class FakeLifecycleObserver implements LifecycleObserver {
 final class FakeLifecycleEvents {
   const FakeLifecycleEvents._();
 
-  /// Builds an event of [type] stamped with [clock.now].
+  /// Builds an event of [type] stamped with the current `clock.now`.
   static LifecycleEvent of(LifecycleEventType type, {DateTime? timestamp}) {
     return LifecycleEvent(type: type, timestamp: timestamp ?? clock.now());
   }

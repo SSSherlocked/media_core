@@ -1,8 +1,9 @@
 import 'dart:async';
+import 'package:media_core/identity/operation_id.dart';
 import 'package:media_core/operation/operation.dart';
+import 'package:media_core/operation/operation_registry.dart' show OperationRegistry;
 import 'package:media_core/operation/operation_state.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:media_core/identity/operation_id.dart';
 
 /// Tracks operation lifecycle changes.
 ///
@@ -275,9 +276,7 @@ final class OperationTracker {
   void trackAll(Iterable<Operation> operations) {
     _checkNotDisposed();
 
-    for (final operation in operations) {
-      _record(operation);
-    }
+    operations.forEach(_record);
   }
 
   /// Updates multiple already tracked operations.
@@ -296,9 +295,7 @@ final class OperationTracker {
       }
     }
 
-    for (final operation in updates) {
-      _record(operation);
-    }
+    updates.forEach(_record);
   }
 
   // ---------------------------------------------------------------------------
@@ -455,14 +452,12 @@ final class OperationTracker {
       return 0;
     }
 
-    final ids = _latest.values
-        .where((operation) => operation.isTerminal)
-        .map((operation) => operation.id)
-        .toList(growable: false);
-
-    for (final id in ids) {
-      _latest.remove(id);
-    }
+    final ids =
+        _latest.values
+            .where((operation) => operation.isTerminal)
+            .map((operation) => operation.id)
+            .toList(growable: false)
+          ..forEach(_latest.remove);
 
     if (_latest.isEmpty && !_currentSubject.isClosed) {
       _currentSubject.add(null);
@@ -481,11 +476,8 @@ final class OperationTracker {
       return 0;
     }
 
-    final ids = _latest.values.where(predicate).map((operation) => operation.id).toList(growable: false);
-
-    for (final id in ids) {
-      _latest.remove(id);
-    }
+    final ids = _latest.values.where(predicate).map((operation) => operation.id).toList(growable: false)
+      ..forEach(_latest.remove);
 
     if (_latest.isEmpty && !_currentSubject.isClosed) {
       _currentSubject.add(null);

@@ -12,18 +12,23 @@ import 'package:media_core/fallback/backend_fallback_state.dart';
 /// - control playback
 /// - perform platform-specific operations
 final class BackendFallback {
+  /// Creates a backend fallback coordinator, optionally seeded with [initialState].
   BackendFallback({BackendFallbackState initialState = const BackendFallbackState.initial()}) : _state = initialState;
 
   BackendFallbackState _state;
 
   bool _disposed = false;
 
+  /// The current backend fallback lifecycle state.
   BackendFallbackState get state => _state;
 
+  /// The backend currently being attempted, or `null` before one is selected.
   String? get currentBackend => _state.currentBackend;
 
+  /// The ordered backend candidates this coordinator may fall back through.
   List<String> get candidates => _state.candidates;
 
+  /// Whether another backend candidate is still available to fall back to.
   bool get canFallback => _state.canFallback;
 
   /// Starts a new backend fallback lifecycle.
@@ -39,7 +44,7 @@ final class BackendFallback {
   String? next() {
     _ensureNotDisposed();
 
-    final String? backend = _state.nextBackend;
+    final backend = _state.nextBackend;
 
     if (backend == null) {
       _state = _state.exhaust();

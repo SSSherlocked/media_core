@@ -1,18 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:media_core/adapter/composite_support.dart';
 import 'package:media_core/adapter/player_adapter_base.dart';
 import 'package:media_core/adapter/player_adapter_capabilities.dart';
 import 'package:media_core/adapter/player_adapter_context.dart';
 import 'package:media_core/adapter/player_adapter_registry.dart';
-import 'package:media_core/core/player_config.dart';
 import 'package:media_core/identity/source_id.dart';
 import 'package:media_core/kernel/player_kernel.dart';
 import 'package:media_core/source/media_source.dart';
 import 'package:media_core/source/media_source_bridge.dart';
 import 'package:media_core/source/media_track.dart';
 import 'package:media_core/source/media_track_type.dart';
-import 'package:media_core/source/source_type.dart';
 import 'package:media_core/source/player_source.dart';
 import 'package:media_core/source/source_inspector_chain.dart';
 import 'package:media_core/source/source_resolve_context.dart';
@@ -20,21 +17,14 @@ import 'package:media_core/source/source_resolved.dart';
 import 'package:media_core/source/source_resolver.dart';
 import 'package:media_core/source/source_resolver_chain.dart';
 import 'package:media_core/source/source_service.dart';
+import 'package:media_core/source/source_type.dart';
 import 'package:media_core/testing/test_player_factory.dart';
 
-MediaTrack _videoTrack(String url) => MediaTrack(
-  uri: Uri.parse(url),
-  kind: MediaTrackType.video,
-);
+MediaTrack _videoTrack(String url) => MediaTrack(uri: Uri.parse(url), kind: MediaTrackType.video);
 
 CompositeMediaSource _bilibiliPair() => CompositeMediaSource(
   videoTracks: [_videoTrack('https://example.com/v.m4s')],
-  audioTracks: [
-    MediaTrack(
-      uri: Uri.parse('https://example.com/a.m4s'),
-      kind: MediaTrackType.audio,
-    ),
-  ],
+  audioTracks: [MediaTrack(uri: Uri.parse('https://example.com/a.m4s'), kind: MediaTrackType.audio)],
 );
 
 /// Minimal base-derived adapter used only to exercise the
@@ -84,18 +74,11 @@ class _ReplacingResolver implements SourceResolver {
   bool supports(PlayerSource source) => true;
 
   @override
-  Future<ResolvedSource> resolve(
-    PlayerSource source, {
-    SourceResolveContext? context,
-  }) async {
+  Future<ResolvedSource> resolve(PlayerSource source, {SourceResolveContext? context}) async {
     return ResolvedSource(
       sourceId: source.id,
       uri: source.uri,
-      source: PlayerSource(
-        id: source.id,
-        uri: source.uri,
-        title: 'replaced',
-      ),
+      source: PlayerSource(id: source.id, uri: source.uri, title: 'replaced'),
     );
   }
 }
@@ -114,12 +97,8 @@ void main() {
     });
 
     test('changed primary URI changes the derived SourceId', () {
-      final first = ProgressiveMediaSource(
-        track: _videoTrack('https://example.com/a.mp4'),
-      );
-      final second = ProgressiveMediaSource(
-        track: _videoTrack('https://example.com/b.mp4'),
-      );
+      final first = ProgressiveMediaSource(track: _videoTrack('https://example.com/a.mp4'));
+      final second = ProgressiveMediaSource(track: _videoTrack('https://example.com/b.mp4'));
 
       expect(first.toPlayerSource().id, isNot(second.toPlayerSource().id));
     });
@@ -133,10 +112,7 @@ void main() {
 
   group('MediaSourceBridge live declaration', () {
     test('a declared live source bridges as SourceType.live', () {
-      final live = ProgressiveMediaSource(
-        track: _videoTrack('https://example.com/index.m3u8'),
-        live: true,
-      );
+      final live = ProgressiveMediaSource(track: _videoTrack('https://example.com/index.m3u8'), live: true);
 
       final bridged = live.toPlayerSource();
 
@@ -147,12 +123,7 @@ void main() {
     test('a live composite keeps the declaration across the bridge', () {
       final pair = CompositeMediaSource(
         videoTracks: [_videoTrack('https://example.com/live_v.m4s')],
-        audioTracks: [
-          MediaTrack(
-            uri: Uri.parse('https://example.com/live_a.m4s'),
-            kind: MediaTrackType.audio,
-          ),
-        ],
+        audioTracks: [MediaTrack(uri: Uri.parse('https://example.com/live_a.m4s'), kind: MediaTrackType.audio)],
         live: true,
       );
 
@@ -164,9 +135,7 @@ void main() {
       // Inferring live from `.m3u8` would put every VOD HLS asset behind
       // the live guards, and inferring VOD from a missing duration would
       // put every live stream behind the seek bar.
-      final vod = ProgressiveMediaSource(
-        track: _videoTrack('https://example.com/index.m3u8'),
-      );
+      final vod = ProgressiveMediaSource(track: _videoTrack('https://example.com/index.m3u8'));
 
       final bridged = vod.toPlayerSource();
 
@@ -182,17 +151,12 @@ void main() {
           PlayerAdapterRegistration(
             id: 'fake',
             factory: TestPlayerFactory.fakeAdapterFactory(),
-            capabilities: const PlayerAdapterCapabilities(
-              supportedProtocols: {'https'},
-            ),
+            capabilities: const PlayerAdapterCapabilities(supportedProtocols: {'https'}),
           ),
         );
 
       final bridged = _bilibiliPair().toPlayerSource();
-      final handle = await kernel.create(
-        config: const PlayerConfig(autoPlay: false),
-        source: bridged,
-      );
+      final handle = await kernel.create(source: bridged);
 
       final opened = handle.source;
       expect(opened, isNotNull);
@@ -200,7 +164,8 @@ void main() {
       expect(
         MediaSourceBridge.compositeFromPlayerSource(opened),
         isA<CompositeMediaSource>(),
-        reason: 'the resolver replaced the PlayerSource; the bridge '
+        reason:
+            'the resolver replaced the PlayerSource; the bridge '
             'entry must have been re-attached',
       );
 
@@ -211,9 +176,7 @@ void main() {
 
   group('PlayerAdapterBase.open composite guard', () {
     test('composite on a none backend is refused before onOpen runs', () async {
-      final adapter = _GuardTestAdapter(
-        capabilities: const PlayerAdapterCapabilities(),
-      );
+      final adapter = _GuardTestAdapter(capabilities: const PlayerAdapterCapabilities());
       await adapter.initialize(TestPlayerFactory.context());
 
       await expectLater(
@@ -222,10 +185,7 @@ void main() {
           isA<UnsupportedError>().having(
             (e) => e.message,
             'message',
-            allOf(
-              contains('compositeSupport: none'),
-              contains('native or external-audio'),
-            ),
+            allOf(contains('compositeSupport: none'), contains('native or external-audio')),
           ),
         ),
       );
@@ -236,9 +196,7 @@ void main() {
 
     test('composite reaches onOpen when the backend declares support', () async {
       final adapter = _GuardTestAdapter(
-        capabilities: const PlayerAdapterCapabilities(
-          compositeSupport: CompositeSupport.native,
-        ),
+        capabilities: const PlayerAdapterCapabilities(compositeSupport: CompositeSupport.native),
       );
       await adapter.initialize(TestPlayerFactory.context());
 
@@ -250,21 +208,11 @@ void main() {
     });
 
     test('progressive and unbridged sources are never refused', () async {
-      final adapter = _GuardTestAdapter(
-        capabilities: const PlayerAdapterCapabilities(),
-      );
+      final adapter = _GuardTestAdapter(capabilities: const PlayerAdapterCapabilities());
       await adapter.initialize(TestPlayerFactory.context());
 
-      await adapter.open(
-        ProgressiveMediaSource(track: _videoTrack('https://example.com/v.mp4'))
-            .toPlayerSource(),
-      );
-      await adapter.open(
-        PlayerSource(
-          id: SourceId('plain'),
-          uri: Uri.parse('https://example.com/x.mp4'),
-        ),
-      );
+      await adapter.open(ProgressiveMediaSource(track: _videoTrack('https://example.com/v.mp4')).toPlayerSource());
+      await adapter.open(PlayerSource(id: SourceId('plain'), uri: Uri.parse('https://example.com/x.mp4')));
 
       expect(adapter.openCalls, 2);
 

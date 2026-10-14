@@ -2,6 +2,7 @@ import 'package:media_core/diagnostics/library.dart' show LogCategory, LogModule
 import 'package:media_core/identity/player_id.dart';
 import 'package:media_core/kernel/player_handle.dart';
 import 'package:media_core/kernel/player_kernel.dart';
+import 'package:media_core/renderer/media_player_view.dart' show MediaPlayerView;
 
 /// Records handover lookups that found nothing.
 ///
@@ -55,6 +56,8 @@ abstract interface class PortablePlayerRegistry {
 /// after a page is popped, so the small window can pick the same player up and
 /// render it with [MediaPlayerView].
 final class KernelPortablePlayerRegistry implements PortablePlayerRegistry {
+  /// Looks players up in [kernel], the one that owns the handles a page left
+  /// behind.
   KernelPortablePlayerRegistry(this.kernel);
 
   /// Kernel owning the players.
@@ -86,10 +89,10 @@ final class _KernelPortablePlayer implements PortablePlayer {
   bool get isDisposed => _handle.disposed;
 
   @override
-  int get videoWidth => _handle.combinedSnapshot.geometry.videoSize?.width.toInt() ?? 0;
+  int get videoWidth => _handle.combinedSnapshot.geometry.videoSize?.width ?? 0;
 
   @override
-  int get videoHeight => _handle.combinedSnapshot.geometry.videoSize?.height.toInt() ?? 0;
+  int get videoHeight => _handle.combinedSnapshot.geometry.videoSize?.height ?? 0;
 
   @override
   PlayerHandle? get handle => _handle.disposed ? null : _handle;

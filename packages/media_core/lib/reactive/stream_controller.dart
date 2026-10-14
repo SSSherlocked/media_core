@@ -22,6 +22,8 @@ import 'package:rxdart/rxdart.dart';
 /// await streams.dispose();
 /// ```
 class StreamControllerManager {
+  /// Creates a manager; [onDispose] runs last, after every subscription and
+  /// timer this manager owns has already been cancelled.
   StreamControllerManager({this.onDispose});
 
   /// Optional callback invoked after all subscriptions and timers have been
@@ -55,10 +57,13 @@ class StreamControllerManager {
   }
 
   /// Subscribes to [stream] and automatically manages the subscription.
+  ///
+  /// [onError] receives the error together with its stack trace, matching the
+  /// two-argument form accepted by `Stream.listen`.
   StreamSubscription<T> listen<T>(
     Stream<T> stream,
     void Function(T event) onData, {
-    Function? onError,
+    void Function(Object error, StackTrace stackTrace)? onError,
     void Function()? onDone,
     bool? cancelOnError,
   }) {
@@ -74,15 +79,7 @@ class StreamControllerManager {
 
         onData(event);
       },
-      onError: onError == null
-          ? null
-          : (Object error, StackTrace stackTrace) {
-              if (_disposed) {
-                return;
-              }
-
-              onError(error, stackTrace);
-            },
+      onError: onError == null ? null : _guardOnError(onError),
       onDone: onDone == null
           ? null
           : () {
@@ -103,10 +100,13 @@ class StreamControllerManager {
   /// The next event may arrive before the previous callback completes.
   /// If sequential processing is required, use an async stream operator
   /// instead.
+  ///
+  /// [onError] receives the error together with its stack trace, matching the
+  /// two-argument form accepted by `Stream.listen`.
   StreamSubscription<T> listenAsync<T>(
     Stream<T> stream,
     FutureOr<void> Function(T event) onData, {
-    Function? onError,
+    void Function(Object error, StackTrace stackTrace)? onError,
     FutureOr<void> Function()? onDone,
     bool? cancelOnError,
   }) {
@@ -122,15 +122,7 @@ class StreamControllerManager {
 
         await onData(event);
       },
-      onError: onError == null
-          ? null
-          : (Object error, StackTrace stackTrace) {
-              if (_disposed) {
-                return;
-              }
-
-              onError(error, stackTrace);
-            },
+      onError: onError == null ? null : _guardOnError(onError),
       onDone: onDone == null
           ? null
           : () async {
@@ -144,6 +136,22 @@ class StreamControllerManager {
     );
 
     return add(subscription);
+  }
+
+  /// Wraps [handler] so errors delivered after [dispose] are dropped.
+  ///
+  /// `Stream.listen` declares its `onError` as an untyped `Function?`, so a
+  /// handler written inline there would have `dynamic` parameters; returning a
+  /// closure from this typed helper is what gives them their types and keeps
+  /// the forwarding call static.
+  void Function(Object, StackTrace) _guardOnError(void Function(Object, StackTrace) handler) {
+    return (error, stackTrace) {
+      if (_disposed) {
+        return;
+      }
+
+      handler(error, stackTrace);
+    };
   }
 
   /// Cancels all currently registered subscriptions.

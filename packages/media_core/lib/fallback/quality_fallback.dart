@@ -11,18 +11,23 @@ import 'package:media_core/fallback/quality_fallback_state.dart';
 /// - change decoder settings
 /// - perform playback
 final class QualityFallback {
+  /// Creates a quality fallback coordinator, optionally seeded with [initialState].
   QualityFallback({QualityFallbackState initialState = const QualityFallbackState.initial()}) : _state = initialState;
 
   QualityFallbackState _state;
 
   bool _disposed = false;
 
+  /// The current quality fallback lifecycle state.
   QualityFallbackState get state => _state;
 
+  /// The quality currently being attempted, or `null` before one is selected.
   String? get currentQuality => _state.currentQuality;
 
+  /// The ordered quality candidates this coordinator may fall back through.
   List<String> get candidates => _state.candidates;
 
+  /// Whether another quality candidate is still available to fall back to.
   bool get canFallback => _state.canFallback;
 
   /// Starts a quality fallback lifecycle.
@@ -36,7 +41,7 @@ final class QualityFallback {
   String? next() {
     _ensureNotDisposed();
 
-    final String? quality = _state.nextQuality;
+    final quality = _state.nextQuality;
 
     if (quality == null) {
       _state = _state.exhaust();

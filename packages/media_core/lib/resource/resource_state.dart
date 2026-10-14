@@ -1,6 +1,6 @@
+import 'package:equatable/equatable.dart';
 import 'package:media_core/resource/resource_metrics.dart';
 import 'package:media_core/resource/resource_pressure.dart';
-import 'package:equatable/equatable.dart';
 
 /// Represents current resource runtime state.
 ///

@@ -1,7 +1,5 @@
-import 'package:media_core/platform/platform_type.dart';
 import 'package:equatable/equatable.dart';
-
-
+import 'package:media_core/platform/platform_type.dart';
 
 /// Runtime platform information.
 ///
@@ -23,10 +21,8 @@ import 'package:equatable/equatable.dart';
 ///
 /// - PlatformProvider
 final class PlatformInfo extends Equatable {
-
   /// Creates platform information.
   const PlatformInfo({
-
     required this.type,
 
     this.name,
@@ -40,15 +36,10 @@ final class PlatformInfo extends Equatable {
     this.deviceModel,
 
     this.isEmulator = false,
-
   });
-
-
 
   /// Current platform type.
   final PlatformType type;
-
-
 
   /// Platform display name.
   ///
@@ -59,8 +50,6 @@ final class PlatformInfo extends Equatable {
   /// - macOS
   final String? name;
 
-
-
   /// Operating system version.
   ///
   /// Example:
@@ -69,12 +58,8 @@ final class PlatformInfo extends Equatable {
   /// - Windows 11
   final String? version;
 
-
-
   /// Build number.
   final String? buildNumber;
-
-
 
   /// CPU architecture.
   ///
@@ -84,8 +69,6 @@ final class PlatformInfo extends Equatable {
   /// - x64
   final String? architecture;
 
-
-
   /// Device model.
   ///
   /// Example:
@@ -94,58 +77,41 @@ final class PlatformInfo extends Equatable {
   /// - Surface
   final String? deviceModel;
 
-
-
   /// Whether running on emulator.
   final bool isEmulator;
-
-
 
   /// Whether this is Android.
   bool get isAndroid {
     return type == PlatformType.android;
   }
 
-
-
   /// Whether this is iOS.
   bool get isIos {
     return type == PlatformType.ios;
   }
-
-
 
   /// Whether this is mobile.
   bool get isMobile {
     return type.isMobile;
   }
 
-
-
   /// Whether this is desktop.
   bool get isDesktop {
     return type.isDesktop;
   }
-
-
 
   /// Whether this is TV.
   bool get isTv {
     return type.isTv;
   }
 
-
-
   /// Whether this is web.
   bool get isWeb {
     return type.isWeb;
   }
 
-
-
   /// Creates modified information.
   PlatformInfo copyWith({
-
     PlatformType? type,
 
     String? name,
@@ -159,68 +125,33 @@ final class PlatformInfo extends Equatable {
     String? deviceModel,
 
     bool? isEmulator,
-
   }) {
-
     return PlatformInfo(
+      type: type ?? this.type,
 
-      type:
-          type ?? this.type,
+      name: name ?? this.name,
 
-      name:
-          name ?? this.name,
+      version: version ?? this.version,
 
-      version:
-          version ?? this.version,
+      buildNumber: buildNumber ?? this.buildNumber,
 
-      buildNumber:
-          buildNumber ?? this.buildNumber,
+      architecture: architecture ?? this.architecture,
 
-      architecture:
-          architecture ?? this.architecture,
+      deviceModel: deviceModel ?? this.deviceModel,
 
-      deviceModel:
-          deviceModel ?? this.deviceModel,
-
-      isEmulator:
-          isEmulator ?? this.isEmulator,
-
+      isEmulator: isEmulator ?? this.isEmulator,
     );
-
   }
 
-
-
   @override
-  List<Object?> get props => [
-
-    type,
-
-    name,
-
-    version,
-
-    buildNumber,
-
-    architecture,
-
-    deviceModel,
-
-    isEmulator,
-
-  ];
-
-
+  List<Object?> get props => [type, name, version, buildNumber, architecture, deviceModel, isEmulator];
 
   @override
   String toString() {
-
     return 'PlatformInfo('
         'type=$type, '
         'version=$version, '
         'arch=$architecture'
         ')';
-
   }
-
 }

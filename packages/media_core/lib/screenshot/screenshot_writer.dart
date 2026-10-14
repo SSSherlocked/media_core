@@ -2,10 +2,9 @@ import 'dart:io';
 
 import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:media_core/screenshot/player_screenshot.dart';
 import 'package:media_core_logging/media_core_logging.dart';
 import 'package:path/path.dart' as p;
-
-import 'package:media_core/screenshot/player_screenshot.dart';
 
 /// Writes captured frames to disk.
 ///
@@ -93,7 +92,7 @@ final class ScreenshotWriter {
   /// A player id is caller-supplied and may contain separators or characters a
   /// file system rejects; a screenshot must never escape its directory.
   static String sanitize(String value) {
-    final cleaned = value.trim().replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '_');
+    final cleaned = value.trim().replaceAll(RegExp('[^A-Za-z0-9._-]+'), '_');
 
     return cleaned.isEmpty ? 'player' : cleaned;
   }

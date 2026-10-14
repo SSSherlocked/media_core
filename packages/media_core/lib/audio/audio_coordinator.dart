@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:media_core/audio/audio_focus.dart';
-import 'package:media_core/audio/audio_session.dart';
 import 'package:media_core/audio/audio_focus_state.dart';
+import 'package:media_core/audio/audio_manager.dart' show AudioManager;
+import 'package:media_core/audio/audio_session.dart';
 import 'package:media_core/audio/audio_session_state.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -74,7 +75,7 @@ final class AudioCoordinator {
         return;
       }
 
-      final int generation = ++_generation;
+      final generation = ++_generation;
 
       if (!_sessionActive) {
         _sessionStateSubject.add(AudioSessionState.activating(generation: generation));
@@ -134,7 +135,7 @@ final class AudioCoordinator {
         return;
       }
 
-      final int generation = ++_generation;
+      final generation = ++_generation;
 
       _focusStateSubject.add(AudioFocusState.requesting(generation: generation));
 
@@ -159,7 +160,7 @@ final class AudioCoordinator {
         return;
       }
 
-      final int generation = ++_generation;
+      final generation = ++_generation;
 
       try {
         await _focus.abandon();
@@ -215,7 +216,7 @@ final class AudioCoordinator {
   }
 
   Future<void> _activateSession() async {
-    final int generation = ++_generation;
+    final generation = ++_generation;
 
     _sessionStateSubject.add(AudioSessionState.activating(generation: generation));
 
@@ -242,13 +243,13 @@ final class AudioCoordinator {
       _sessionActive = false;
 
       _sessionStateSubject.add(AudioSessionState.inactive(generation: generation));
-    } catch (_) {
+    } on Object catch (_) {
       _sessionStateSubject.add(AudioSessionState.error(generation: generation));
     }
   }
 
   Future<void> _deactivateInternal() async {
-    final int generation = ++_generation;
+    final generation = ++_generation;
 
     Object? firstError;
     StackTrace? firstStackTrace;
@@ -259,7 +260,7 @@ final class AudioCoordinator {
         _focusActive = false;
 
         _focusStateSubject.add(AudioFocusState.abandoned(generation: generation));
-      } catch (error, stackTrace) {
+      } on Object catch (error, stackTrace) {
         firstError ??= error;
         firstStackTrace ??= stackTrace;
 
@@ -275,7 +276,7 @@ final class AudioCoordinator {
         _sessionActive = false;
 
         _sessionStateSubject.add(AudioSessionState.inactive(generation: generation));
-      } catch (error, stackTrace) {
+      } on Object catch (error, stackTrace) {
         firstError ??= error;
         firstStackTrace ??= stackTrace;
 
@@ -290,7 +291,7 @@ final class AudioCoordinator {
 
   /// Serializes asynchronous lifecycle operations.
   Future<void> _enqueue(Future<void> Function() operation) {
-    final Future<void> next = _operation.then((_) => operation());
+    final next = _operation.then((_) => operation());
 
     _operation = next.catchError((Object _) {});
 
@@ -319,14 +320,14 @@ final class AudioCoordinator {
 
     try {
       await _operation;
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       firstError ??= error;
       firstStackTrace ??= stackTrace;
     }
 
     try {
       await _deactivateInternal();
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       firstError ??= error;
       firstStackTrace ??= stackTrace;
     }

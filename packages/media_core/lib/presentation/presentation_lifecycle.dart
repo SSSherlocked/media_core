@@ -25,11 +25,8 @@ enum PresentationLifecyclePhase {
 /// several variants (fullscreen's screen and window variants) it names the
 /// concrete one, for single-mode drivers it is always the driver's own mode.
 final class PresentationLifecycleEvent {
-  const PresentationLifecycleEvent({
-    required this.phase,
-    required this.playerId,
-    required this.mode,
-  });
+  /// Describes the transition point [phase] for [playerId] in [mode].
+  const PresentationLifecycleEvent({required this.phase, required this.playerId, required this.mode});
 
   /// Which point of the transition this is.
   final PresentationLifecyclePhase phase;
@@ -41,13 +38,11 @@ final class PresentationLifecycleEvent {
   final PresentationMode mode;
 
   @override
-  String toString() =>
-      'PresentationLifecycleEvent(${phase.name}, ${playerId.value}, ${mode.name})';
+  String toString() => 'PresentationLifecycleEvent(${phase.name}, ${playerId.value}, ${mode.name})';
 }
 
 /// Signature of one lifecycle hook.
-typedef PresentationLifecycleHook =
-    Future<void> Function(PresentationLifecycleEvent event);
+typedef PresentationLifecycleHook = Future<void> Function(PresentationLifecycleEvent event);
 
 /// The four hooks a host can install around a presentation transition.
 ///
@@ -61,12 +56,8 @@ typedef PresentationLifecycleHook =
 /// own, for example) have no "before" point; only `afterEnter`/`afterExit`
 /// fire for them. `dispose` is teardown, not a transition, and fires nothing.
 class PresentationLifecycleHooks {
-  const PresentationLifecycleHooks({
-    this.beforeEnter,
-    this.afterEnter,
-    this.beforeExit,
-    this.afterExit,
-  });
+  /// Groups the optional hooks a driver runs around a transition; unset hooks are skipped.
+  const PresentationLifecycleHooks({this.beforeEnter, this.afterEnter, this.beforeExit, this.afterExit});
 
   /// Awaited before the driver starts entering the mode.
   final PresentationLifecycleHook? beforeEnter;
@@ -81,9 +72,5 @@ class PresentationLifecycleHooks {
   final PresentationLifecycleHook? afterExit;
 
   /// Whether no hook is installed at all; drivers skip the whole path then.
-  bool get isEmpty =>
-      beforeEnter == null &&
-      afterEnter == null &&
-      beforeExit == null &&
-      afterExit == null;
+  bool get isEmpty => beforeEnter == null && afterEnter == null && beforeExit == null && afterExit == null;
 }

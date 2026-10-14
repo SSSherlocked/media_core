@@ -131,11 +131,13 @@ final class ScreenshotSurface {
   bool _needsPaint(RenderRepaintBoundary boundary) {
     var needsPaint = false;
 
+    // debugNeedsPaint is a debug-only accessor, so the read lives inside an
+    // assert and stays compiled out of release builds.
     assert(() {
       needsPaint = boundary.debugNeedsPaint;
 
       return true;
-    }());
+    }(), 'RenderRepaintBoundary.debugNeedsPaint is readable only in debug mode.');
 
     return needsPaint;
   }

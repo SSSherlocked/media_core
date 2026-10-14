@@ -1,8 +1,8 @@
-import 'package:media_core/platform/platform_type.dart';
-import 'package:media_core/platform/platform_info.dart';
 import 'package:media_core/platform/platform_capabilities.dart';
-import 'package:media_core/platform/platform_device_profile.dart';
 import 'package:media_core/platform/platform_codec_capabilities.dart';
+import 'package:media_core/platform/platform_device_profile.dart';
+import 'package:media_core/platform/platform_info.dart';
+import 'package:media_core/platform/platform_type.dart';
 
 /// Provides platform runtime information.
 ///

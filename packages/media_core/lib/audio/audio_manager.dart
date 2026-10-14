@@ -97,7 +97,7 @@ final class AudioManager {
   ///
   /// Enabling does not automatically activate the audio session. Activation
   /// remains an explicit lifecycle operation.
-  Future<void> setEnabled(bool value) {
+  Future<void> setEnabled({required bool value}) {
     return _enqueue(() async {
       _ensureNotDisposed();
 
@@ -238,7 +238,7 @@ final class AudioManager {
   /// one. If an earlier operation fails, the queue is reset so a later
   /// operation can still proceed.
   Future<void> _enqueue(Future<void> Function() operation) {
-    final Future<void> next = _operation.then((_) => operation());
+    final next = _operation.then((_) => operation());
 
     _operation = next.catchError((Object _) {});
 
@@ -255,7 +255,7 @@ final class AudioManager {
     if (_focused) {
       try {
         await _focus.abandon();
-      } catch (error, stackTrace) {
+      } on Object catch (error, stackTrace) {
         firstError ??= error;
         firstStackTrace ??= stackTrace;
       }
@@ -267,7 +267,7 @@ final class AudioManager {
     if (_active) {
       try {
         await _session.deactivate();
-      } catch (error, stackTrace) {
+      } on Object catch (error, stackTrace) {
         firstError ??= error;
         firstStackTrace ??= stackTrace;
       }
@@ -305,14 +305,14 @@ final class AudioManager {
 
     try {
       await _operation;
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       firstError ??= error;
       firstStackTrace ??= stackTrace;
     }
 
     try {
       await _deactivateInternal();
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       firstError ??= error;
       firstStackTrace ??= stackTrace;
     }

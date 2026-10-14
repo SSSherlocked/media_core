@@ -1,9 +1,10 @@
 import 'package:equatable/equatable.dart';
+import 'package:media_core/composition/schedule_navigator.dart' show ScheduleNavigator;
 import 'package:media_core/source/media_source.dart';
 
 /// What role a scheduled clip plays on the combined timeline.
 ///
-/// [kind] is the only thing the schedule machine itself branches on:
+/// `kind` is the only thing the schedule machine itself branches on:
 /// entering and leaving [advertisement] segments is what interrupts
 /// playback and fires tracking, while every other kind flows straight
 /// through. What the kinds mean to the user — an ad break versus a
@@ -68,14 +69,8 @@ final class ScheduleClip extends Equatable {
     this.clickThroughUrl,
     this.trackingUris = const <Uri>[],
     this.attributes = const <String, Object?>{},
-  }) : assert(
-         !duration.isNegative,
-         'A scheduled clip must occupy a non-negative span.',
-       ),
-       assert(
-         skipAfter == null || !skipAfter.isNegative,
-         'A skip point cannot precede the start of its clip.',
-       );
+  }) : assert(!duration.isNegative, 'A scheduled clip must occupy a non-negative span.'),
+       assert(skipAfter == null || !skipAfter.isNegative, 'A skip point cannot precede the start of its clip.');
 
   /// The media to present for this clip.
   final MediaSource source;

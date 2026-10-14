@@ -60,18 +60,11 @@ final class ScheduledPlayback {
   /// timeline is fixed for the controller's lifetime, matching the
   /// "immutable by construction" promise of [ComposedSchedule]. A
   /// host that needs a different schedule builds a new controller.
-  factory ScheduledPlayback({
-    required PlayerHandle handle,
-    required PlaybackSchedule schedule,
-  }) {
-    return ScheduledPlayback._(
-      handle: handle,
-      composed: const TimelineComposer().compose(schedule),
-    );
+  factory ScheduledPlayback({required PlayerHandle handle, required PlaybackSchedule schedule}) {
+    return ScheduledPlayback._(handle: handle, composed: const TimelineComposer().compose(schedule));
   }
 
-  ScheduledPlayback._({required this.handle, required this.composed})
-    : navigator = ScheduleNavigator(composed);
+  ScheduledPlayback._({required this.handle, required this.composed}) : navigator = ScheduleNavigator(composed);
 
   /// The handle whose position is observed and whose media is opened.
   final PlayerHandle handle;
@@ -129,8 +122,7 @@ final class ScheduledPlayback {
         if (programStart == null) {
           continue;
         }
-        if (mediaPosition >= programStart &&
-            mediaPosition < programStart + segment.duration) {
+        if (mediaPosition >= programStart && mediaPosition < programStart + segment.duration) {
           return segment.start + (mediaPosition - programStart);
         }
       }
@@ -173,13 +165,12 @@ final class ScheduledPlayback {
     final segment = composed.positionAt(clamped).segment;
 
     await _enqueue(() async {
-      final needsOpen = navigator.openedSegment?.start != segment.start ||
-          navigator.openedSegment?.clip != segment.clip;
+      final needsOpen =
+          navigator.openedSegment?.start != segment.start || navigator.openedSegment?.clip != segment.clip;
       if (needsOpen) {
         await handle.openMedia(segment.clip.source, autoPlay: false);
       }
-      final target = segment.clip.kind == ClipKind.content &&
-              segment.programTime != null
+      final target = segment.clip.kind == ClipKind.content && segment.programTime != null
           ? segment.programTimeAt(clamped) ?? segment.programTime!
           : clamped - segment.start;
       await handle.seek(target);

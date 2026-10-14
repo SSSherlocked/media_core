@@ -1,5 +1,5 @@
-import 'package:media_core/presentation/presentation_mode.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/presentation/presentation_mode.dart';
 
 part 'presentation_capabilities.freezed.dart';
 
@@ -22,6 +22,7 @@ part 'presentation_capabilities.freezed.dart';
 /// - manage lifecycle
 @freezed
 abstract class PresentationCapabilities with _$PresentationCapabilities {
+  /// Creates a capability set from its individual support flags.
   const factory PresentationCapabilities({
     /// Fullscreen support.
     @Default(true) bool fullscreen,
@@ -45,7 +46,7 @@ abstract class PresentationCapabilities with _$PresentationCapabilities {
 
   /// Default capability.
   factory PresentationCapabilities.initial() {
-    return const PresentationCapabilities(fullscreen: true, windowFullscreen: true, pip: false, floating: false);
+    return const PresentationCapabilities();
   }
 
   /// Whether any presentation mode is supported.

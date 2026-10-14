@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'package:media_core/bug/bug_hooks.dart';
-import 'package:media_core/bug/fault_type.dart';
-import 'package:media_core/bug/fault_event.dart';
-import 'package:media_core/bug/fault_config.dart';
 import 'package:clock/clock.dart';
+import 'package:media_core/bug/bug_hooks.dart';
 import 'package:media_core/bug/bug_mode_controller.dart';
-
+import 'package:media_core/bug/fault_config.dart';
+import 'package:media_core/bug/fault_event.dart';
+import 'package:media_core/bug/fault_scheduler.dart' show FaultScheduler;
+import 'package:media_core/bug/fault_type.dart';
 
 /// Coordinates fault injection between bug mode configuration and hooks.
 ///
@@ -14,6 +14,7 @@ import 'package:media_core/bug/bug_mode_controller.dart';
 ///
 /// Scheduling belongs to [FaultScheduler].
 final class FaultInjector {
+  /// Wires a [modeController] to the [hooks] registry that performs injection.
   FaultInjector({required BugModeController modeController, BugHooks? hooks})
     : _modeController = modeController,
       _hooks = hooks ?? BugHooks();
@@ -126,7 +127,7 @@ final class FaultInjector {
   Future<FaultEvent?> tryInject(FaultConfig config, {String? source, String? target, Object? metadata}) async {
     try {
       return await inject(config, source: source, target: target, metadata: metadata);
-    } catch (_) {
+    } on Object catch (_) {
       return null;
     }
   }

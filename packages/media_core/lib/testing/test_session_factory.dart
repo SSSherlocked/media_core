@@ -1,9 +1,9 @@
-import 'package:media_core/session/player_session.dart';
-import 'package:media_core/session/session_context.dart';
 import 'package:media_core/identity/generation_id.dart';
 import 'package:media_core/identity/player_id.dart';
 import 'package:media_core/identity/session_id.dart';
 import 'package:media_core/policy/player_policy.dart';
+import 'package:media_core/session/player_session.dart';
+import 'package:media_core/session/session_context.dart';
 import 'package:media_core/source/player_source.dart';
 import 'package:media_core/testing/test_source_factory.dart';
 
@@ -46,10 +46,7 @@ final class TestSessionFactory {
   }
 
   /// Builds a ready to use session.
-  static PlayerSession session({
-    String playerId = 'test-player',
-    String sessionId = 'test-session',
-  }) {
+  static PlayerSession session({String playerId = 'test-player', String sessionId = 'test-session'}) {
     return PlayerSession(
       context: context(playerId: playerId, sessionId: sessionId),
     );

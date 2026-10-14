@@ -18,10 +18,10 @@ library;
 
 export 'package:media_core/renderer/media_player_view.dart';
 export 'package:media_core/renderer/player_overlay.dart';
-export 'package:media_core/renderer/portable_player.dart';
 export 'package:media_core/renderer/player_renderer.dart';
 export 'package:media_core/renderer/player_surface.dart';
 export 'package:media_core/renderer/player_view.dart';
+export 'package:media_core/renderer/portable_player.dart';
 export 'package:media_core/renderer/renderer_capabilities.dart';
 export 'package:media_core/renderer/renderer_config.dart';
 export 'package:media_core/renderer/renderer_controller.dart';

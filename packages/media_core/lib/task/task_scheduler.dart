@@ -1,7 +1,8 @@
-import 'package:media_core/task/task_id.dart';
-import 'package:media_core/task/task_queue.dart';
+import 'package:media_core/task/library.dart' show TaskCancelToken, TaskManager, TaskState;
 import 'package:media_core/task/player_task.dart';
+import 'package:media_core/task/task_id.dart';
 import 'package:media_core/task/task_priority.dart';
+import 'package:media_core/task/task_queue.dart';
 
 /// Schedules [PlayerTask] instances for execution.
 ///
@@ -32,6 +33,8 @@ import 'package:media_core/task/task_priority.dart';
 /// The scheduler is therefore intentionally lifecycle-neutral except for the
 /// scheduling transition from `queued` to `running`.
 final class TaskScheduler {
+  /// Creates a scheduler over an optional [queue] with at most
+  /// [maxConcurrentTasks] running tasks.
   TaskScheduler({TaskQueue? queue, this.maxConcurrentTasks = 1}) : _queue = queue ?? TaskQueue() {
     if (maxConcurrentTasks <= 0) {
       throw ArgumentError.value(maxConcurrentTasks, 'maxConcurrentTasks', 'Must be greater than zero.');

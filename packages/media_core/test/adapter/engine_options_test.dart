@@ -1,12 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:media_core/adapter/engine_option.dart';
 import 'package:media_core/adapter/player_adapter_registry.dart';
 import 'package:media_core/event/player_event_bus.dart';
+import 'package:media_core/identity/source_id.dart';
 import 'package:media_core/kernel/kernel_options.dart';
 import 'package:media_core/kernel/player_handle.dart';
 import 'package:media_core/source/player_source.dart';
-import 'package:media_core/identity/source_id.dart';
 import 'package:media_core/testing/fake_player_adapter.dart';
 import 'package:media_core/testing/test_player_factory.dart';
 
@@ -49,9 +48,9 @@ void main() {
   });
 
   test('options the engine cannot take live rebuild the engine on the same backend', () async {
-    final original = FakePlayerAdapter(id: 'fake-1');
-    original.engineOptionHandler =
-        (option) => option.key == 'needs-rebuild' ? EngineOptionOutcome.needsRebuild : EngineOptionOutcome.appliedLive;
+    final original = FakePlayerAdapter(id: 'fake-1')
+      ..engineOptionHandler = (option) =>
+          option.key == 'needs-rebuild' ? EngineOptionOutcome.needsRebuild : EngineOptionOutcome.appliedLive;
     final handle = _handle(original);
 
     await handle.initialize();
@@ -77,17 +76,15 @@ void main() {
   });
 
   test('nextOpen effect never rebuilds the engine', () async {
-    final original = FakePlayerAdapter(id: 'fake-1');
-    original.engineOptionHandler = (_) => EngineOptionOutcome.needsRebuild;
+    final original = FakePlayerAdapter(id: 'fake-1')..engineOptionHandler = (_) => EngineOptionOutcome.needsRebuild;
     final handle = _handle(original);
 
     await handle.initialize();
     await handle.open(_source('s1'));
 
-    final report = await handle.applyEngineOptions(
-      const [EngineOption('cache-size', 999)],
-      effect: EngineOptionEffect.nextOpen,
-    );
+    final report = await handle.applyEngineOptions(const [
+      EngineOption('cache-size', 999),
+    ], effect: EngineOptionEffect.nextOpen);
 
     expect(report.stagedForNextOpen.map((option) => option.key), <String>['cache-size']);
     expect(report.rebuiltFor, isEmpty);

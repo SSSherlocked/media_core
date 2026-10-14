@@ -1,5 +1,6 @@
-import 'package:media_core/playback/buffer_range.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:media_core/playback/buffer_range.dart';
+import 'package:media_core/playback/playback_buffer.dart' show PlaybackBuffer;
 
 part 'player_adapter_event.freezed.dart';
 
@@ -67,7 +68,8 @@ abstract class PlayerAdapterEvent with _$PlayerAdapterEvent {
   ///
   /// This event is a heartbeat indicating that the backend has
   /// decoded another video frame. It is separate from
-  /// [videoSizeChanged], which only describes video geometry.
+  /// [PlayerAdapterEvent.videoSizeChanged], which only describes video
+  /// geometry.
   const factory PlayerAdapterEvent.videoFrameProgress() = PlayerAdapterVideoFrameProgress;
 
   /// Video output configuration changed.
@@ -122,8 +124,8 @@ abstract class PlayerAdapterEvent with _$PlayerAdapterEvent {
   /// without waiting, in the same media clock as
   /// [PlayerAdapterEvent.positionChanged].
   ///
-  /// It is distinct from [cacheChanged], which reports a single
-  /// scalar progress figure: a progress bar needs the actual
+  /// It is distinct from [PlayerAdapterEvent.cacheChanged], which reports a
+  /// single scalar progress figure: a progress bar needs the actual
   /// stretches to paint the ahead-fill and to answer whether a
   /// scrub target is already downloaded, and a scalar cannot express
   /// the discontiguous buffers a seek-ahead or a live edge produces.

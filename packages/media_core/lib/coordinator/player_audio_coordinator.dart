@@ -1,7 +1,7 @@
-import 'package:media_core/identity/player_id.dart';
-import 'package:media_core/audio/audio_volume.dart';
-import 'package:rxdart/rxdart.dart';
 import 'package:media_core/audio/audio_manager.dart';
+import 'package:media_core/audio/audio_volume.dart';
+import 'package:media_core/identity/player_id.dart';
+import 'package:rxdart/rxdart.dart';
 
 /// Coordinates audio operations across multiple players.
 ///
@@ -87,7 +87,7 @@ final class PlayerAudioCoordinator {
   bool unregister(PlayerId playerId) {
     _ensureNotDisposed();
 
-    final bool removed = _managers.remove(playerId) != null;
+    final removed = _managers.remove(playerId) != null;
     _volumes.remove(playerId);
     _mutedStates.remove(playerId);
 
@@ -122,7 +122,7 @@ final class PlayerAudioCoordinator {
         return false;
       }
 
-      final AudioVolume currentVolume = _volumes[playerId] ?? AudioVolume.medium;
+      final currentVolume = _volumes[playerId] ?? AudioVolume.medium;
 
       if (currentVolume == volume) {
         return true;
@@ -199,8 +199,8 @@ final class PlayerAudioCoordinator {
         return false;
       }
 
-      final bool currentMuted = _mutedStates[playerId] ?? false;
-      final bool nextMuted = !currentMuted;
+      final currentMuted = _mutedStates[playerId] ?? false;
+      final nextMuted = !currentMuted;
 
       _mutedStates[playerId] = nextMuted;
       _mutedStatesSubject.add(Map<PlayerId, bool>.from(_mutedStates));
@@ -247,7 +247,7 @@ final class PlayerAudioCoordinator {
   /// If an earlier operation fails, the queue is reset so a later
   /// operation can still proceed.
   Future<T> _enqueue<T>(Future<T> Function() operation) {
-    final Future<T> next = _operation.then((_) => operation());
+    final next = _operation.then((_) => operation());
 
     _operation = next.then((_) {}, onError: (Object _) {});
 
@@ -277,21 +277,21 @@ final class PlayerAudioCoordinator {
 
     try {
       await _operation;
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       firstError ??= error;
       firstStackTrace ??= stackTrace;
     }
 
     try {
       await _volumesSubject.close();
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       firstError ??= error;
       firstStackTrace ??= stackTrace;
     }
 
     try {
       await _mutedStatesSubject.close();
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       firstError ??= error;
       firstStackTrace ??= stackTrace;
     }

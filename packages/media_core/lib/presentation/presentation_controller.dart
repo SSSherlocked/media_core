@@ -1,12 +1,13 @@
 import 'dart:async';
+
 import 'package:media_core/geometry/video_orientation.dart';
-import 'package:media_core/presentation/presentation_mode.dart';
+import 'package:media_core/presentation/presentation_capabilities.dart';
 import 'package:media_core/presentation/presentation_event.dart';
-import 'package:media_core/presentation/presentation_state.dart';
+import 'package:media_core/presentation/presentation_mode.dart';
 import 'package:media_core/presentation/presentation_reducer.dart';
 import 'package:media_core/presentation/presentation_request.dart';
+import 'package:media_core/presentation/presentation_state.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:media_core/presentation/presentation_capabilities.dart';
 
 /// Controls presentation lifecycle state.
 ///
@@ -33,6 +34,7 @@ import 'package:media_core/presentation/presentation_capabilities.dart';
 /// PresentationAdapter
 ///
 final class PresentationController {
+  /// Creates a controller with an optional [reducer] and initial [capabilities].
   PresentationController({
     PresentationReducer reducer = const PresentationReducer(),
     PresentationCapabilities capabilities = const PresentationCapabilities(),
@@ -209,6 +211,7 @@ final class PresentationController {
   // Dispose
   // ============================================================
 
+  /// Releases resources; further calls to this controller throw.
   Future<void> dispose() async {
     if (_disposed) {
       return;

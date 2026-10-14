@@ -1,12 +1,12 @@
-import 'package:media_core/identity/source_id.dart';
-import 'package:media_core/error/player_failure.dart';
-import 'package:media_core/error/error_context.dart';
-import 'package:media_core/identity/generation_id.dart';
-import 'package:media_core/error/player_error_code.dart';
-import 'package:media_core/error/error_classifier.dart';
-import 'package:media_core/error/player_error_category.dart';
-import 'package:media_core/recovery/recovery_reason.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/error/error_classifier.dart';
+import 'package:media_core/error/error_context.dart';
+import 'package:media_core/error/player_error_category.dart';
+import 'package:media_core/error/player_error_code.dart';
+import 'package:media_core/error/player_failure.dart';
+import 'package:media_core/identity/generation_id.dart';
+import 'package:media_core/identity/source_id.dart';
+import 'package:media_core/recovery/recovery_reason.dart';
 
 /// Describes which layer observed a failure.
 ///
@@ -256,6 +256,9 @@ final class RecoveryFailure extends Equatable {
     );
   }
 
+  /// Serialises the failure for diagnostics and persistence.
+  ///
+  /// The classified category and reason are written out, so the record can be read back without the classifier.
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'code': code.value,

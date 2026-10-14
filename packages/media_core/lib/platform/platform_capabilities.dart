@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:media_core/platform/platform_provider.dart' show PlatformProvider;
 
 /// Describes platform capabilities.
 ///

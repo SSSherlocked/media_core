@@ -1,6 +1,6 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:media_core/identity/player_id.dart';
 import 'package:media_core/identity/session_id.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'player_pool_state.freezed.dart';
 

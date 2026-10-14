@@ -1,6 +1,6 @@
 import 'package:media_core/adapter/player_adapter_capabilities.dart';
-import 'package:media_core/source/media_source.dart';
 import 'package:media_core/planning/media_source_plan.dart';
+import 'package:media_core/source/media_source.dart';
 
 /// Decides how a [MediaSource] should be handled by a specific
 /// backend.
@@ -30,8 +30,5 @@ import 'package:media_core/planning/media_source_plan.dart';
 /// - PlayerKernel
 abstract interface class MediaSourcePlanner {
   /// Produces the plan for [source] against [capabilities].
-  MediaSourcePlan plan(
-    MediaSource source,
-    PlayerAdapterCapabilities capabilities,
-  );
+  MediaSourcePlan plan(MediaSource source, PlayerAdapterCapabilities capabilities);
 }

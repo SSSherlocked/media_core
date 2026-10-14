@@ -5,10 +5,12 @@ import 'dart:async';
 /// The callback is queued and fires only once the accumulated
 /// pumped time reaches the configured duration.
 final class FakeTimer implements Timer {
+  /// Creates a timer that fires [_callback] once [_duration] of pumped time
+  /// has accumulated.
   FakeTimer(this._duration, this._callback);
 
   final Duration _duration;
-  final ZoneCallback _callback;
+  final void Function() _callback;
 
   bool _fired = false;
   bool _canceled = false;

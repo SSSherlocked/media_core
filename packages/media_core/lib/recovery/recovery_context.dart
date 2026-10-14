@@ -1,9 +1,9 @@
-import 'package:media_core/recovery/recovery_reason.dart';
-import 'package:media_core/identity/source_id.dart';
-import 'package:media_core/identity/request_id.dart';
-import 'package:media_core/identity/operation_id.dart';
-import 'package:media_core/identity/generation_id.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/identity/generation_id.dart';
+import 'package:media_core/identity/operation_id.dart';
+import 'package:media_core/identity/request_id.dart';
+import 'package:media_core/identity/source_id.dart';
+import 'package:media_core/recovery/recovery_reason.dart';
 
 /// Context associated with a recovery attempt.
 ///
@@ -13,6 +13,7 @@ import 'package:equatable/equatable.dart';
 ///
 /// It does not contain recovery policy or execute recovery actions.
 final class RecoveryContext extends Equatable {
+  /// Records what triggered recovery together with the identities needed to tie the attempt to the operation that failed.
   const RecoveryContext({
     required this.reason,
     this.operationId,
@@ -80,6 +81,9 @@ final class RecoveryContext extends Equatable {
     );
   }
 
+  /// Serialises the context for diagnostics and persistence.
+  ///
+  /// The reason is written as its runtime type name, because the sealed reason subtypes carry no data of their own.
   Map<String, dynamic> toMap() {
     return {
       'reason': reason.runtimeType.toString(),

@@ -54,8 +54,7 @@ void main() {
     });
 
     test('compareTo orders by value', () {
-      final ids = [PlayerId('c'), PlayerId('a'), PlayerId('b')];
-      ids.sort();
+      final ids = [PlayerId('c'), PlayerId('a'), PlayerId('b')]..sort();
       expect(ids.map((id) => id.value), ['a', 'b', 'c']);
     });
 

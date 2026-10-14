@@ -1,8 +1,8 @@
-import 'package:media_core/source/player_source.dart';
-import 'package:media_core/identity/generation_id.dart';
-import 'package:media_core/adapter/player_adapter_registry.dart';
-import 'package:media_core/recovery/recovery_failure.dart';
 import 'package:equatable/equatable.dart';
+import 'package:media_core/adapter/player_adapter_registry.dart';
+import 'package:media_core/identity/generation_id.dart';
+import 'package:media_core/recovery/recovery_failure.dart';
+import 'package:media_core/source/player_source.dart';
 
 /// Everything the ladder needs to know to make a recovery decision.
 ///
@@ -124,6 +124,9 @@ final class RecoverySession extends Equatable {
     );
   }
 
+  /// Serialises the session for diagnostics and persistence.
+  ///
+  /// Candidates are reduced to URIs and backend ids so the map stays small enough to log.
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'label': label,

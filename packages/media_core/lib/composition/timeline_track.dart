@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:media_core/composition/media_timeline.dart' show MediaTimeline;
 import 'package:media_core/source/media_track.dart';
 
 /// One essence track placed on a shared presentation timeline.
@@ -27,10 +28,7 @@ import 'package:media_core/source/media_track.dart';
 /// - PlayerAdapter
 final class TimelineTrack extends Equatable {
   /// Places [track] on the presentation timeline at [offset].
-  const TimelineTrack({
-    required this.track,
-    this.offset = Duration.zero,
-  });
+  const TimelineTrack({required this.track, this.offset = Duration.zero});
 
   /// The essence this entry positions.
   final MediaTrack track;
@@ -53,8 +51,7 @@ final class TimelineTrack extends Equatable {
   /// Can return a negative duration for a presentation time earlier
   /// than the track's own start; callers deciding whether to show
   /// this track must treat a negative result as "not started yet".
-  Duration mediaTimeFor(Duration presentationTime) =>
-      presentationTime - offset;
+  Duration mediaTimeFor(Duration presentationTime) => presentationTime - offset;
 
   @override
   List<Object?> get props => <Object?>[track, offset];
