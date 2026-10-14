@@ -9,6 +9,7 @@ import 'package:ffmpeg_kit_extended_flutter/ffmpeg_kit_extended_flutter.dart';
 /// FFmpeg's statistics (frame numbers, quality, duplicate counts) are
 /// transcoding concepts and say nothing useful about a `-c copy` capture.
 final class FfmpegStatistics {
+  /// Creates a report of one FFmpeg statistics line.
   const FfmpegStatistics({
     this.timeMs = 0,
     this.sizeBytes = 0,
@@ -167,10 +168,8 @@ final class FfmpegKitExecutor implements FfmpegExecutor {
       logCallback: onLog == null ? null : (log) => onLog(log.message),
     );
 
-    session.execute();
-
     return _FfmpegKitExecution(
-      session: session,
+      session: session..execute(),
       completion: completion.future,
       cancelSession: _cancelSession,
     );

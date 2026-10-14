@@ -1,6 +1,8 @@
 import 'package:media_core/media_core.dart' show HttpHeaderSanitizer, UriUtils;
 
 import 'package:media_core_recording_ffmpeg/src/ffmpeg_record_config.dart';
+import 'package:media_core_recording_ffmpeg/src/ffmpeg_record_container.dart';
+import 'package:media_core_recording_ffmpeg/src/output_path.dart';
 
 /// Builds the FFmpeg argument lists a recording uses.
 ///
@@ -21,6 +23,7 @@ import 'package:media_core_recording_ffmpeg/src/ffmpeg_record_config.dart';
 /// re-introduce quoting bugs for URLs, headers and paths containing spaces.
 /// [formatArguments] exists for logs and tests only.
 final class FfmpegRecordArguments {
+  /// Builds the arguments a recording made under [config] needs.
   const FfmpegRecordArguments({this.config = FfmpegRecordConfig.defaults});
 
   /// Tunables.
@@ -37,8 +40,7 @@ final class FfmpegRecordArguments {
   /// alone. Deciding that a URL is a network address and not a local path
   /// belongs to whoever knows where the URL came from — this builder only
   /// formats arguments.
-  static const String protocolWhitelist =
-      'httpproxy,udp,rtp,rtsp,rtmp,rtmps,srt,tcp,tls,data,file,http,https,crypto';
+  static const String protocolWhitelist = 'httpproxy,udp,rtp,rtsp,rtmp,rtmps,srt,tcp,tls,data,file,http,https,crypto';
 
   /// Segmented recording arguments.
   ///
@@ -56,8 +58,7 @@ final class FfmpegRecordArguments {
     final normalizedHeaders = normalizeHeaders(headers);
     final userAgent = normalizedHeaders.remove('user-agent');
     final headerString = buildHeader(normalizedHeaders);
-    final prefix = safeFilePrefix(filePrefix ?? config.filePrefix ?? timestampPrefix(DateTime.now()));
-    final separator = outputDirectory.endsWith('/') || outputDirectory.endsWith(r'\') ? '' : _separator(outputDirectory);
+    final prefix = safeFilePrefix(filePrefix ?? config.filePrefix ?? generatedPrefix(config, DateTime.now()));
 
     final arguments = <String>[
       // Keep no-overwrite intent: segment muxers open child outputs separately,
@@ -94,9 +95,9 @@ final class FfmpegRecordArguments {
       // Optional mappings support audio-only rooms and temporarily missing
       // video tracks without selecting metadata or data streams.
       '-map',
-      config.preferBestStream ? '0:v:0?' : '0:v?',
+      if (config.preferBestStream) '0:v:0?' else '0:v?',
       '-map',
-      config.preferBestStream ? '0:a:0?' : '0:a?',
+      if (config.preferBestStream) '0:a:0?' else '0:a?',
       '-c',
       'copy',
       '-avoid_negative_ts',
@@ -104,18 +105,22 @@ final class FfmpegRecordArguments {
       '-f',
       'segment',
       '-segment_format',
-      'mpegts',
-      // Commit complete packets in each child TS while running, rather than
-      // leaving a partial 512 KiB AVIO prefix when cancellation prevents the
-      // trailer from flushing.
+      config.container.segmentFormat,
+      // Each container needs its own child-file options.
       //
-      // Only the outer muxer normalizes the clock: a second per-child shift
-      // breaks reconstruction from the segment list's reference timestamps.
-      // Zero child mux delay keeps each timestamped audio packet's anchor, and
-      // the 1.4 s offset retains MPEG-TS's former preroll — without it, concat's
-      // inpoint 0 discards leading negative DTS in later segments.
+      // MPEG-TS commits complete packets while running (flush_packets=1) rather than
+      // leaving a partial 512 KiB AVIO prefix when cancellation prevents the trailer
+      // from flushing. Only the outer muxer normalises the clock: a second per-child
+      // shift breaks reconstruction from the journal's reference timestamps. Zero
+      // child mux delay keeps each timestamped audio packet's anchor, and the 1.4 s
+      // offset retains MPEG-TS's former preroll — without it, concat's inpoint 0
+      // discards leading negative DTS in later segments.
+      //
+      // Fragmented MP4 cannot use any of that: it asks for one fragment per key frame
+      // behind an empty movie header, so each child file describes itself and stays
+      // readable up to its last complete fragment.
       '-segment_format_options',
-      'flush_packets=1:avoid_negative_ts=disabled:max_delay=0:output_ts_offset=1.4',
+      config.container.segmentFormatOptions,
       '-segment_list',
       journalPath,
       '-segment_list_type',
@@ -126,13 +131,13 @@ final class FfmpegRecordArguments {
       '0',
       '-reset_timestamps',
       '1',
-      '$outputDirectory$separator$segmentPattern',
+      joinOutputPath(outputDirectory, segmentPattern),
     ];
 
     // The prefix is part of the path the caller passed, so the recorded name is
     // authoritative here; it is validated to keep a hostile room title out of
     // the filesystem.
-    assert(prefix.isNotEmpty);
+    assert(prefix.isNotEmpty, 'A recording needs a file name, and safeFilePrefix falls back to a timestamp.');
 
     return List<String>.unmodifiable(arguments);
   }
@@ -239,15 +244,61 @@ final class FfmpegRecordArguments {
     return HttpHeaderSanitizer.ffmpegBlock(headers);
   }
 
+  /// Longest prefix a generated file name keeps.
+  ///
+  /// Room titles are long, the prefix repeats in every segment name, and a
+  /// Windows path stops working past MAX_PATH — a recording that cannot create
+  /// its fifth segment has lost the four before it for a name nobody can read.
+  static const int maxFilePrefixLength = 64;
+
+  /// Characters a file name may not contain.
+  ///
+  /// Letters and numbers of any script survive, because the names a user records
+  /// are their own: an ASCII-only rule folded a Chinese room title to nothing, and
+  /// nothing falls back to a timestamp, so the folder ended up full of files whose
+  /// names said nothing about who had been in them. What is dropped is what a
+  /// filesystem or a shell would act on — the path separators, the dot that makes
+  /// `..`, the colon, the quotes, and control characters.
+  static final RegExp _unsafeFileName = RegExp(r'[^\p{L}\p{N}_-]+', unicode: true);
+
   /// Makes [value] safe to use as a file name.
   ///
-  /// Room titles reach this from the network; everything outside
-  /// `[A-Za-z0-9_-]` collapses to `_` so a title can never escape the recording
-  /// directory.
+  /// Room titles reach this from the network, so the result is what a path may
+  /// contain, never the title as it arrived.
   static String safeFilePrefix(String? value) {
-    final normalized = (value ?? '').replaceAll(RegExp(r'[^A-Za-z0-9_-]+'), '_').replaceAll(RegExp(r'_+'), '_');
-    final trimmed = normalized.replaceAll(RegExp(r'^_+|_+$'), '');
-    return trimmed.isEmpty ? timestampPrefix(DateTime.now()) : trimmed;
+    var normalized = (value ?? '')
+        .replaceAll(_unsafeFileName, '_')
+        .replaceAll(RegExp('_+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+
+    if (normalized.runes.length > maxFilePrefixLength) {
+      // Runes, not code units: cutting the middle of a surrogate pair leaves a name
+      // that does not compare equal to itself.
+      normalized = String.fromCharCodes(normalized.runes.take(maxFilePrefixLength));
+      normalized = normalized.replaceAll(RegExp(r'_+$'), '');
+    }
+
+    return normalized.isEmpty ? timestampPrefix(DateTime.now()) : normalized;
+  }
+
+  /// The prefix a recording gets when its caller gave none.
+  ///
+  /// [FfmpegRecordConfig.includeTimestampPrefix] decides the shape: a timestamp
+  /// (`20261013_182232_915`) is what a host that records several rooms into one
+  /// directory needs to tell two takes apart, while a neutral name is what a host
+  /// that gives each recording its own directory wants, because there the
+  /// directory already says when.
+  static String generatedPrefix(FfmpegRecordConfig config, DateTime time) {
+    return config.includeTimestampPrefix ? timestampPrefix(time) : 'recording';
+  }
+
+  /// The file-name prefix [config] produces for a recording started at [now].
+  ///
+  /// The single place this rule is read: a recording and its re-opened attempts
+  /// have to agree on the base name, and a backend that guessed it a second way
+  /// would write the next attempt over the first one's files.
+  static String filePrefixFor(FfmpegRecordConfig config, {DateTime? now}) {
+    return safeFilePrefix(config.filePrefix ?? generatedPrefix(config, now ?? DateTime.now()));
   }
 
   /// Timestamp used when no usable prefix is supplied.
@@ -271,10 +322,4 @@ final class FfmpegRecordArguments {
 
   /// Human-readable command for logs and tests. Never passed to FFmpeg.
   static String formatArguments(Iterable<String> arguments) => arguments.map(quoteArgument).join(' ');
-
-  static String _separator(String outputDirectory) {
-    // Windows accepts both separators, POSIX only `/`; `Platform` is avoided so
-    // this stays callable from a test on any host.
-    return outputDirectory.contains('\\') ? '\\' : '/';
-  }
 }
