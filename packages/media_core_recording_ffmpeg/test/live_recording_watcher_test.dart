@@ -97,6 +97,23 @@ void main() {
     );
   });
 
+  test('the room title is what the recording is named after', () async {
+    final watcher = watching(
+      answers: <FfmpegLiveRoomStatus>[const FfmpegLiveRoomStatus.live('https://e.com/live.flv', title: '主播8891')],
+    );
+
+    await watcher.watch(const RecordingSource.network('https://api.e.com/room.flv', id: 'room-1'));
+    await settle();
+
+    final arguments = executor.argumentLists.single;
+
+    expect(
+      arguments.last,
+      endsWith('主播8891_%06d.clock-v1.ts'),
+      reason: 'the watcher knows the title from the status probe; a file named `room` says nothing weeks later',
+    );
+  });
+
   test('the session starts once and ends once, with what was recorded', () async {
     final started = <FfmpegLiveRecordingSession>[];
     final ended = <FfmpegLiveRecordingSession>[];

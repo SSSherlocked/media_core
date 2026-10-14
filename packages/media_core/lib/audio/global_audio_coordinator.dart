@@ -71,11 +71,11 @@ final class GlobalAudioCoordinator {
   /// Releases the current ownership.
   Future<void> releaseOwnership() async {
     if (_owner == null) return;
-    
+
     final owner = _owner;
     _owner = null;
     _ownerSubject.add(null);
-    
+
     await owner!.abandonFocus();
   }
 

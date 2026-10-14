@@ -49,6 +49,10 @@ final result = await backend.stop();     // 用户主动停止是"成功录制"
 
 **命名**是三段规则，一处实现（`FfmpegRecordArguments.filePrefixFor`）：
 
+- **名字跟着来源走**：`RecordingSource.title`（房间标题、节目名）优先，其次 `FfmpegRecordConfig.filePrefix`，最后才是生成的。
+  理由是地址既不稳定（签名 URL 一次一个）又不能落到文件名里（query 就是凭证），而标题是几周后唯一还认得出的东西。
+  `FfmpegLiveRecordingWatcher` 会把状态接口返回的标题带进它录的那个 source，所以看房间录制时不用额外配置。
+  想要固定文件名的宿主就不传标题。
 - 前缀来自房间标题时会被清洗，但清洗**保留任何文字的字母和数字**（中文主播名不再被压成一串下划线），
   只丢掉文件系统与 shell 会当回事的字符，并截到 64 个码点 —— 段名会重复前缀，Windows 的长路径会直接失败。
 - `includeTimestampPrefix` 决定没有前缀时生成 `20261013_182232_915` 还是 `recording`：

@@ -1,4 +1,4 @@
-import 'package:media_core/media_core.dart' show HttpHeaderSanitizer, UriUtils;
+import 'package:media_core/media_core.dart' show HttpHeaderSanitizer, RecordingSource, UriUtils;
 
 import 'package:media_core_recording_ffmpeg/src/ffmpeg_record_config.dart';
 import 'package:media_core_recording_ffmpeg/src/ffmpeg_record_container.dart';
@@ -58,7 +58,7 @@ final class FfmpegRecordArguments {
     final normalizedHeaders = normalizeHeaders(headers);
     final userAgent = normalizedHeaders.remove('user-agent');
     final headerString = buildHeader(normalizedHeaders);
-    final prefix = safeFilePrefix(filePrefix ?? config.filePrefix ?? generatedPrefix(config, DateTime.now()));
+    final prefix = filePrefix ?? filePrefixFor(config);
 
     final arguments = <String>[
       // Keep no-overwrite intent: segment muxers open child outputs separately,
@@ -292,12 +292,24 @@ final class FfmpegRecordArguments {
     return config.includeTimestampPrefix ? timestampPrefix(time) : 'recording';
   }
 
-  /// The file-name prefix [config] produces for a recording started at [now].
+  /// The file-name prefix [config] produces for a recording of [source], started
+  /// at [now].
+  ///
+  /// The name follows the source: a recording of a live room is worth finding by
+  /// the room's title, and the address is neither stable (a signed URL changes per
+  /// session) nor safe to write down (its query is a credential). So the order is
+  /// the source's own title, then the config's [FfmpegRecordConfig.filePrefix],
+  /// then the generated one. A host that wants the fixed name instead passes a
+  /// source with no title.
   ///
   /// The single place this rule is read: a recording and its re-opened attempts
   /// have to agree on the base name, and a backend that guessed it a second way
   /// would write the next attempt over the first one's files.
-  static String filePrefixFor(FfmpegRecordConfig config, {DateTime? now}) {
+  static String filePrefixFor(FfmpegRecordConfig config, {RecordingSource? source, DateTime? now}) {
+    if (source != null && source.hasTitle) {
+      return safeFilePrefix(source.title);
+    }
+
     return safeFilePrefix(config.filePrefix ?? generatedPrefix(config, now ?? DateTime.now()));
   }
 

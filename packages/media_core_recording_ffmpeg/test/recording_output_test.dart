@@ -80,6 +80,82 @@ void main() {
     });
   });
 
+  group('the name follows the source', () {
+    const titled = RecordingSource.network('https://cdn.e.com/live.flv?sign=abc', id: 'room-42', title: '主播8891');
+
+    test('a titled source wins over the config prefix', () {
+      expect(
+        FfmpegRecordArguments.filePrefixFor(const FfmpegRecordConfig(filePrefix: 'room'), source: titled),
+        '主播8891',
+        reason: 'the address changes per session and its query is a credential; the title is the name a viewer reads',
+      );
+    });
+
+    test('a source with no usable title falls back to the config, then to the generated name', () {
+      expect(FfmpegRecordArguments.filePrefixFor(const FfmpegRecordConfig(filePrefix: 'room')), 'room');
+      expect(
+        FfmpegRecordArguments.filePrefixFor(
+          const FfmpegRecordConfig(filePrefix: 'room'),
+          source: const RecordingSource.network('https://e.com/a', title: '   '),
+        ),
+        'room',
+        reason: 'a blank title is not a name',
+      );
+      expect(
+        FfmpegRecordArguments.filePrefixFor(
+          const FfmpegRecordConfig(includeTimestampPrefix: false),
+          source: const RecordingSource.network('https://e.com/a'),
+        ),
+        'recording',
+      );
+    });
+
+    test('a hostile title is still only a file name', () {
+      expect(
+        FfmpegRecordArguments.filePrefixFor(
+          FfmpegRecordConfig.defaults,
+          source: const RecordingSource.network('https://e.com/a', title: '../../etc/passwd'),
+        ),
+        'etc_passwd',
+        reason: 'the title reaches this from the room API, which does not get to choose where files go',
+      );
+    });
+
+    test('the running recording is named after its source', () async {
+      final executor = _RecordingExecutor();
+      final backend = backendFor(executor, config: const FfmpegRecordConfig(includeTimestampPrefix: false));
+      final arguments = <String>[];
+
+      await backend.initialize();
+      await backend.start(titled, const RecordingConfig());
+      arguments.addAll(executor.argumentLists.single);
+
+      expect(arguments.last, endsWith('主播8891_%06d.clock-v1.ts'));
+      expect(arguments.last, isNot(contains('sign')), reason: 'the signed address must not become file name noise');
+      expect(arguments[arguments.indexOf('-segment_list') + 1], endsWith('主播8891.clock-v1.csv'));
+      expect(File(joinFor(directory, '主播8891.clock-v1.json')).existsSync(), isTrue);
+      expect(
+        backend.lastManifest?.sourceLabel,
+        'room-42',
+        reason: 'the manifest keeps the machine identity; the file names carry the human one',
+      );
+    });
+
+    test('a per-recording directory is named after the source too', () async {
+      final executor = _RecordingExecutor();
+      final backend = backendFor(
+        executor,
+        config: const FfmpegRecordConfig(includeTimestampPrefix: false, subdirectoryPerRecording: true),
+      );
+
+      await backend.initialize();
+      await backend.start(titled, const RecordingConfig());
+
+      expect(backend.activeDirectory, joinFor(directory, '主播8891'));
+      expect(executor.argumentLists.single.last, contains('主播8891${Platform.pathSeparator}主播8891_%06d'));
+    });
+  });
+
   group('containers', () {
     test('MPEG-TS is the default and keeps its flushed child options', () {
       final arguments = const FfmpegRecordArguments().recordArguments(

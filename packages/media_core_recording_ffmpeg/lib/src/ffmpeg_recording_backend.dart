@@ -310,7 +310,7 @@ final class FfmpegRecordingBackend implements RecordingBackend {
     // drop the first attempt's journal out of the verdict.
     // `config` here is the core's RecordingConfig (the per-start overrides), so the
     // tunables are read from the field.
-    final prefix = FfmpegRecordArguments.filePrefixFor(this.config);
+    final prefix = FfmpegRecordArguments.filePrefixFor(this.config, source: source);
     final recordingDirectory = this.config.subdirectoryPerRecording ? joinOutputPath(directory, prefix) : directory;
 
     // A fresh state, not a copy: `copyWith` cannot clear an error from a

@@ -27,21 +27,23 @@ import 'package:equatable/equatable.dart';
 /// - RecordingBackend
 final class RecordingSource extends Equatable {
   /// Creates a recording source.
-  const RecordingSource({required this.type, required this.value, this.id});
+  const RecordingSource({required this.type, required this.value, this.id, this.title});
 
   /// Creates a local file recording source.
-  const RecordingSource.file(String path, {String? id}) : this(type: RecordingSourceType.file, value: path, id: id);
+  const RecordingSource.file(String path, {String? id, String? title})
+    : this(type: RecordingSourceType.file, value: path, id: id, title: title);
 
   /// Creates a network recording source.
-  const RecordingSource.network(String url, {String? id}) : this(type: RecordingSourceType.network, value: url, id: id);
+  const RecordingSource.network(String url, {String? id, String? title})
+    : this(type: RecordingSourceType.network, value: url, id: id, title: title);
 
   /// Creates a stream recording source.
-  const RecordingSource.stream(String streamId, {String? id})
-    : this(type: RecordingSourceType.stream, value: streamId, id: id);
+  const RecordingSource.stream(String streamId, {String? id, String? title})
+    : this(type: RecordingSourceType.stream, value: streamId, id: id, title: title);
 
   /// Creates a custom recording source.
-  const RecordingSource.custom(String value, {String? id})
-    : this(type: RecordingSourceType.custom, value: value, id: id);
+  const RecordingSource.custom(String value, {String? id, String? title})
+    : this(type: RecordingSourceType.custom, value: value, id: id, title: title);
 
   /// Type of the recording source.
   final RecordingSourceType type;
@@ -55,9 +57,30 @@ final class RecordingSource extends Equatable {
   /// Optional stable source identifier.
   final String? id;
 
+  /// What the source is called where the viewer can see it — a room title, a
+  /// programme name.
+  ///
+  /// Set it when the caller knows it, because it is what a recording is named
+  /// after: [value] is an address, and a signed live URL changes every session
+  /// (and carries a credential in its query), so files named from it are
+  /// unrecognisable and unsafe to keep. A backend that turns this into a file
+  /// name must sanitise it — it arrives from the network, and a room title can
+  /// contain anything including path separators.
+  ///
+  /// It is a label, not an identity: two sources with the same [title] and
+  /// different [value] are different sources.
+  final String? title;
+
   /// Whether this source has an explicit identifier.
   bool get hasId {
     return id != null && id!.isNotEmpty;
+  }
+
+  /// Whether a non-blank [title] was given.
+  bool get hasTitle {
+    final label = title;
+
+    return label != null && label.trim().isNotEmpty;
   }
 
   /// Whether the source value is non-empty.
@@ -66,7 +89,7 @@ final class RecordingSource extends Equatable {
   }
 
   @override
-  List<Object?> get props => [type, value, id];
+  List<Object?> get props => [type, value, id, title];
 
   @override
   String toString() {
@@ -74,6 +97,7 @@ final class RecordingSource extends Equatable {
         'type: $type, '
         'value: $value, '
         'id: $id'
+        '${title == null ? '' : ', title: $title'}'
         ')';
   }
 }

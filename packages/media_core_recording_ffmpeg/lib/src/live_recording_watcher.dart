@@ -395,7 +395,15 @@ class FfmpegLiveRecordingWatcher {
 
     try {
       await _backend.start(
-        address == null || address.isEmpty ? source : RecordingSource.network(address, id: source.id),
+        // The room's title travels with the source it records, because that is
+        // what the backend names the files after: the address changes per session
+        // and a signed URL is not a name anyone can read back.
+        RecordingSource(
+          type: source.type,
+          value: address == null || address.isEmpty ? source.value : address,
+          id: source.id,
+          title: status.title ?? source.title,
+        ),
         config,
       );
       _recording = true;

@@ -446,10 +446,7 @@ final class _MediaPlayerViewState extends State<MediaPlayerView> {
         ? ColoredBox(color: background, child: const SizedBox.expand())
         // Keyed per adapter instance: on a backend swap the old surface
         // unmounts instead of being updated onto a foreign controller.
-        : KeyedSubtree(
-            key: ValueKey('${video.runtimeType}_${identityHashCode(video)}'),
-            child: video.build(),
-          );
+        : KeyedSubtree(key: ValueKey('${video.runtimeType}_${identityHashCode(video)}'), child: video.build());
   }
 
   /// Wraps [child] in the capture boundary when the host wants screenshots.
@@ -477,7 +474,9 @@ final class _MediaPlayerViewState extends State<MediaPlayerView> {
           return child!;
         }
 
-        return ClipRect(child: Transform(transform: _zoom.matrix, child: child));
+        return ClipRect(
+          child: Transform(transform: _zoom.matrix, child: child),
+        );
       },
     );
   }
