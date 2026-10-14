@@ -154,6 +154,22 @@ final class LiveWatchdogs {
   /// Disabled watchdogs never arm.
   final bool enabled;
 
+  /// How far the position must move past the first sample of a buffering
+  /// episode before the episode counts as over.
+  ///
+  /// mpv's `time-pos` stands still while it waits for its cache
+  /// (`paused-for-cache`), so a whole second of media time proves data is
+  /// arriving and being played. An engine whose buffering flag stays set
+  /// after that (media_kit's flag can miss the property change that clears
+  /// it) is treated as having ended the buffering.
+  static const Duration bufferingProgress = Duration(seconds: 1);
+
+  /// How much further the position may move than the wall clock did since
+  /// the first sample before the move is taken for a jump (a timestamp
+  /// discontinuity, a seek) rather than playback. A jump restarts the
+  /// measurement from the new position.
+  static const Duration bufferingProgressSlack = Duration(seconds: 2);
+
   // ---------------------------------------------------------------------------
   // Bound capabilities
   // ---------------------------------------------------------------------------
@@ -281,6 +297,13 @@ final class LiveWatchdogs {
   /// of one session are distinguishable by their value.
   int? _lastPositionMs;
 
+  /// First position sample of the current buffering episode, or null when
+  /// none was seen yet (or the measurement was restarted).
+  int? _bufferingBaseMs;
+
+  /// Wall clock since [_bufferingBaseMs] was taken.
+  final Stopwatch _bufferingBaseClock = Stopwatch();
+
   // ---------------------------------------------------------------------------
   // Active watchdog subscriptions
   // ---------------------------------------------------------------------------
@@ -391,6 +414,11 @@ final class LiveWatchdogs {
 
     _playing = playing;
 
+    if (!playing) {
+      // Position does not move while paused; resuming measures afresh.
+      _resetBufferingProgress();
+    }
+
     _cancelSourceReady();
 
     if (playing) {
@@ -445,6 +473,9 @@ final class LiveWatchdogs {
 
     _buffering = buffering;
 
+    // Every buffering episode is measured from its own first position.
+    _resetBufferingProgress();
+
     if (!buffering && _hasPositionSignal && _positionStallSubscription == null) {
       // Buffering was the reason arming was refused; it is over now.
       _armPositionStall(via: 'bufferingEnd');
@@ -491,9 +522,14 @@ final class LiveWatchdogs {
   /// it the only stall detector that works everywhere — including on
   /// engines that declare no frame heartbeat, where a frozen picture is
   /// otherwise indistinguishable from a healthy stream.
-  void onPositionProgress(Duration position) {
+  ///
+  /// Returns true when this sample ended a buffering episode the engine
+  /// never ended itself (see [bufferingProgress]); the owner then shows the
+  /// stream as playing again, exactly as the engine's own buffering-end
+  /// notification would have.
+  bool onPositionProgress(Duration position) {
     if (_disposed) {
-      return;
+      return false;
     }
 
     _lastPositionMs = position.inMilliseconds;
@@ -521,13 +557,85 @@ final class LiveWatchdogs {
     // never detected, and the room simply appeared to have failed to
     // start. Retrying here costs one comparison and keeps the only
     // engine-independent stall detector alive.
+    //
+    // The buffering check runs first: when it ends the episode, the
+    // position-stall watchdog that buffering kept disarmed is armed by it.
+    final bufferingEnded = _endBufferingOnProgress(position);
+
     if (_positionStallSubscription == null) {
       _armPositionStall(via: 'position');
 
-      return;
+      return bufferingEnded;
     }
 
     _positionProgress.add(null);
+
+    return bufferingEnded;
+  }
+
+  /// Ends the current buffering episode when [position] shows playback
+  /// moving through it; returns whether it did.
+  ///
+  /// Without this the buffering deadline judged the engine's flag alone: a
+  /// flag left set while the position moved fired
+  /// [LiveStallKind.bufferingStallTimeout] after [bufferingStallTimeout] and
+  /// reopened a stream that was playing.
+  ///
+  /// Only an engine that is playing counts: a pause ends nothing. A position
+  /// that moved backwards, or further than the wall clock allows
+  /// ([bufferingProgressSlack]), restarts the measurement from itself.
+  bool _endBufferingOnProgress(Duration position) {
+    if (!_buffering || !_playing) {
+      return false;
+    }
+
+    final positionMs = position.inMilliseconds;
+    final baseMs = _bufferingBaseMs;
+
+    if (baseMs == null) {
+      _startBufferingProgress(positionMs);
+      return false;
+    }
+
+    final advancedMs = positionMs - baseMs;
+    final allowedMs = _bufferingBaseClock.elapsedMilliseconds + bufferingProgressSlack.inMilliseconds;
+
+    if (advancedMs < 0 || advancedMs > allowedMs) {
+      _startBufferingProgress(positionMs);
+      return false;
+    }
+
+    if (advancedMs < bufferingProgress.inMilliseconds) {
+      return false;
+    }
+
+    MediaCoreLog.info(
+      LogCategory.recovery,
+      'buffering ended by position progress; the engine still reports buffering',
+      fields: <String, Object?>{
+        'fromMs': baseMs,
+        'toMs': positionMs,
+        'elapsedMs': _bufferingBaseClock.elapsedMilliseconds,
+      },
+    );
+
+    onBufferingChanged(false);
+
+    return true;
+  }
+
+  void _startBufferingProgress(int positionMs) {
+    _bufferingBaseMs = positionMs;
+    _bufferingBaseClock
+      ..reset()
+      ..start();
+  }
+
+  void _resetBufferingProgress() {
+    _bufferingBaseMs = null;
+    _bufferingBaseClock
+      ..stop()
+      ..reset();
   }
 
   // ---------------------------------------------------------------------------
@@ -723,6 +831,7 @@ final class LiveWatchdogs {
     _buffering = false;
     _recoveryPending = false;
     _recoveryGeneration = null;
+    _resetBufferingProgress();
 
     _cancelSourceReady();
     _cancelContinuity();
@@ -746,6 +855,7 @@ final class LiveWatchdogs {
     _buffering = false;
     _recoveryPending = false;
     _recoveryGeneration = null;
+    _resetBufferingProgress();
 
     _cancelSourceReady();
     _cancelContinuity();
@@ -771,6 +881,7 @@ final class LiveWatchdogs {
     }
 
     _hasPositionSignal = false;
+    _resetBufferingProgress();
 
     _cancelPositionStall();
   }

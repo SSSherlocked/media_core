@@ -255,7 +255,12 @@ extension _LivePlaybackPipeline on LivePlaybackController {
         watchdogs.onBufferingChanged(buffering);
 
       case PlayerAdapterPositionChanged(position: final position):
-        watchdogs.onPositionProgress(position);
+        // A buffering the engine never ended is over once the position
+        // moves through it; the mirror follows, as it would have for the
+        // engine's own buffering-end event.
+        if (watchdogs.onPositionProgress(position) && state.playback == PlayerPlaybackState.buffering) {
+          _setState(_liveState(PlayerPlaybackState.playing));
+        }
         _reconcileMirroredPlayback();
 
       case PlayerAdapterVideoFrameProgress():

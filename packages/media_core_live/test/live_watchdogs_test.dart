@@ -202,6 +202,88 @@ void main() {
       expect(recorder.stalls, isEmpty);
       watchdogs.dispose();
     });
+
+    test('a position moving through a buffering the engine never ended ends it', () async {
+      // media_kit can leave its buffering flag set while the stream plays;
+      // judging the flag alone reopened a healthy stream at the deadline.
+      final recorder = _Recorder();
+      final watchdogs = _watchdogs(recorder);
+
+      watchdogs.onPlayingChanged(true, fromUserIntent: false);
+      watchdogs.onBufferingChanged(true);
+
+      expect(watchdogs.onPositionProgress(const Duration(seconds: 10)), isFalse);
+      expect(watchdogs.onPositionProgress(const Duration(milliseconds: 10500)), isFalse);
+      expect(watchdogs.onPositionProgress(const Duration(seconds: 11)), isTrue);
+      // Over once: later samples report nothing new.
+      expect(watchdogs.onPositionProgress(const Duration(seconds: 12)), isFalse);
+      await _settle();
+
+      expect(recorder.stalls, isNot(contains(LiveStallKind.bufferingStallTimeout)));
+      watchdogs.dispose();
+    });
+
+    test('a position standing still keeps the buffering deadline', () async {
+      final recorder = _Recorder();
+      final watchdogs = _watchdogs(recorder);
+
+      watchdogs.onPlayingChanged(true, fromUserIntent: false);
+      watchdogs.onBufferingChanged(true);
+      watchdogs.onPositionProgress(const Duration(seconds: 10));
+      watchdogs.onPositionProgress(const Duration(seconds: 10));
+      expect(watchdogs.onPositionProgress(const Duration(milliseconds: 10900)), isFalse);
+      await _settle();
+
+      expect(recorder.stalls, contains(LiveStallKind.bufferingStallTimeout));
+      watchdogs.dispose();
+    });
+
+    test('a position jump is not progress; playback after it is', () async {
+      final recorder = _Recorder();
+      final watchdogs = _watchdogs(recorder, bufferingStallTimeout: _long);
+
+      watchdogs.onPlayingChanged(true, fromUserIntent: false);
+      watchdogs.onBufferingChanged(true);
+
+      expect(watchdogs.onPositionProgress(const Duration(seconds: 10)), isFalse);
+      // Further than the wall clock allows: a timestamp jump, measured afresh.
+      expect(watchdogs.onPositionProgress(const Duration(seconds: 70)), isFalse);
+      // Backwards: measured afresh too.
+      expect(watchdogs.onPositionProgress(const Duration(seconds: 5)), isFalse);
+      expect(watchdogs.onPositionProgress(const Duration(seconds: 6)), isTrue);
+
+      watchdogs.dispose();
+    });
+
+    test('a paused engine ends no buffering', () async {
+      final recorder = _Recorder();
+      final watchdogs = _watchdogs(recorder, bufferingStallTimeout: _long);
+
+      watchdogs.onPlayingChanged(false, fromUserIntent: false);
+      watchdogs.onBufferingChanged(true);
+
+      expect(watchdogs.onPositionProgress(const Duration(seconds: 10)), isFalse);
+      expect(watchdogs.onPositionProgress(const Duration(seconds: 12)), isFalse);
+
+      watchdogs.dispose();
+    });
+
+    test('each buffering episode is measured from its own first position', () async {
+      final recorder = _Recorder();
+      final watchdogs = _watchdogs(recorder, bufferingStallTimeout: _long);
+
+      watchdogs.onPlayingChanged(true, fromUserIntent: false);
+      watchdogs.onBufferingChanged(true);
+      watchdogs.onPositionProgress(const Duration(seconds: 10));
+      watchdogs.onBufferingChanged(false);
+      watchdogs.onBufferingChanged(true);
+
+      expect(watchdogs.onPositionProgress(const Duration(milliseconds: 10500)), isFalse);
+      expect(watchdogs.onPositionProgress(const Duration(milliseconds: 11200)), isFalse);
+      expect(watchdogs.onPositionProgress(const Duration(milliseconds: 11500)), isTrue);
+
+      watchdogs.dispose();
+    });
   });
 
   group('video frame stall', () {
