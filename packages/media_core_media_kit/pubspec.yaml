@@ -22,22 +22,22 @@ dependencies:
   media_core_logging:
     path: ../media_core_logging
 
-  # Upstream Predidit/media-kit, pinned. The repository no longer carries copies
-  # of these two packages: the fork patches described in pure_live's
-  # media_kit_video/PURELIVE_PATCH.md (Android Surface/vid ownership,
-  # setVideoOutputEnabled, Windows frameRevision) are NOT in this revision, so
-  # nothing here may depend on them. One source per dependency: the commit pin
-  # is authoritative, no hosted fallback is possible.
+  # SSSherlocked/media-kit (branch pure-live): Predidit/media-kit 6b188ae
+  # plus the Android Surface patch in media_kit_video/PURELIVE_PATCH.md (a
+  # Surface change neither seeks nor resets vo). setVideoOutputEnabled and the
+  # Windows frameRevision of the older vendored copy are NOT in it, so nothing
+  # here may depend on them. One source per dependency: the commit pin is
+  # authoritative, no hosted fallback is possible.
   media_kit:
     git:
-      url: https://github.com/Predidit/media-kit.git
-      ref: 6b188ae978808a63e5b58b7ce61f7725238c04c5
+      url: https://github.com/SSSherlocked/media-kit.git
+      ref: 35f8e8993c3ed737b5e8807c7d330780741f321e
       path: ./media_kit
 
   media_kit_video:
     git:
-      url: https://github.com/Predidit/media-kit.git
-      ref: 6b188ae978808a63e5b58b7ce61f7725238c04c5
+      url: https://github.com/SSSherlocked/media-kit.git
+      ref: 35f8e8993c3ed737b5e8807c7d330780741f321e
       path: ./media_kit_video
 
 dev_dependencies:
