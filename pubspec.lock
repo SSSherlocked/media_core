@@ -370,7 +370,7 @@ packages:
     source: hosted
     version: "1.38.2"
   flame_barrage:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
       name: flame_barrage
       sha256: "15541ff9c2b9afc003b3a607754a8dbcce8679b6868e9c1da83927f6389b9bc5"
@@ -398,6 +398,46 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.0"
+  flutter_local_notifications:
+    dependency: transitive
+    description:
+      name: flutter_local_notifications
+      sha256: "9ee28742343dd13df758bb4185e8ded37ac2d1aeca6648c3ba7862c99797517e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "22.3.2"
+  flutter_local_notifications_linux:
+    dependency: transitive
+    description:
+      name: flutter_local_notifications_linux
+      sha256: "3b89a4bf095fa5f8a99beeabf982c5bd506c3ad25e7b9e61da945e994dc5b615"
+      url: "https://pub.dev"
+    source: hosted
+    version: "8.0.2"
+  flutter_local_notifications_platform_interface:
+    dependency: transitive
+    description:
+      name: flutter_local_notifications_platform_interface
+      sha256: "43c3761d916c9bd3d5c7ebbc44d82f4990329840c0c5d62ad5260cc1b5d399bd"
+      url: "https://pub.dev"
+    source: hosted
+    version: "12.2.0"
+  flutter_local_notifications_web:
+    dependency: transitive
+    description:
+      name: flutter_local_notifications_web
+      sha256: "516afaf97a2d1e67a036c6617321b00d205d72f7a67b6eccf936cd565f985878"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
+  flutter_local_notifications_windows:
+    dependency: transitive
+    description:
+      name: flutter_local_notifications_windows
+      sha256: "6f43bdd03b171b7a90f22647506fea33e2bb12294b7c7c7a3d690e960a382945"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.1"
   flutter_localizations:
     dependency: transitive
     description: flutter
@@ -598,6 +638,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.14.1"
+  kareki:
+    dependency: "direct dev"
+    description:
+      name: kareki
+      sha256: "39a8613cda9d2d60d93b8c765356bda351c9fe3ff868edf959169ef1fa591098"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.7.0"
   leak_tracker:
     dependency: transitive
     description:
@@ -712,6 +760,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.6"
+  native_picture_in_picture:
+    dependency: transitive
+    description:
+      name: native_picture_in_picture
+      sha256: "2fdc5e238c00f1e239113f897a366e07fcaca06eef9b2be8ef95aa0a0d06d137"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.1"
   native_toolchain_c:
     dependency: transitive
     description:
@@ -1157,6 +1213,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.6.18"
+  timezone:
+    dependency: transitive
+    description:
+      name: timezone
+      sha256: "9f4e5a1a0e4fef7dd3424842c0575db01bfb7a11730e8d55753fcd5c5c98767b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.11.2"
   typed_data:
     dependency: transitive
     description:
@@ -1197,6 +1261,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.3"
+  very_good_analysis:
+    dependency: "direct dev"
+    description:
+      name: very_good_analysis
+      sha256: "0bd5eb8d6be76aa0d71e70cbdae6cac8f784f761170568e3c2214a6948c7f6d3"
+      url: "https://pub.dev"
+    source: hosted
+    version: "11.0.0"
   video_player:
     dependency: transitive
     description:

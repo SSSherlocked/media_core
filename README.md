@@ -109,7 +109,7 @@ adapter 报错后，唯一决策点 `RecoveryLadder` 按梯级推进，每一步
 | `media_core_ui`               | 播放器 UI    | **六套设计语言**（material / cupertino / fluent / macos / yaru / neumorphic）共用一层控制逻辑；含双指/双击缩放与截图按钮 |
 | `media_core_mediasession`     | 系统媒体面   | 通知 / 锁屏 / SMTC / MPRIS + 音频焦点；**进程内一次 `enable()`，之后所有播放器自动挂载**                               |
 | `media_core_native`           | 平台能力探针 | 编解码硬解与分辨率上限、内存/核数、系统特性，以及**后台保活**（前台服务/唤醒锁、防休眠）；五平台实现，答案随每个 session 与适配器下发 |
-| `media_core_live`             | 直播         | 线路/引擎扫描、卡顿看门狗、退避重试（跑在单槽任务队列上）                                                                      |
+| `media_core_live`             | 直播         | 线路/引擎扫描、卡顿看门狗、宿主节奏的即时 retry（跑在单槽任务队列上）                                                                      |
 | `media_core_feed`             | 抖音式上下滑 | 共用一个播放器换源、滑动吸附、下一项预载                                                                                       |
 | `media_core_list_playback`    | 列表播放     | 单窗口上/下滑切换，按条目记忆进度，返回时续播                                                                                  |
 | `media_core_multiview`        | 多画面同看   | 监控式视频墙：逐格健康度、唯一音频归属、解码预算、逐格弹幕、巡更轮巡、逐格列表                                                 |
@@ -117,11 +117,9 @@ adapter 报错后，唯一决策点 `RecoveryLadder` 按梯级推进，每一步
 | `media_core_audio`            | 音乐         | 音源注册与解析（签名 URL 带过期）、队列与四种播放模式、歌词（LRC/翻译/逐字）、桌面歌词原生窗口、下载（ffmpeg）                 |
 | `media_core_recording_ffmpeg` | 录播         | FFmpegKit 分段 MPEG-TS 录制 + CSV 日志；失败只丢几秒而非整场；进程默认取后台保活会话（熄屏继续录）                              |
 | `media_core_download`         | 下载         | 有界并发队列、断点续传（先校验再续）、重试预算与进度                                                                           |
-| `media_core_presentation`     | 呈现接缝     | 窗口级驱动契约 + 通用浮层舞台（槽位 / 悬停显隐），三个窗口包共用                                                               |
+| `media_core_presentation`     | 呈现接缝     | 窗口级驱动契约 + 通用浮层舞台（槽位 / 悬停显隐），窗口类包共用                                                               |
 | `media_core_fullscreen`       | 全屏         | 系统全屏与窗口级全屏两种变体，含横竖屏适配策略                                                                                 |
-| `media_core_pip`              | 画中画       | 桌面置顶小窗（可锁宽高比）+ Android 系统 PiP；移动端"能进不能出"是平台事实，如实返回                                           |
-| `media_core_floating`         | 应用内小窗   | widget 树内可拖拽、贴边吸附的浮层；纯几何，无平台分支                                                                          |
-| `floating`                    | 三方快照     | 安卓系统 PiP 上游插件 6.0.0 的源码快照，为 AGP 9 内置 Kotlin 与状态观测打过补丁，`media_core_pip` 按路径依赖它；补丁清单见 `packages/floating/PATCHES.md` |
+| `media_core_pip`              | 画中画       | 桌面置顶小窗（可锁宽高比）+ Android/iOS 系统 PiP（`native_picture_in_picture` 接管式）；移动端"能进不能出"是平台事实，如实返回                    |
 | `media_core_logging`          | 分级日志     | 全局枢纽：分级/分类开关、多 sink（控制台/内存环/文件轮转）、作用域字段                                                         |
 | `media_core_memory`           | 内存记账     | 按贡献者申报求和 + 设备实测快照；预算阈值驱动的四级压力                                                                        |
 
@@ -201,8 +199,7 @@ packages/
   media_core_audio/                 音乐：音源 / 队列 / 歌词 / 桌面歌词 / 下载
   media_core_presentation/          呈现接缝（窗口驱动契约 + 浮层舞台）
   media_core_fullscreen/            全屏（两种变体 + 方向策略）
-  media_core_pip/                   画中画（桌面小窗 + 安卓系统 PiP）
-  media_core_floating/              应用内小窗（拖拽 / 吸附）
+  media_core_pip/                   画中画（桌面小窗 + Android/iOS 系统 PiP）
   media_core_danmaku/               弹幕
   media_core_live/                  直播编排
   media_core_feed/                  抖音式上下滑
@@ -212,7 +209,6 @@ packages/
   media_core_download/              下载（队列 + 续传 + 重试）
   media_core_logging/               分级日志
   media_core_memory/                内存记账
-  floating/                         三方源码快照：安卓系统 PiP 插件（补丁见 packages/floating/PATCHES.md）
 example</* */s/example/                   示例 App：9 个可运行页面 + 14 个模块速览
 ```
 
