@@ -6,9 +6,9 @@ import 'package:audio_service_mpris/audio_service_mpris.dart' as ampris;
 import 'package:audio_service_win/audio_service_win.dart' as aswin;
 import 'package:audio_session/audio_session.dart' as asession;
 import 'package:media_core/media_core.dart';
-
 import 'package:media_core_mediasession/src/media_session_config.dart';
 import 'package:media_core_mediasession/src/media_session_handler.dart';
+import 'package:meta/meta.dart' show visibleForTesting;
 
 /// System media surfaces for the media_core kernel.
 ///
@@ -52,7 +52,9 @@ base class MediaSessionDriver implements KernelAudioDriver {
     this.config = const MediaSessionConfig(),
     asession.AudioSessionConfiguration? sessionConfiguration,
     this.artUriResolver,
-  }) : _sessionConfiguration = sessionConfiguration;
+    @visibleForTesting MediaSessionHandler? handler,
+  }) : _sessionConfiguration = sessionConfiguration,
+       _handler = handler;
 
   /// Capability configuration.
   final MediaSessionConfig config;
@@ -97,7 +99,7 @@ base class MediaSessionDriver implements KernelAudioDriver {
   bool _disposed = false;
   bool _ducked = false;
   bool _resumeOnInterruptionEnd = false;
-  double _volumeBeforeDuck = 1.0;
+  double _volumeBeforeDuck = 1;
 
   /// The underlying audio_service handler.
   ///
@@ -136,24 +138,54 @@ base class MediaSessionDriver implements KernelAudioDriver {
 
     _registerPlatformImplementation();
 
+    if (_handler != null) {
+      // Supplied from outside (a test): the platform session is still wired,
+      // but there is no handler to build.
+      return;
+    }
+
     _handler = await asvc.AudioService.init(
       builder: () => MediaSessionHandler(
-        onPlay: () async => _active?.play(),
-        onPause: () async => _active?.pause(),
-        onSeek: (position) async => _active?.seek(position),
-        onStop: () async => _active?.stop(),
-        onNext: skipToNextHandler == null ? null : () async => skipToNextHandler!.call(),
-        onPrevious: skipToPreviousHandler == null ? null : () async => skipToPreviousHandler!.call(),
-        onSkipToQueueItem: skipToQueueItemHandler == null ? null : (index) async => skipToQueueItemHandler!.call(index),
-        onSetSpeed: setSpeedHandler == null ? null : (rate) async => setSpeedHandler!.call(rate),
+        onPlay: () async {
+          await _active?.play();
+        },
+        onPause: () async {
+          await _active?.pause();
+        },
+        onSeek: (position) async {
+          await _active?.seek(position);
+        },
+        onStop: () async {
+          await _active?.stop();
+        },
+        onNext: skipToNextHandler == null
+            ? null
+            : () async {
+                await skipToNextHandler!.call();
+              },
+        onPrevious: skipToPreviousHandler == null
+            ? null
+            : () async {
+                await skipToPreviousHandler!.call();
+              },
+        onSkipToQueueItem: skipToQueueItemHandler == null
+            ? null
+            : (index) async {
+                await skipToQueueItemHandler!.call(index);
+              },
+        onSetSpeed: setSpeedHandler == null
+            ? null
+            : (rate) async {
+                await setSpeedHandler!.call(rate);
+              },
         controlsBuilder: _buildControls,
+        stopOnTaskRemoved: config.androidStopOnRemoveTask,
       ),
       config: asvc.AudioServiceConfig(
         androidNotificationChannelId: config.androidNotificationChannelId,
         androidNotificationChannelName: config.androidNotificationChannelName,
         androidNotificationOngoing: config.androidNotificationOngoing,
         androidStopForegroundOnPause: !config.androidNotificationOngoing,
-        androidNotificationClickStartsActivity: true,
       ),
     );
 
@@ -173,7 +205,7 @@ base class MediaSessionDriver implements KernelAudioDriver {
       if (config.pauseOnBecomingNoisy) {
         _noisySub = session.becomingNoisyEventStream.listen((_) => _active?.pause(), onError: (_) {});
       }
-    } catch (_) {
+    } on Object catch (_) {
       // A platform without a functional audio_session implementation. Playback
       // still works; focus handling is simply unavailable.
     }
@@ -233,7 +265,7 @@ base class MediaSessionDriver implements KernelAudioDriver {
       return;
     }
 
-    _playbackSub?.cancel();
+    unawaited(_playbackSub?.cancel());
     _playbackSub = null;
 
     _active = handle;
@@ -248,8 +280,9 @@ base class MediaSessionDriver implements KernelAudioDriver {
     }
 
     if (handle == null) {
-      handler.publishIdle();
-      handler.clearMediaItem();
+      handler
+        ..publishIdle()
+        ..clearMediaItem();
 
       return;
     }
@@ -312,13 +345,13 @@ base class MediaSessionDriver implements KernelAudioDriver {
           if (!_ducked) {
             _ducked = true;
             _volumeBeforeDuck = active.playback.volume;
-            active.setVolume(_volumeBeforeDuck * config.duckFactor);
+            unawaited(active.setVolume(_volumeBeforeDuck * config.duckFactor));
           }
 
         case asession.AudioInterruptionType.pause:
         case asession.AudioInterruptionType.unknown:
           _resumeOnInterruptionEnd = config.resumeAfterInterruption && active.playback.isPlaying;
-          active.pause();
+          unawaited(active.pause());
       }
 
       return;
@@ -326,12 +359,12 @@ base class MediaSessionDriver implements KernelAudioDriver {
 
     if (_ducked) {
       _ducked = false;
-      active.setVolume(_volumeBeforeDuck);
+      unawaited(active.setVolume(_volumeBeforeDuck));
     }
 
     if (_resumeOnInterruptionEnd) {
       _resumeOnInterruptionEnd = false;
-      active.play();
+      unawaited(active.play());
     }
   }
 
@@ -354,7 +387,7 @@ base class MediaSessionDriver implements KernelAudioDriver {
       } else if (Platform.isLinux) {
         ampris.AudioServiceMpris.registerWith();
       }
-    } catch (_) {
+    } on Object catch (_) {
       // Registration is best-effort: audio_service falls back to its default
       // platform implementation when this fails.
     }
@@ -374,11 +407,7 @@ base class MediaSessionDriver implements KernelAudioDriver {
 
     return <asvc.MediaControl>[
       if (skipToPreviousHandler != null)
-        asvc.MediaControl(
-          androidIcon: config.previousIcon,
-          label: 'Previous',
-          action: asvc.MediaAction.skipToPrevious,
-        )
+        asvc.MediaControl(androidIcon: config.previousIcon, label: 'Previous', action: asvc.MediaAction.skipToPrevious)
       else if (config.showSeekButtons)
         asvc.MediaControl(
           androidIcon: config.rewindIcon,
@@ -402,18 +431,43 @@ base class MediaSessionDriver implements KernelAudioDriver {
     ];
   }
 
+  /// What the surfaces were last told, so a position-only tick can be skipped.
+  MediaSessionState? _published;
+
+  /// How far the notification's position may lag the player.
+  ///
+  /// A lock screen redraws this bar about once a second no matter what the app
+  /// pushes, and every publish is a platform notification rebuild. The player
+  /// can report many times a second (and, before the engine adapters reduced
+  /// their position streams, once per frame) - publishing each one spent battery
+  /// and heat on frames nobody would see.
+  static const Duration _positionPublishInterval = Duration(seconds: 1);
+
   void _publishCurrent(PlayerHandle handle) {
     final playback = handle.playback;
-
-    _handler?.publishState(
-      MediaSessionState(
-        playing: playback.isPlaying,
-        position: playback.position,
-        duration: playback.duration,
-        speed: playback.rate,
-      ),
-      controls: _buildControls(playback.isPlaying),
+    final next = MediaSessionState(
+      playing: playback.isPlaying,
+      position: playback.position,
+      duration: playback.duration,
+      speed: playback.rate,
     );
+
+    final previous = _published;
+    if (previous != null &&
+        next.playing == previous.playing &&
+        next.duration == previous.duration &&
+        next.speed == previous.speed) {
+      final drift = next.position - previous.position;
+      // Only small forward drift is skippable. A jump - a seek back, a new song
+      // whose zero position follows the old one - must reach the surfaces now:
+      // it is a different timeline, not a step along the same one.
+      if (drift >= Duration.zero && drift < _positionPublishInterval) {
+        return;
+      }
+    }
+
+    _published = next;
+    _handler?.publishState(next, controls: _buildControls(next.playing));
   }
 
   /// Describes a handle as a media item.
@@ -432,9 +486,7 @@ base class MediaSessionDriver implements KernelAudioDriver {
 
     final metadata = source?.metadataValue('artUri');
 
-    final artUri = metadata is String
-        ? Uri.tryParse(metadata)
-        : (source != null ? artUriResolver?.call(source) : null);
+    final artUri = metadata is String ? Uri.tryParse(metadata) : (source != null ? artUriResolver?.call(source) : null);
 
     final duration = handle.playback.duration;
 

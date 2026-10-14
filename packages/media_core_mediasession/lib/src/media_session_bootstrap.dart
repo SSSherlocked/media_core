@@ -87,11 +87,7 @@ final class MediaSessionBootstrap {
 
     final session =
         driver ??
-        MediaSessionDriver(
-          config: config,
-          artUriResolver: artUriResolver,
-          sessionConfiguration: sessionConfiguration,
-        );
+        MediaSessionDriver(config: config, artUriResolver: artUriResolver, sessionConfiguration: sessionConfiguration);
 
     await session.initialize();
 
@@ -109,7 +105,7 @@ final class MediaSessionBootstrap {
   static void install(MediaSessionDriver session) {
     _current = session;
 
-    final factory = () => session;
+    MediaSessionDriver factory() => session;
 
     _installedFactory = factory;
 

@@ -46,6 +46,8 @@
 /// - drawables for the control icons named in [MediaSessionConfig].
 library;
 
+import 'package:media_core_mediasession/src/media_session_config.dart' show MediaSessionConfig;
+
 // The handler extends `BaseAudioHandler` and its streams carry these types, so
 // a host that observes the surfaces would otherwise have to depend on
 // audio_service itself just to name them.

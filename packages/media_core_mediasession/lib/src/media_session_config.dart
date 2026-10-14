@@ -64,6 +64,10 @@ final class MediaSessionConfig {
   final bool androidNotificationOngoing;
 
   /// Whether playback stops when the task is removed on Android.
+  ///
+  /// Forwarded to `MediaSessionHandler.stopOnTaskRemoved`, which is what makes
+  /// audio_service's `onTaskRemoved` (the viewer swiping the app out of recents)
+  /// stop the player instead of leaving it running from the notification.
   final bool androidStopOnRemoveTask;
 
   /// Whether transport controls are shown in the notification.

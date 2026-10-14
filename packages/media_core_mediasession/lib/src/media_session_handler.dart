@@ -3,12 +3,7 @@ import 'package:audio_service/audio_service.dart';
 /// Snapshot of playback state pushed into the system media surface.
 final class MediaSessionState {
   /// Creates the snapshot.
-  const MediaSessionState({
-    required this.playing,
-    required this.position,
-    required this.duration,
-    required this.speed,
-  });
+  const MediaSessionState({required this.playing, required this.position, required this.duration, required this.speed});
 
   /// Whether playback is active.
   final bool playing;
@@ -67,14 +62,7 @@ final class MediaSessionItem {
 
   /// Converts to the platform model.
   MediaItem toMediaItem() {
-    return MediaItem(
-      id: id,
-      album: album,
-      title: title,
-      artist: artist,
-      duration: duration,
-      artUri: artUri,
-    );
+    return MediaItem(id: id, album: album, title: title, artist: artist, duration: duration, artUri: artUri);
   }
 }
 
@@ -99,6 +87,7 @@ final class MediaSessionHandler extends BaseAudioHandler {
     Future<void> Function(int index)? onSkipToQueueItem,
     Future<void> Function(double rate)? onSetSpeed,
     this.controlsBuilder,
+    this.stopOnTaskRemoved = false,
   }) : _onPlay = onPlay,
        _onPause = onPause,
        _onSeek = onSeek,
@@ -123,10 +112,21 @@ final class MediaSessionHandler extends BaseAudioHandler {
   /// Whether the platform may offer skip-previous.
   bool get canSkipToPrevious => _onPrevious != null;
 
+  /// Whether the task-removal callback stops playback.
+  ///
+  /// `MediaSessionConfig.androidStopOnRemoveTask`, which is what the platform's
+  /// "the viewer swiped the app away" signal is for. Off means the audio keeps
+  /// running from the notification, which is what a music app wants and what a
+  /// live room does not.
+  final bool stopOnTaskRemoved;
+
   /// Optional builder for notification controls.
   ///
   /// Receives the current playing state and returns the controls to display.
   /// When null a play/pause + stop pair is used.
+  // Positional `playing` mirrors audio_service's `MediaControlsBuilder`, so a
+  // platform-provided builder can be dropped in without rewrapping.
+  // ignore: avoid_positional_boolean_parameters
   final List<MediaControl> Function(bool playing)? controlsBuilder;
 
   /// Builds compact action indices advertised to the platform.
@@ -156,14 +156,7 @@ final class MediaSessionHandler extends BaseAudioHandler {
 
   /// Pushes idle state into the media surface.
   void publishIdle() {
-    playbackState.add(
-      PlaybackState(
-        processingState: AudioProcessingState.idle,
-        playing: false,
-        updatePosition: Duration.zero,
-        bufferedPosition: Duration.zero,
-      ),
-    );
+    playbackState.add(PlaybackState());
   }
 
   /// Pushes [item] as the current media item.
@@ -207,13 +200,29 @@ final class MediaSessionHandler extends BaseAudioHandler {
     await super.stop();
   }
 
+  /// The viewer swiped the app away in Android's recents.
+  ///
+  /// Without [stopOnTaskRemoved] this answers nothing and playback continues —
+  /// the music keeps playing from the notification, which is what a music app
+  /// asks for. With it, the stop the viewer meant is the stop that happens: a
+  /// live room that keeps streaming after its page is gone is the case the flag
+  /// exists for.
+  @override
+  Future<void> onTaskRemoved() async {
+    if (!stopOnTaskRemoved) {
+      return;
+    }
+
+    await stop();
+  }
+
   @override
   Future<void> skipToNext() async {
     final next = _onNext;
 
     // Without a queue the sane degrade is the default behavior.
     if (next == null) {
-      return super.skipToNext();
+      return await super.skipToNext();
     }
 
     await next();
@@ -224,7 +233,7 @@ final class MediaSessionHandler extends BaseAudioHandler {
     final previous = _onPrevious;
 
     if (previous == null) {
-      return super.skipToPrevious();
+      return await super.skipToPrevious();
     }
 
     await previous();
@@ -235,7 +244,7 @@ final class MediaSessionHandler extends BaseAudioHandler {
     final skip = _onSkipToQueueItem;
 
     if (skip == null) {
-      return super.skipToQueueItem(index);
+      return await super.skipToQueueItem(index);
     }
 
     await skip(index);
@@ -246,7 +255,7 @@ final class MediaSessionHandler extends BaseAudioHandler {
     final setSpeed = _onSetSpeed;
 
     if (setSpeed == null) {
-      return super.setSpeed(speed);
+      return await super.setSpeed(speed);
     }
 
     await setSpeed(speed);

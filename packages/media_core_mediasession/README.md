@@ -9,9 +9,12 @@
 ```text
 PlayerHandle.playbackStream ──▶ MediaSessionHandler ──▶ 通知 / SMTC / MPRIS
 通知按钮 / 锁屏 / 媒体键     ──▶ MediaSessionHandler ──▶ PlayerHandle
+
 音频焦点打断（来电、别的播放器） ──▶ 暂停 / 压低 / 恢复
 拔耳机                      ──▶ 暂停
 ```
+
+**出去的方向有节奏**：位置每 1 秒最多发一次，其余（playing / speed / duration / 控件表）一到就发。播放器的 transport 流一秒能报很多次（引擎侧未收敛前是每帧一次），而每一次 publishState 到 Android 就是一次通知重建——锁屏那条进度条本身大约一秒才重画一次，多发的都是电池和热量。往回跳（seek、换歌的零位置）算"换了条时间线"，不等窗口，立刻发。
 
 ## 用法：应用启动时挂一次，之后全自动
 
