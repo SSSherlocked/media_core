@@ -104,94 +104,45 @@ final class _MonitorInfo extends Struct {
   external int dwFlags;
 }
 
-typedef _FindWindowW_Native =
-    _Hwnd Function(Pointer<Utf16> className, Pointer<Utf16> windowName);
-typedef _FindWindowW_Dart =
-    int Function(Pointer<Utf16> className, Pointer<Utf16> windowName);
-typedef _FindWindowExW_Native =
-    _Hwnd Function(
-      _Hwnd parent,
-      _Hwnd after,
-      Pointer<Utf16> className,
-      Pointer<Utf16> windowName,
-    );
-typedef _FindWindowExW_Dart =
-    int Function(
-      int parent,
-      int after,
-      Pointer<Utf16> className,
-      Pointer<Utf16> windowName,
-    );
-typedef _GetWindowThreadProcessId_Native =
-    _Dword Function(_Hwnd hwnd, Pointer<_Dword> processId);
-typedef _GetWindowThreadProcessId_Dart =
-    int Function(int hwnd, Pointer<_Dword> processId);
-typedef _GetWindowLongPtrW_Native =
-    _LongPtr Function(_Hwnd hwnd, _LongPtr index);
-typedef _GetWindowLongPtrW_Dart = int Function(int hwnd, int index);
-typedef _SetWindowLongPtrW_Native =
-    _LongPtr Function(_Hwnd hwnd, _LongPtr index, _LongPtr value);
-typedef _SetWindowLongPtrW_Dart = int Function(int hwnd, int index, int value);
-typedef _SetWindowPos_Native =
-    _Bool32 Function(
-      _Hwnd hwnd,
-      _Hwnd after,
-      _Long x,
-      _Long y,
-      _Long cx,
-      _Long cy,
-      _Dword flags,
-    );
-typedef _SetWindowPos_Dart =
-    int Function(int hwnd, int after, int x, int y, int cx, int cy, int flags);
-typedef _GetWindowPlacement_Native =
-    _Bool32 Function(_Hwnd hwnd, Pointer<_WindowPlacement> placement);
-typedef _GetWindowPlacement_Dart =
-    int Function(int hwnd, Pointer<_WindowPlacement> placement);
-typedef _SetWindowPlacement_Native =
-    _Bool32 Function(_Hwnd hwnd, Pointer<_WindowPlacement> placement);
-typedef _SetWindowPlacement_Dart =
-    int Function(int hwnd, Pointer<_WindowPlacement> placement);
-typedef _MonitorFromWindow_Native =
-    _Hmonitor Function(_Hwnd hwnd, _Dword flags);
-typedef _MonitorFromWindow_Dart = int Function(int hwnd, int flags);
-typedef _GetMonitorInfoW_Native =
-    _Bool32 Function(_Hmonitor monitor, Pointer<_MonitorInfo> info);
-typedef _GetMonitorInfoW_Dart =
-    int Function(int monitor, Pointer<_MonitorInfo> info);
-typedef _IsZoomed_Native = _Bool32 Function(_Hwnd hwnd);
-typedef _IsZoomed_Dart = int Function(int hwnd);
-typedef _GetWindowRect_Native =
-    _Bool32 Function(_Hwnd hwnd, Pointer<_Rect> rect);
-typedef _GetWindowRect_Dart = int Function(int hwnd, Pointer<_Rect> rect);
-typedef _SendMessageW_Native =
-    _LongPtr Function(_Hwnd hwnd, _Dword msg, _LongPtr wparam, _LongPtr lparam);
-typedef _SendMessageW_Dart =
-    int Function(int hwnd, int msg, int wparam, int lparam);
-typedef _DwmSetWindowAttribute_Native =
-    _LongPtr Function(
-      _Hwnd hwnd,
-      _Dword attr,
-      Pointer<_Dword> value,
-      _Dword size,
-    );
-typedef _DwmSetWindowAttribute_Dart =
-    int Function(int hwnd, int attr, Pointer<_Dword> value, int size);
-typedef _ReleaseCapture_Native = _Bool32 Function();
-typedef _ReleaseCapture_Dart = int Function();
-typedef _GetCurrentProcessId_Native = _Dword Function();
-typedef _GetCurrentProcessId_Dart = int Function();
+typedef _FindWindowWNative = _Hwnd Function(Pointer<Utf16> className, Pointer<Utf16> windowName);
+typedef _FindWindowWDart = int Function(Pointer<Utf16> className, Pointer<Utf16> windowName);
+typedef _FindWindowExWNative =
+    _Hwnd Function(_Hwnd parent, _Hwnd after, Pointer<Utf16> className, Pointer<Utf16> windowName);
+typedef _FindWindowExWDart = int Function(int parent, int after, Pointer<Utf16> className, Pointer<Utf16> windowName);
+typedef _GetWindowThreadProcessIdNative = _Dword Function(_Hwnd hwnd, Pointer<_Dword> processId);
+typedef _GetWindowThreadProcessIdDart = int Function(int hwnd, Pointer<_Dword> processId);
+typedef _GetWindowLongPtrWNative = _LongPtr Function(_Hwnd hwnd, _LongPtr index);
+typedef _GetWindowLongPtrWDart = int Function(int hwnd, int index);
+typedef _SetWindowLongPtrWNative = _LongPtr Function(_Hwnd hwnd, _LongPtr index, _LongPtr value);
+typedef _SetWindowLongPtrWDart = int Function(int hwnd, int index, int value);
+typedef _SetWindowPosNative =
+    _Bool32 Function(_Hwnd hwnd, _Hwnd after, _Long x, _Long y, _Long cx, _Long cy, _Dword flags);
+typedef _SetWindowPosDart = int Function(int hwnd, int after, int x, int y, int cx, int cy, int flags);
+typedef _GetWindowPlacementNative = _Bool32 Function(_Hwnd hwnd, Pointer<_WindowPlacement> placement);
+typedef _GetWindowPlacementDart = int Function(int hwnd, Pointer<_WindowPlacement> placement);
+typedef _SetWindowPlacementNative = _Bool32 Function(_Hwnd hwnd, Pointer<_WindowPlacement> placement);
+typedef _SetWindowPlacementDart = int Function(int hwnd, Pointer<_WindowPlacement> placement);
+typedef _MonitorFromWindowNative = _Hmonitor Function(_Hwnd hwnd, _Dword flags);
+typedef _MonitorFromWindowDart = int Function(int hwnd, int flags);
+typedef _GetMonitorInfoWNative = _Bool32 Function(_Hmonitor monitor, Pointer<_MonitorInfo> info);
+typedef _GetMonitorInfoWDart = int Function(int monitor, Pointer<_MonitorInfo> info);
+typedef _IsZoomedNative = _Bool32 Function(_Hwnd hwnd);
+typedef _IsZoomedDart = int Function(int hwnd);
+typedef _GetWindowRectNative = _Bool32 Function(_Hwnd hwnd, Pointer<_Rect> rect);
+typedef _GetWindowRectDart = int Function(int hwnd, Pointer<_Rect> rect);
+typedef _SendMessageWNative = _LongPtr Function(_Hwnd hwnd, _Dword msg, _LongPtr wparam, _LongPtr lparam);
+typedef _SendMessageWDart = int Function(int hwnd, int msg, int wparam, int lparam);
+typedef _DwmSetWindowAttributeNative = _LongPtr Function(_Hwnd hwnd, _Dword attr, Pointer<_Dword> value, _Dword size);
+typedef _DwmSetWindowAttributeDart = int Function(int hwnd, int attr, Pointer<_Dword> value, int size);
+typedef _ReleaseCaptureNative = _Bool32 Function();
+typedef _ReleaseCaptureDart = int Function();
+typedef _GetCurrentProcessIdNative = _Dword Function();
+typedef _GetCurrentProcessIdDart = int Function();
 
 /// A captured window placement, sufficient to put the window back exactly
 /// where it was.
 final class Win32WindowSnapshot {
-  const Win32WindowSnapshot._(
-    this.hwnd,
-    this._style,
-    this._exStyle,
-    this._maximized,
-    this._placement,
-  );
+  const Win32WindowSnapshot._(this.hwnd, this._style, this._exStyle, this._maximized, this._placement);
 
   /// The window the snapshot belongs to.
   final int hwnd;
@@ -210,68 +161,45 @@ abstract final class Win32WindowFfi {
 
   static final DynamicLibrary _user32 = DynamicLibrary.open('user32.dll');
   static final DynamicLibrary _kernel32 = DynamicLibrary.open('kernel32.dll');
-  static final DynamicLibrary? _dwmapi = Platform.isWindows
-      ? DynamicLibrary.open('dwmapi.dll')
-      : null;
+  static final DynamicLibrary? _dwmapi = Platform.isWindows ? DynamicLibrary.open('dwmapi.dll') : null;
 
-  static final _ReleaseCapture_Dart _releaseCapture = _user32
-      .lookupFunction<_ReleaseCapture_Native, _ReleaseCapture_Dart>(
-        'ReleaseCapture',
-      );
-  static final _DwmSetWindowAttribute_Dart? _dwmSetWindowAttribute = _dwmapi
-      ?.lookupFunction<
-        _DwmSetWindowAttribute_Native,
-        _DwmSetWindowAttribute_Dart
-      >('DwmSetWindowAttribute');
-  static final _GetCurrentProcessId_Dart _getCurrentProcessId = _kernel32
-      .lookupFunction<_GetCurrentProcessId_Native, _GetCurrentProcessId_Dart>(
-        'GetCurrentProcessId',
-      );
-  static final _FindWindowW_Dart _findWindow = _user32
-      .lookupFunction<_FindWindowW_Native, _FindWindowW_Dart>('FindWindowW');
-  static final _FindWindowExW_Dart _findWindowEx = _user32
-      .lookupFunction<_FindWindowExW_Native, _FindWindowExW_Dart>(
-        'FindWindowExW',
-      );
-  static final _GetWindowThreadProcessId_Dart _getWindowThreadProcessId =
-      _user32.lookupFunction<
-        _GetWindowThreadProcessId_Native,
-        _GetWindowThreadProcessId_Dart
-      >('GetWindowThreadProcessId');
-  static final _GetWindowLongPtrW_Dart _getWindowLongPtr = _user32
-      .lookupFunction<_GetWindowLongPtrW_Native, _GetWindowLongPtrW_Dart>(
-        'GetWindowLongPtrW',
-      );
-  static final _SetWindowLongPtrW_Dart _setWindowLongPtr = _user32
-      .lookupFunction<_SetWindowLongPtrW_Native, _SetWindowLongPtrW_Dart>(
-        'SetWindowLongPtrW',
-      );
-  static final _SetWindowPos_Dart _setWindowPos = _user32
-      .lookupFunction<_SetWindowPos_Native, _SetWindowPos_Dart>('SetWindowPos');
-  static final _GetWindowPlacement_Dart _getWindowPlacement = _user32
-      .lookupFunction<_GetWindowPlacement_Native, _GetWindowPlacement_Dart>(
-        'GetWindowPlacement',
-      );
-  static final _SetWindowPlacement_Dart _setWindowPlacement = _user32
-      .lookupFunction<_SetWindowPlacement_Native, _SetWindowPlacement_Dart>(
-        'SetWindowPlacement',
-      );
-  static final _MonitorFromWindow_Dart _monitorFromWindow = _user32
-      .lookupFunction<_MonitorFromWindow_Native, _MonitorFromWindow_Dart>(
-        'MonitorFromWindow',
-      );
-  static final _GetMonitorInfoW_Dart _getMonitorInfo = _user32
-      .lookupFunction<_GetMonitorInfoW_Native, _GetMonitorInfoW_Dart>(
-        'GetMonitorInfoW',
-      );
-  static final _IsZoomed_Dart _isZoomed = _user32
-      .lookupFunction<_IsZoomed_Native, _IsZoomed_Dart>('IsZoomed');
-  static final _GetWindowRect_Dart _getWindowRect = _user32
-      .lookupFunction<_GetWindowRect_Native, _GetWindowRect_Dart>(
-        'GetWindowRect',
-      );
-  static final _SendMessageW_Dart _sendMessage = _user32
-      .lookupFunction<_SendMessageW_Native, _SendMessageW_Dart>('SendMessageW');
+  static final _ReleaseCaptureDart _releaseCapture = _user32.lookupFunction<_ReleaseCaptureNative, _ReleaseCaptureDart>(
+    'ReleaseCapture',
+  );
+  static final _DwmSetWindowAttributeDart? _dwmSetWindowAttribute = _dwmapi
+      ?.lookupFunction<_DwmSetWindowAttributeNative, _DwmSetWindowAttributeDart>('DwmSetWindowAttribute');
+  static final _GetCurrentProcessIdDart _getCurrentProcessId = _kernel32
+      .lookupFunction<_GetCurrentProcessIdNative, _GetCurrentProcessIdDart>('GetCurrentProcessId');
+  static final _FindWindowWDart _findWindow = _user32.lookupFunction<_FindWindowWNative, _FindWindowWDart>(
+    'FindWindowW',
+  );
+  static final _FindWindowExWDart _findWindowEx = _user32.lookupFunction<_FindWindowExWNative, _FindWindowExWDart>(
+    'FindWindowExW',
+  );
+  static final _GetWindowThreadProcessIdDart _getWindowThreadProcessId = _user32
+      .lookupFunction<_GetWindowThreadProcessIdNative, _GetWindowThreadProcessIdDart>('GetWindowThreadProcessId');
+  static final _GetWindowLongPtrWDart _getWindowLongPtr = _user32
+      .lookupFunction<_GetWindowLongPtrWNative, _GetWindowLongPtrWDart>('GetWindowLongPtrW');
+  static final _SetWindowLongPtrWDart _setWindowLongPtr = _user32
+      .lookupFunction<_SetWindowLongPtrWNative, _SetWindowLongPtrWDart>('SetWindowLongPtrW');
+  static final _SetWindowPosDart _setWindowPos = _user32.lookupFunction<_SetWindowPosNative, _SetWindowPosDart>(
+    'SetWindowPos',
+  );
+  static final _GetWindowPlacementDart _getWindowPlacement = _user32
+      .lookupFunction<_GetWindowPlacementNative, _GetWindowPlacementDart>('GetWindowPlacement');
+  static final _SetWindowPlacementDart _setWindowPlacement = _user32
+      .lookupFunction<_SetWindowPlacementNative, _SetWindowPlacementDart>('SetWindowPlacement');
+  static final _MonitorFromWindowDart _monitorFromWindow = _user32
+      .lookupFunction<_MonitorFromWindowNative, _MonitorFromWindowDart>('MonitorFromWindow');
+  static final _GetMonitorInfoWDart _getMonitorInfo = _user32
+      .lookupFunction<_GetMonitorInfoWNative, _GetMonitorInfoWDart>('GetMonitorInfoW');
+  static final _IsZoomedDart _isZoomed = _user32.lookupFunction<_IsZoomedNative, _IsZoomedDart>('IsZoomed');
+  static final _GetWindowRectDart _getWindowRect = _user32.lookupFunction<_GetWindowRectNative, _GetWindowRectDart>(
+    'GetWindowRect',
+  );
+  static final _SendMessageWDart _sendMessage = _user32.lookupFunction<_SendMessageWNative, _SendMessageWDart>(
+    'SendMessageW',
+  );
 
   /// The runner window of this process, or null when not found.
   ///
@@ -307,8 +235,7 @@ abstract final class Win32WindowFfi {
     if (hwnd == 0) return null;
     final placementPtr = calloc<_WindowPlacement>();
     try {
-      final placement = placementPtr.ref;
-      placement.length = sizeOf<_WindowPlacement>();
+      final placement = placementPtr.ref..length = sizeOf<_WindowPlacement>();
       if (_getWindowPlacement(hwnd, placementPtr) == 0) {
         return null;
       }
@@ -376,9 +303,7 @@ abstract final class Win32WindowFfi {
   static bool setSkipTaskbar(int hwnd, {required bool skip}) {
     if (hwnd == 0) return false;
     final exStyle = _getWindowLongPtr(hwnd, _gwlExStyle);
-    final updated = skip
-        ? (exStyle | _wsExToolwindow)
-        : (exStyle & ~_wsExToolwindow);
+    final updated = skip ? (exStyle | _wsExToolwindow) : (exStyle & ~_wsExToolwindow);
     _setWindowLongPtr(hwnd, _gwlExStyle, updated);
     return _forceRelayout(hwnd);
   }
@@ -394,9 +319,7 @@ abstract final class Win32WindowFfi {
   static bool setResizable(int hwnd, {required bool resizable}) {
     if (hwnd == 0) return false;
     final style = _getWindowLongPtr(hwnd, _gwlStyle);
-    final updated = resizable
-        ? (style | _wsThickframe)
-        : (style & ~_wsThickframe);
+    final updated = resizable ? (style | _wsThickframe) : (style & ~_wsThickframe);
     _setWindowLongPtr(hwnd, _gwlStyle, updated);
     return _forceRelayout(hwnd);
   }
@@ -442,13 +365,7 @@ abstract final class Win32WindowFfi {
     final preference = calloc<_Dword>();
     try {
       preference.value = round ? _dwmwcpRound : _dwmwcpDefault;
-      return setter(
-            hwnd,
-            _dwmwaWindowCornerPreference,
-            preference,
-            sizeOf<_Dword>(),
-          ) ==
-          0;
+      return setter(hwnd, _dwmwaWindowCornerPreference, preference, sizeOf<_Dword>()) == 0;
     } finally {
       calloc.free(preference);
     }
@@ -501,17 +418,18 @@ abstract final class Win32WindowFfi {
     try {
       final p = placementPtr.ref;
       final v = snapshot._placement;
-      p.length = sizeOf<_WindowPlacement>();
-      p.flags = v[0];
-      p.showCmd = v[1];
-      p.ptMinPosition.x = v[2];
-      p.ptMinPosition.y = v[3];
-      p.ptMaxPosition.x = v[4];
-      p.ptMaxPosition.y = v[5];
-      p.rcNormalPosition.left = v[6];
-      p.rcNormalPosition.top = v[7];
-      p.rcNormalPosition.right = v[8];
-      p.rcNormalPosition.bottom = v[9];
+      p
+        ..length = sizeOf<_WindowPlacement>()
+        ..flags = v[0]
+        ..showCmd = v[1]
+        ..ptMinPosition.x = v[2]
+        ..ptMinPosition.y = v[3]
+        ..ptMaxPosition.x = v[4]
+        ..ptMaxPosition.y = v[5]
+        ..rcNormalPosition.left = v[6]
+        ..rcNormalPosition.top = v[7]
+        ..rcNormalPosition.right = v[8]
+        ..rcNormalPosition.bottom = v[9];
       _setWindowPlacement(hwnd, placementPtr);
     } finally {
       calloc.free(placementPtr);
@@ -527,35 +445,23 @@ abstract final class Win32WindowFfi {
   /// Entering: strip the caption/thickframe bits, then fill the monitor the
   /// window is on, top-most. Leaving: restore the command, the styles and the
   /// captured placement, then force a re-layout.
-  static bool setScreenFullscreen(
-    int hwnd, {
-    required bool fullscreen,
-    Win32WindowSnapshot? snapshot,
-  }) {
+  static bool setScreenFullscreen(int hwnd, {required bool fullscreen, Win32WindowSnapshot? snapshot}) {
     if (hwnd == 0) return false;
 
     if (fullscreen) {
       if (snapshot != null) {
-        _setWindowLongPtr(
-          hwnd,
-          _gwlStyle,
-          snapshot._style & ~(_wsCaption | _wsThickframe | _wsMaximize),
-        );
+        _setWindowLongPtr(hwnd, _gwlStyle, snapshot._style & ~(_wsCaption | _wsThickframe | _wsMaximize));
         _setWindowLongPtr(
           hwnd,
           _gwlExStyle,
           (snapshot._exStyle | _wsExTopmost) &
-              ~(_wsExDlgModalFrame |
-                  _wsExWindowEdge |
-                  _wsExClientEdge |
-                  _wsExStaticEdge),
+              ~(_wsExDlgModalFrame | _wsExWindowEdge | _wsExClientEdge | _wsExStaticEdge),
         );
       }
       final monitor = _monitorFromWindow(hwnd, _monitorDefaultToNearest);
       final infoPtr = calloc<_MonitorInfo>();
       try {
-        final info = infoPtr.ref;
-        info.cbSize = sizeOf<_MonitorInfo>();
+        final info = infoPtr.ref..cbSize = sizeOf<_MonitorInfo>();
         if (monitor == 0 || _getMonitorInfo(monitor, infoPtr) == 0) {
           return false;
         }

@@ -10,13 +10,12 @@ environment:
   flutter: ">=3.35.0"
 
 dependencies:
+  # Win32 FFI bindings
+  ffi: ^2.2.0
   flutter:
     sdk: flutter
 
-  # Win32 FFI bindings
-  ffi: ^2.2.0
-
 dev_dependencies:
+  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0

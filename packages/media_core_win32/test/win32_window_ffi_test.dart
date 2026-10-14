@@ -14,7 +14,6 @@ void main() {
   test('reports support honestly for the host platform', () {
     // The flag itself is platform-derived; only its type is pinned here so
     // the API cannot silently drift to throwing.
-    // ignore: unnecessary_statements
     Win32WindowFfi.isSupported;
   });
 
@@ -31,14 +30,7 @@ void main() {
     expect(Win32WindowFfi.setSkipTaskbar(0, skip: true), isFalse);
     expect(Win32WindowFfi.setResizable(0, resizable: false), isFalse);
     expect(Win32WindowFfi.setTopmost(0, topmost: true), isFalse);
-    expect(
-      Win32WindowFfi.applyBounds(
-        0,
-        const Rect.fromLTWH(0, 0, 1280, 720),
-        topmost: true,
-      ),
-      isFalse,
-    );
+    expect(Win32WindowFfi.applyBounds(0, const Rect.fromLTWH(0, 0, 1280, 720), topmost: true), isFalse);
     expect(Win32WindowFfi.setScreenFullscreen(0, fullscreen: true), isFalse);
   });
 }
