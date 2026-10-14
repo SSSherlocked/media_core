@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:media_core_logging/media_core_logging.dart' show MediaCoreLog, PlayerLogger;
 
 /// Defines the severity of a diagnostic log record.
 ///

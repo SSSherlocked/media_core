@@ -1,5 +1,6 @@
 import 'package:media_core_logging/src/log_category.dart';
 import 'package:media_core_logging/src/log_level.dart';
+import 'package:media_core_logging/src/media_core_log.dart' show MediaCoreLog;
 import 'package:media_core_logging/src/player_logger.dart';
 
 /// A logger bound to one category.

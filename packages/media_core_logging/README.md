@@ -34,7 +34,7 @@ LogScope.run({'roomId': room.id, 'engine': 'media_kit'}, () {
 });
 
 // 5. 出问题时收窄:只看某个分类、或只搜关键词。
-MediaCoreLog.setFilter(LogFilter(categories: {LogCategory.fallback}, keyword: 'signed'));
+MediaCoreLog.filter = LogFilter(categories: {LogCategory.fallback}, keyword: 'signed');
 ```
 
 ## 等级与分类

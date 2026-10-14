@@ -8,8 +8,12 @@ import 'package:media_core_logging/src/player_logger.dart';
 /// output: narrow to one module, search for a string, and stop one hot path from
 /// burying everything else.
 final class LogFilter {
+  /// Creates a filter limited to [categories] (all when null) and [keyword].
   LogFilter({Set<LogCategory>? categories, this.keyword})
     : _categories = categories == null ? null : Set<LogCategory>.unmodifiable(categories);
+
+  /// Creates a filter that accepts everything.
+  factory LogFilter.none() => LogFilter();
 
   /// When non-empty, only these categories pass.
   final Set<LogCategory>? _categories;
@@ -44,9 +48,6 @@ final class LogFilter {
 
   /// The same filter with a keyword.
   LogFilter withKeyword(String? keyword) => LogFilter(categories: _categories, keyword: keyword);
-
-  /// A filter that accepts everything.
-  static LogFilter get none => LogFilter();
 }
 
 /// Counts and drops records that arrive too often.
@@ -57,6 +58,7 @@ final class LogFilter {
 /// next record that is allowed through, so a reader can tell "this happened
 /// once" from "this happened four thousand times".
 final class LogThrottle {
+  /// Creates a throttle allowing [maxRecords] per [window].
   LogThrottle({this.maxRecords = 20, this.window = const Duration(seconds: 1)});
 
   /// How many records per [window] are allowed through.
@@ -71,8 +73,8 @@ final class LogThrottle {
   /// Whether [category] may emit at [now], and how many were dropped since it
   /// last did.
   ({bool allowed, int suppressed}) admit(LogCategory category, DateTime now) {
-    final history = _history.putIfAbsent(category, () => <DateTime>[]);
-    history.removeWhere((stamp) => now.difference(stamp) > window);
+    final history = _history.putIfAbsent(category, () => <DateTime>[])
+      ..removeWhere((stamp) => now.difference(stamp) > window);
 
     if (history.length >= maxRecords) {
       _suppressed[category] = (_suppressed[category] ?? 0) + 1;

@@ -1,8 +1,9 @@
 import 'dart:developer' as developer;
-import 'package:media_core_logging/src/log_level.dart';
 import 'package:media_core_logging/src/log_category.dart';
 import 'package:media_core_logging/src/log_file_sink.dart';
 import 'package:media_core_logging/src/log_formatter.dart';
+import 'package:media_core_logging/src/log_level.dart';
+import 'package:media_core_logging/src/media_core_log.dart' show MediaCoreLog;
 import 'package:media_core_logging/src/player_logger.dart';
 
 /// Writes log records to the platform console.

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-/// Attaches fields to every record logged inside [body].
+/// Attaches fields to every record logged inside `body`.
 ///
 /// The problem it solves is the one that makes player logs hard to read: the
 /// interesting events come from four layers (session, playback, adapter,

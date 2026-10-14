@@ -56,37 +56,39 @@ void main() {
     });
 
     test('drops records below the minimum level', () {
-      logger.trace(LogCategory.playback, 'ignored');
-      logger.debug(LogCategory.playback, 'kept');
+      logger
+        ..trace(LogCategory.playback, 'ignored')
+        ..debug(LogCategory.playback, 'kept');
 
       expect(collector.messages, <String>['kept']);
     });
 
     test('emits every level through its convenience method', () {
-      logger.trace(LogCategory.playback, 'trace');
-      logger.debug(LogCategory.playback, 'debug');
-      logger.info(LogCategory.playback, 'info');
-      logger.warning(LogCategory.playback, 'warning');
-      logger.error(LogCategory.playback, 'error');
-      logger.critical(LogCategory.playback, 'critical');
+      logger
+        ..trace(LogCategory.playback, 'trace')
+        ..debug(LogCategory.playback, 'debug')
+        ..info(LogCategory.playback, 'info')
+        ..warning(LogCategory.playback, 'warning')
+        ..error(LogCategory.playback, 'error')
+        ..critical(LogCategory.playback, 'critical');
 
       expect(collector.messages, <String>['debug', 'info', 'warning', 'error', 'critical']);
       expect(logger.emittedCount, 5);
     });
 
     test('does nothing when disabled', () {
-      logger.enabled = false;
-
-      logger.error(LogCategory.playback, 'nope');
+      logger
+        ..enabled = false
+        ..error(LogCategory.playback, 'nope');
 
       expect(collector.records, isEmpty);
     });
 
     test('fans out to every registered sink', () {
       final second = _Collector();
-      logger.addSink(second.call);
-
-      logger.info(LogCategory.playback, 'both');
+      logger
+        ..addSink(second.call)
+        ..info(LogCategory.playback, 'both');
 
       expect(collector.messages, <String>['both']);
       expect(second.messages, <String>['both']);
@@ -94,9 +96,9 @@ void main() {
 
     test('setSink replaces the list instead of adding to it', () {
       final replacement = _Collector();
-      logger.setSink(replacement.call);
-
-      logger.info(LogCategory.playback, 'only replacement');
+      logger
+        ..setSink(replacement.call)
+        ..info(LogCategory.playback, 'only replacement');
 
       expect(collector.records, isEmpty);
       expect(replacement.messages, <String>['only replacement']);
@@ -104,10 +106,10 @@ void main() {
 
     test('removeSink stops delivery to that sink only', () {
       final second = _Collector();
-      logger.addSink(second.call);
-      logger.removeSink(second.call);
-
-      logger.info(LogCategory.playback, 'first only');
+      logger
+        ..addSink(second.call)
+        ..removeSink(second.call)
+        ..info(LogCategory.playback, 'first only');
 
       expect(collector.messages, <String>['first only']);
       expect(second.records, isEmpty);
@@ -125,19 +127,20 @@ void main() {
     });
 
     test('a developer filter narrows by category and keyword', () {
-      logger.filter = LogFilter(categories: {LogCategory.playback}, keyword: 'open');
-
-      logger.info(LogCategory.playback, 'opened stream');
-      logger.info(LogCategory.playback, 'closed stream');
-      logger.info(LogCategory.session, 'opened session');
+      logger
+        ..filter = LogFilter(categories: {LogCategory.playback}, keyword: 'open')
+        ..info(LogCategory.playback, 'opened stream')
+        ..info(LogCategory.playback, 'closed stream')
+        ..info(LogCategory.session, 'opened session');
 
       expect(collector.messages, <String>['opened stream']);
     });
 
     test('a throttle bounds a hot path and reports what it dropped', () {
-      logger.minimumLevel = LogLevel.trace;
-      logger.clock = () => DateTime(2026, 9, 26, 12);
-      logger.throttle = LogThrottle(maxRecords: 2, window: const Duration(seconds: 1));
+      logger
+        ..minimumLevel = LogLevel.trace
+        ..clock = (() => DateTime(2026, 9, 26, 12))
+        ..throttle = LogThrottle(maxRecords: 2);
 
       for (var index = 0; index < 5; index++) {
         logger.debug(LogCategory.buffering, 'frame $index');
@@ -149,13 +152,13 @@ void main() {
 
     test('the suppressed count is attached to the next record that gets through', () {
       var now = DateTime(2026, 9, 26, 12);
-      logger.minimumLevel = LogLevel.trace;
-      logger.clock = () => now;
-      logger.throttle = LogThrottle(maxRecords: 1, window: const Duration(seconds: 1));
-
-      logger.debug(LogCategory.buffering, 'first');
-      logger.debug(LogCategory.buffering, 'dropped');
-      logger.debug(LogCategory.buffering, 'dropped');
+      logger
+        ..minimumLevel = LogLevel.trace
+        ..clock = (() => now)
+        ..throttle = LogThrottle(maxRecords: 1)
+        ..debug(LogCategory.buffering, 'first')
+        ..debug(LogCategory.buffering, 'dropped')
+        ..debug(LogCategory.buffering, 'dropped');
       now = now.add(const Duration(seconds: 2));
       logger.debug(LogCategory.buffering, 'next window');
 
@@ -350,8 +353,8 @@ void main() {
         await sink.flush();
       }
 
-      expect(await file.exists(), isTrue);
-      expect(await File('${file.path}.1').exists(), isTrue, reason: 'the previous file was rotated');
+      expect(file.existsSync(), isTrue);
+      expect(File('${file.path}.1').existsSync(), isTrue, reason: 'the previous file was rotated');
     });
 
     test('close waits for a write that is already in flight', () async {
@@ -365,7 +368,7 @@ void main() {
       sink(PlayerLogRecord(level: LogLevel.info, category: LogCategory.pool, message: 'in flight'));
       await sink.close();
 
-      expect(await file.exists(), isTrue);
+      expect(file.existsSync(), isTrue);
       expect(await file.readAsString(), contains('in flight'));
     });
 
@@ -445,7 +448,9 @@ void main() {
       module.info('after reset');
 
       expect(collector.messages, <String>['before reset']);
-      expect(after.messages, <String>['after reset'], reason: 'the module must not keep logging into the replaced logger');
+      expect(after.messages, <String>[
+        'after reset',
+      ], reason: 'the module must not keep logging into the replaced logger');
     });
 
     test('resolves a level from its name', () {

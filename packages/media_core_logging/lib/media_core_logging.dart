@@ -20,8 +20,9 @@
 /// makes "turn up playback, leave the rest alone" possible while debugging.
 library;
 
+import 'package:media_core_logging/media_core_logging.dart' show LogCategory, LogLevel;
+
 export 'package:media_core_logging/src/log_category.dart';
-export 'package:media_core_logging/src/memory_log_sink.dart';
 export 'package:media_core_logging/src/log_file_sink.dart';
 export 'package:media_core_logging/src/log_filter.dart';
 export 'package:media_core_logging/src/log_formatter.dart';
@@ -29,4 +30,5 @@ export 'package:media_core_logging/src/log_level.dart';
 export 'package:media_core_logging/src/log_module.dart';
 export 'package:media_core_logging/src/log_scope.dart';
 export 'package:media_core_logging/src/media_core_log.dart';
+export 'package:media_core_logging/src/memory_log_sink.dart';
 export 'package:media_core_logging/src/player_logger.dart';

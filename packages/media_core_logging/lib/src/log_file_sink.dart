@@ -23,6 +23,7 @@ abstract interface class LogSink {
 /// per frame with a synchronous file write is a way to make the thing you are
 /// debugging stutter.
 final class LogFileSink implements LogSink {
+  /// Creates a file sink writing to [file].
   LogFileSink(
     this.file, {
     this.formatter = const LogFormatter(),
@@ -110,12 +111,12 @@ final class LogFileSink implements LogSink {
 
     try {
       await file.parent.create(recursive: true);
-      await file.writeAsString('$lines\n', mode: FileMode.append, flush: false);
-      _flushedBytes = await file.exists() ? await file.length() : 0;
+      await file.writeAsString('$lines\n', mode: FileMode.append);
+      _flushedBytes = file.existsSync() ? file.lengthSync() : 0;
       if (_flushedBytes >= maxBytes) {
         await _rotate();
       }
-    } catch (_) {
+    } on Object catch (_) {
       // A log sink that throws would take the code being logged down with it.
       // Losing the line is the correct trade; the caller cannot fix a full disk
       // from inside a log call.
@@ -142,12 +143,12 @@ final class LogFileSink implements LogSink {
 
     for (var index = maxFiles - 1; index >= 1; index--) {
       final source = File('${file.path}.$index');
-      if (!await source.exists()) {
+      if (!source.existsSync()) {
         continue;
       }
       await source.rename('${file.path}.${index + 1}');
     }
-    if (await file.exists()) {
+    if (file.existsSync()) {
       await file.rename('${file.path}.1');
     }
     _flushedBytes = 0;

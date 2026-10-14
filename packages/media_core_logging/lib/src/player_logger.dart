@@ -1,7 +1,8 @@
 import 'dart:async';
+
+import 'package:media_core_logging/src/log_category.dart';
 import 'package:media_core_logging/src/log_filter.dart';
 import 'package:media_core_logging/src/log_level.dart';
-import 'package:media_core_logging/src/log_category.dart';
 import 'package:media_core_logging/src/log_scope.dart';
 
 /// Represents one diagnostic log record.
@@ -116,9 +117,9 @@ typedef PlayerLogSink = void Function(PlayerLogRecord record);
 /// Those responsibilities belong to:
 ///
 /// - [PlayerLogSink]
-/// - [PerformanceMonitor]
-/// - [MemoryMonitor]
-/// - [DiagnosticsManager]
+/// - `PerformanceMonitor`
+/// - `MemoryMonitor`
+/// - `DiagnosticsManager`
 final class PlayerLogger {
   /// Creates a player logger.
   PlayerLogger({this.minimumLevel = LogLevel.info, this.enabled = true, PlayerLogSink? sink}) {

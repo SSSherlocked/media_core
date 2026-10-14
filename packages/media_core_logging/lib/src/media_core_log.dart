@@ -1,14 +1,14 @@
 import 'dart:io';
 
+import 'package:media_core_logging/src/log_category.dart';
 import 'package:media_core_logging/src/log_file_sink.dart';
 import 'package:media_core_logging/src/log_filter.dart';
 import 'package:media_core_logging/src/log_formatter.dart';
 import 'package:media_core_logging/src/log_level.dart';
-import 'package:media_core_logging/src/log_category.dart';
-import 'package:media_core_logging/src/player_logger.dart';
-import 'package:media_core_logging/src/memory_log_sink.dart';
 import 'package:media_core_logging/src/log_module.dart';
 import 'package:media_core_logging/src/log_scope.dart';
+import 'package:media_core_logging/src/memory_log_sink.dart';
+import 'package:media_core_logging/src/player_logger.dart';
 
 /// The framework-wide logging entry point.
 ///
@@ -81,9 +81,7 @@ abstract final class MediaCoreLog {
   /// a category override would be accepted by the facade and then rejected by
   /// the logger's own global check.
   static PlayerLogger _createLogger() {
-    final logger = PlayerLogger(minimumLevel: defaultLevel, sink: consoleLogSink());
-
-    logger.levelResolver = _resolveLevel;
+    final logger = PlayerLogger(minimumLevel: defaultLevel, sink: consoleLogSink())..levelResolver = _resolveLevel;
 
     return logger;
   }
@@ -113,7 +111,7 @@ abstract final class MediaCoreLog {
   /// button reads from; it keeps the most recent [capacity] records only.
   static MemoryLogSink attachMemorySink({int capacity = 500, LogLevel minimumLevel = LogLevel.trace}) {
     final sink = MemoryLogSink(capacity: capacity, minimumLevel: minimumLevel);
-    addSink(sink);
+    addSink(sink.call);
     return sink;
   }
 
@@ -128,15 +126,21 @@ abstract final class MediaCoreLog {
     int maxFiles = 3,
   }) {
     final sink = LogFileSink(file, formatter: formatter, maxBytes: maxBytes, maxFiles: maxFiles);
-    addSink(sink);
+    addSink(sink.call);
     return sink;
   }
 
+  /// The developer filter (category narrowing, keyword search), or `null`.
+  static LogFilter? get filter => _logger.filter;
+
   /// Sets the developer filter (category narrowing, keyword search), or clears it.
-  static void setFilter(LogFilter? filter) => _logger.filter = filter;
+  static set filter(LogFilter? value) => _logger.filter = value;
+
+  /// The rate limit per category, or `null`.
+  static LogThrottle? get throttle => _logger.throttle;
 
   /// Sets the rate limit per category, or clears it.
-  static void setThrottle(LogThrottle? throttle) => _logger.throttle = throttle;
+  static set throttle(LogThrottle? value) => _logger.throttle = value;
 
   /// Records emitted since start.
   static int get emittedCount => _logger.emittedCount;

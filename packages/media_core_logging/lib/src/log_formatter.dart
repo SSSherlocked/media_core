@@ -12,6 +12,7 @@ import 'package:media_core_logging/src/player_logger.dart';
 /// multi-line: a stack trace is useful, a stack trace that pushes every
 /// following record off the screen is not.
 final class LogFormatter {
+  /// Creates a formatter with the chosen record parts.
   const LogFormatter({
     this.includeTimestamp = true,
     this.includeCategory = true,
