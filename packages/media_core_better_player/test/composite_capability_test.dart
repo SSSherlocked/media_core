@@ -20,7 +20,8 @@ void main() {
       expect(
         BetterPlayerAdapter.defaultCapabilities.supportsComposite,
         isFalse,
-        reason: 'a single-URI BetterPlayerDataSource cannot consume a '
+        reason:
+            'a single-URI BetterPlayerDataSource cannot consume a '
             'CompositeMediaSource without dropping its audio',
       );
     });
@@ -28,27 +29,14 @@ void main() {
 
   group('planning a DASH pair against the real adapters', () {
     final pair = CompositeMediaSource(
-      videoTracks: [
-        MediaTrack(
-          uri: Uri.parse('https://example.com/v.m4s'),
-          kind: MediaTrackType.video,
-        ),
-      ],
-      audioTracks: [
-        MediaTrack(
-          uri: Uri.parse('https://example.com/a.m4s'),
-          kind: MediaTrackType.audio,
-        ),
-      ],
+      videoTracks: [MediaTrack(uri: Uri.parse('https://example.com/v.m4s'), kind: MediaTrackType.video)],
+      audioTracks: [MediaTrack(uri: Uri.parse('https://example.com/a.m4s'), kind: MediaTrackType.audio)],
     );
 
     test('refuses loudly rather than playing the pair video-only', () {
       const planner = DefaultMediaSourcePlanner();
 
-      final plan = planner.plan(
-        pair,
-        BetterPlayerAdapter.defaultCapabilities,
-      );
+      final plan = planner.plan(pair, BetterPlayerAdapter.defaultCapabilities);
 
       expect(plan, isA<UnsupportedPlan>());
     });
@@ -86,8 +74,7 @@ void main() {
 
 class _NullFactory implements PlayerAdapterFactory {
   @override
-  PlayerAdapter create(String id) =>
-      throw UnsupportedError('selection-only factory');
+  PlayerAdapter create(String id) => throw UnsupportedError('selection-only factory');
 
   @override
   bool supports(String id) => true;

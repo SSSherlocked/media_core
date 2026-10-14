@@ -2,9 +2,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:media_core/media_core.dart';
 import 'package:media_core_better_player/media_core_better_player.dart';
+
 // The package barrel carries the engine too (`better_player_plus` is
 // re-exported from it), so this file does not import the engine directly.
 
+/// Rewrites the data source a [BetterPlayerAdapter] is about to set up.
+///
+/// Receives the framework [PlayerSource] and the data source the adapter
+/// mapped from it, returns the one to actually use.
+typedef BetterPlayerDataSourceBuilder =
+    BetterPlayerDataSource Function(PlayerSource source, BetterPlayerDataSource dataSource);
 
 /// [PlayerAdapter] implementation backed by better_player_plus —
 /// the  BetterPlayer engine.
@@ -30,15 +37,13 @@ import 'package:media_core_better_player/media_core_better_player.dart';
 ///   layer) into tearing down and rebuilding the background decoder
 ///   on every tick. Buffering is expressed through
 ///   [PlayerAdapterEvent.buffering] instead.
-/// - an honest capability declaration ([defaultCapabilities])
-/// Rewrites the data source a [BetterPlayerAdapter] is about to set up.
-///
-/// Receives the framework [PlayerSource] and the data source the adapter
-/// mapped from it, returns the one to actually use.
-typedef BetterPlayerDataSourceBuilder =
-    BetterPlayerDataSource Function(PlayerSource source, BetterPlayerDataSource dataSource);
-
+/// - an honest capability declaration ([BetterPlayerAdapter.defaultCapabilities])
 final class BetterPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
+  /// Creates a better_player adapter.
+  ///
+  /// A native [controller] may be injected; otherwise one is built from
+  /// [configuration], [playlistConfiguration] and [dataSource], with
+  /// [configureDataSource] as a last-chance transform per setup.
   BetterPlayerAdapter({
     super.id = kBetterPlayerBackendId,
     super.capabilities = defaultCapabilities,
@@ -71,6 +76,7 @@ final class BetterPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
   /// Last-chance transform applied to every data source before setup.
   BetterPlayerDataSourceBuilder? configureDataSource;
 
+  /// How the video is sized within its box, mirrored by [setVideoFit].
   BoxFit get videoFit => _videoFit;
 
   /// Applies the viewport fit through `setOverriddenFit`.
@@ -149,7 +155,10 @@ final class BetterPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
   // State
   // ---------------------------------------------------------------------------
 
-  bool _audioOutputSuppressed = false;
+  /// Suppresses this engine's audio output: the volume is forced to zero when the
+  /// source opens and auto-play is held back, which is what a video that plays
+  /// behind another surface needs.
+  bool audioOutputSuppressed = false;
   BoxFit _videoFit = BoxFit.contain;
 
   /// Whether the current source is live. Rate changes on a live stream
@@ -173,7 +182,7 @@ final class BetterPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
   /// frequency. Without de-duplication those events would be forwarded
   /// 1:1 as [PlayerAdapterEvent.playing] / [PlayerAdapterEvent.paused]
   /// transitions, which downstream consumers read as a real state
-  /// change. Mirrors the guard in [MediaKitPlayerAdapter].
+  /// change. Mirrors the guard in `MediaKitPlayerAdapter`.
   bool _playingNow = false;
 
   /// The underlying [BetterPlayerController].
@@ -246,13 +255,11 @@ final class BetterPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
           configuration ??
           const BetterPlayerConfiguration(
             handleLifecycle: false,
-            fullScreenByDefault: false,
-            looping: false,
             controlsConfiguration: BetterPlayerControlsConfiguration(showControls: false),
           );
 
       _controller = BetterPlayerController(
-        base.copyWith(autoPlay: base.autoPlay && !_audioOutputSuppressed, fit: _videoFit),
+        base.copyWith(autoPlay: base.autoPlay && !audioOutputSuppressed, fit: _videoFit),
         betterPlayerPlaylistConfiguration: playlistConfiguration,
         betterPlayerDataSource: dataSource,
       );
@@ -285,7 +292,7 @@ final class BetterPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
 
     // Prefer an explicitly configured data source; otherwise map the
     // framework-provided source.
-    BetterPlayerDataSource? resolvedDataSource = dataSource;
+    var resolvedDataSource = dataSource;
 
     if (resolvedDataSource == null) {
       final resolved = _resolveSource(source);
@@ -322,8 +329,9 @@ final class BetterPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
     final vpc = controller.videoPlayerController;
 
     if (vpc != null) {
-      vpc.removeListener(_onValueChange);
-      vpc.addListener(_onValueChange);
+      vpc
+        ..removeListener(_onValueChange)
+        ..addListener(_onValueChange);
 
       final value = vpc.value;
 
@@ -375,7 +383,7 @@ final class BetterPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
     // reset any non-default volume on every open.
     final contextConfig = _context?.config ?? const PlayerAdapterConfig();
 
-    await setVolume(_audioOutputSuppressed ? 0.0 : contextConfig.volume);
+    await setVolume(audioOutputSuppressed ? 0.0 : contextConfig.volume);
 
     if (isDisposed) return;
 
@@ -383,7 +391,7 @@ final class BetterPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
     // autoPlay: false. Start playback only when the caller asked for it.
     final autoPlay = _context?.playerConfig?.autoPlay ?? true;
 
-    if (_audioOutputSuppressed && autoPlay) {
+    if (audioOutputSuppressed && autoPlay) {
       await play();
     }
   }
@@ -440,7 +448,7 @@ final class BetterPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
     // a best-effort cleanup operation.
     try {
       await controller.seekTo(Duration.zero);
-    } catch (_) {
+    } on Object catch (_) {
       // Best-effort cleanup.
     }
   }
@@ -456,9 +464,10 @@ final class BetterPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
     _controller = null;
 
     if (controller != null) {
-      controller.videoPlayerController?.removeListener(_onValueChange);
-      controller.removeEventsListener(_onEngineEvent);
-      controller.dispose(forceDispose: true);
+      controller
+        ..videoPlayerController?.removeListener(_onValueChange)
+        ..removeEventsListener(_onEngineEvent)
+        ..dispose(forceDispose: true);
     }
 
     _context = null;
@@ -471,11 +480,6 @@ final class BetterPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
   // ---------------------------------------------------------------------------
   // Extensions
   // ---------------------------------------------------------------------------
-
-  /// Suppresses audio output for the next open.
-  void setAudioOutputSuppressed(bool suppressed) {
-    _audioOutputSuppressed = suppressed;
-  }
 
   // Audio-only is not implemented for this engine, and the capability
   // declaration says so: better_player_plus exposes no video-track
@@ -557,10 +561,10 @@ final class BetterPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
         emitPaused();
 
       case BetterPlayerEventType.bufferingStart:
-        emitBuffering(true);
+        emitBuffering(buffering: true);
 
       case BetterPlayerEventType.bufferingEnd:
-        emitBuffering(false, resumePlaying: state.playing);
+        emitBuffering(buffering: false, resumePlaying: state.playing);
 
       case BetterPlayerEventType.finished:
         emitCompleted();
@@ -576,6 +580,10 @@ final class BetterPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
         _lastReportedError = message;
         reportEngineError(message: message);
 
+      // BetterPlayerEventType may carry members this adapter intentionally
+      // ignores (and can gain more across engine releases); a default drops
+      // them rather than breaking here.
+      // ignore: no_default_cases
       default:
         break;
     }
@@ -648,80 +656,15 @@ final class BetterPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
     supportsRateControl: true,
     supportsVolumeControl: true,
     supportsMuteControl: true,
-
-    // better_player_plus exposes no video-track control, so the decoder
-    // cannot be switched off and the adapter will not accept a command
-    // it cannot carry out.
-    supportsAudioOnly: false,
-
-    // Video and rendering.
-    supportsVideoFrameProgress: false,
     supportsVideoSizeChanged: true,
-    supportsVideoReconfig: false,
-    supportsHwdecInfo: false,
-    supportsVideoFilters: false,
-    // This backend has no frame-capture API of its own: screenshots are served
-    // by capturing the rendered surface of a MediaPlayerView instead, so the
-    // capability stays false and `captureFrame` inherits its null answer.
-    supportsScreenshot: false,
-
-    // Audio.
-    supportsAudioReconfig: false,
-    supportsAudioDeviceSelection: false,
-    supportsAudioFilters: false,
-
-    // Tracks and subtitles.
-    supportsTrackSelection: false,
-    supportsSubtitleTrack: false,
-    supportsExternalSubtitle: false,
-
-    // Playback state and buffering.
-    supportsCacheState: false,
-    supportsBufferingProgress: false,
-    supportsChapterControl: false,
-    supportsLoop: false,
-
-    // Metadata and playlist.
-    supportsMetadata: false,
-    supportsPlaylist: false,
-    supportsPlaylistControl: false,
-
-    // Diagnostics and integration.
-    supportsClientMessage: false,
-    supportsLogMessages: false,
 
     // Decoders.
     supportsHardwareDecoder: true,
     supportsSoftwareDecoder: false,
-
-    // Presentation.
-    supportsPictureInPicture: false,
     supportsFullscreen: true,
 
     // Source matching.
     supportedProtocols: BetterPlayerFormats.supportedProtocols,
     supportedFormats: BetterPlayerFormats.supportedFormats,
-    // BetterPlayer drives ExoPlayer on Android and AVPlayer on iOS, and
-    // both *engines* can merge parallel essences (Media3's
-    // `MergingMediaSource`, AVFoundation's `AVMutableComposition`) — but
-    // the better_player_plus surface this adapter is limited to hands
-    // `BetterPlayerDataSource` exactly one URI. There is no Dart-side
-    // entry for a second essence, so a composite handed to this adapter
-    // would open its video URL and drop the audio with no signal.
-    // Declared `none` deliberately, and the consequence is loud rather
-    // than silent: the planner answers UnsupportedPlan for a composite
-    // here, so a DASH pair only reaches this adapter once the provider
-    // has folded it into one URL — which is the only thing its surface
-    // can express.
-    //
-    // A fork of better_player_plus adding a merge data source was built
-    // and removed again in the same week: a 114-file vendored plugin plus
-    // a Kotlin change nobody here could compile, bought only the ability
-    // to skip an external merge step, at the cost of a permanent
-    // upstream-tracking branch.
-    // If this ever wants the `native` claim, the route is a first-party
-    // Media3 adapter owning ExoPlayer and its `TextureRegistry` surface,
-    // not another fork.
-    compositeSupport: CompositeSupport.none,
   );
 }
