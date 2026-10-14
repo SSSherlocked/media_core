@@ -1,6 +1,7 @@
 name: media_core_win32
 description: Direct Win32 (user32) window-state operations for media_core desktop presentations - snapshot/restore placement, frameless bounds moves and screen fullscreen via FFI, bypassing window_manager's frameless fast path.
 version: 0.1.0
+publish_to: none
 repository: https://github.com/liuchuancong/media_core
 issue_tracker: https://github.com/liuchuancong/media_core/issues
 resolution: workspace

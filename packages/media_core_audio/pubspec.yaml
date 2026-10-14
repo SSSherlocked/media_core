@@ -1,6 +1,7 @@
 name: media_core_audio
 description: Music playback for media_core - sources, queue and play modes, lyrics and the native desktop-lyric windows, plus ffmpeg downloads.
 version: 0.1.0
+publish_to: none
 repository: https://github.com/liuchuancong/media_core
 issue_tracker: https://github.com/liuchuancong/media_core/issues
 resolution: workspace
@@ -29,14 +30,14 @@ dependencies:
   flutter:
     sdk: flutter
   media_core:
-    ^0.1.0
+    path: ../media_core
 
   # Background audio + media notification (lock screen / notification controls)
   # The media surfaces (notification / lock screen / SMTC / MPRIS) and audio
   # focus live in their own capability package now; this module uses them for
   # music instead of owning a second implementation.
   media_core_mediasession:
-    ^0.1.0
+    path: ../media_core_mediasession
 
 dev_dependencies:
   flutter_lints: ^6.0.0

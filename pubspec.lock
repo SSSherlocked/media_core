@@ -370,13 +370,22 @@ packages:
     source: hosted
     version: "1.38.2"
   flame_barrage:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: flame_barrage
       sha256: "15541ff9c2b9afc003b3a607754a8dbcce8679b6868e9c1da83927f6389b9bc5"
       url: "https://pub.dev"
     source: hosted
     version: "0.0.9"
+  floating:
+    dependency: transitive
+    description:
+      path: "."
+      ref: "9a4492893ca5eee8ffac0593d1cd93b1187b6b53"
+      resolved-ref: "9a4492893ca5eee8ffac0593d1cd93b1187b6b53"
+      url: "https://github.com/liuchuancong/floating.git"
+    source: git
+    version: "6.0.0"
   flutter:
     dependency: transitive
     description: flutter
@@ -760,14 +769,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.6"
-  native_picture_in_picture:
-    dependency: transitive
-    description:
-      name: native_picture_in_picture
-      sha256: "2fdc5e238c00f1e239113f897a366e07fcaca06eef9b2be8ef95aa0a0d06d137"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.1"
   native_toolchain_c:
     dependency: transitive
     description:

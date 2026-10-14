@@ -1,6 +1,7 @@
 name: media_core_download
 description: Offline media downloads for media_core - a task queue with concurrency limits, resumable transfers and retry policy.
 version: 0.1.0
+publish_to: none
 repository: https://github.com/liuchuancong/media_core
 issue_tracker: https://github.com/liuchuancong/media_core/issues
 resolution: workspace
@@ -13,7 +14,7 @@ dependencies:
   flutter:
     sdk: flutter
   media_core:
-    ^0.1.0
+    path: ../media_core
 
 dev_dependencies:
   flutter_lints: ^6.0.0

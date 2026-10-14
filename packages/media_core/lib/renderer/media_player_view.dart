@@ -1,11 +1,12 @@
 import 'dart:async';
+
 import 'package:flutter/widgets.dart';
+
 import 'package:media_core/adapter/player_video.dart';
 import 'package:media_core/kernel/player_handle.dart';
-import 'package:media_core/renderer/player_surface.dart' show PlayerSurface;
-import 'package:media_core/renderer/video_zoom_controller.dart';
 import 'package:media_core/screenshot/screenshot_surface.dart';
 import 'package:media_core/source/player_source.dart';
+import 'package:media_core/renderer/video_zoom_controller.dart';
 
 /// Application-facing video widget for a [PlayerHandle].
 ///
@@ -22,9 +23,9 @@ import 'package:media_core/source/player_source.dart';
 /// - hands the viewport fit to the adapter through the [PlayerVideo]
 ///   contract, so the surface is fitted by the same engine widget that
 ///   renders it,
-/// - offers its video layer as a screenshot surface, so the handle's
-///   `captureScreenshot()` works on engines that have no frame-capture API of
-///   their own,
+/// - offers its video layer as a screenshot surface, so
+///   [PlayerHandle.captureScreenshot] works on engines that have no
+///   frame-capture API of their own,
 /// - magnifies the video on request, through [zoom] and [enablePinchZoom].
 ///
 /// The view never controls playback. Pausing, recovery and
@@ -57,11 +58,6 @@ import 'package:media_core/source/player_source.dart';
 /// so a drag always moves the picture with the finger, and inside the clip
 /// so magnifying crops the edges instead of painting over the host's UI.
 final class MediaPlayerView extends StatefulWidget {
-  /// Displays the video of [handle] inside the host's own layout.
-  ///
-  /// Only [handle] is required: an adapter with no video output, or one whose
-  /// surface is not ready yet, renders [backgroundColor] while its audio keeps
-  /// playing, so the same widget serves an audio-only source.
   const MediaPlayerView({
     required this.handle,
     super.key,
@@ -171,6 +167,19 @@ final class _MediaPlayerViewState extends State<MediaPlayerView> {
   /// The video output the current build wants.
   PlayerVideo? _desired;
 
+  /// The engine's picture widget for the output currently rendered.
+  ///
+  /// Cached against the output's identity and the background behind it, because
+  /// this widget is the most expensive one in the tree: building it constructs
+  /// the engine's own surface widget (a texture or platform view) for no change
+  /// at all. A host page that rebuilds on every transport tick — the natural way
+  /// to drive chrome from playback state — would otherwise rebuild the surface
+  /// tens of times a second. Reusing the identical instance lets Flutter skip
+  /// the subtree entirely.
+  Widget? _picture;
+  PlayerVideo? _pictureOutput;
+  Color? _pictureBackground;
+
   bool _surfaceSyncScheduled = false;
 
   /// Zoom state, owned by this view when the host did not supply one.
@@ -178,7 +187,7 @@ final class _MediaPlayerViewState extends State<MediaPlayerView> {
 
   /// Scale at the start of the running pinch, so the reported cumulative scale
   /// is applied as a ratio instead of being multiplied in every frame.
-  double _gestureStartScale = 1;
+  double _gestureStartScale = 1.0;
 
   /// Where the last double tap landed, in view coordinates.
   Offset _doubleTapPosition = Offset.zero;
@@ -315,17 +324,13 @@ final class _MediaPlayerViewState extends State<MediaPlayerView> {
   void _unbind() {
     _releaseSurface();
 
-    // Nothing awaits a cancellation: `cancel()` stops delivery when it is
-    // called, and the subscription references are dropped right below, so the
-    // future only reports the stream finishing its own teardown. `dispose()`
-    // has to stay synchronous, which is why none of these can be awaited.
-    unawaited(_backendSubscription?.cancel());
+    _backendSubscription?.cancel();
     _backendSubscription = null;
 
-    unawaited(_geometrySubscription?.cancel());
+    _geometrySubscription?.cancel();
     _geometrySubscription = null;
 
-    unawaited(_sourceSubscription?.cancel());
+    _sourceSubscription?.cancel();
     _sourceSubscription = null;
 
     // `attach`/`detach` exist for surfaces with an explicit lifecycle
@@ -382,7 +387,7 @@ final class _MediaPlayerViewState extends State<MediaPlayerView> {
   @override
   Widget build(BuildContext context) {
     final handle = widget.handle;
-    final video = switch (handle.adapter) {
+    final PlayerVideo? video = switch (handle.adapter) {
       final PlayerVideo output when output.available => output,
       _ => null,
     };
@@ -395,18 +400,14 @@ final class _MediaPlayerViewState extends State<MediaPlayerView> {
 
     // Without a video widget there is nothing to render: an audio-only
     // player, or one whose surface is not ready yet, paints its background.
-    final picture = video == null
-        ? ColoredBox(color: _backgroundColor, child: const SizedBox.expand())
-        // Keyed per adapter instance: on a backend swap the old surface
-        // unmounts instead of being updated onto a foreign controller.
-        : KeyedSubtree(key: ValueKey('${video.runtimeType}_${identityHashCode(video)}'), child: video.build());
+    final Widget picture = _pictureFor(video);
 
-    var content = picture;
+    Widget content = picture;
 
     if (widget.mirror) {
       content = Transform(
         alignment: Alignment.center,
-        transform: Matrix4.identity()..scaleByDouble(-1, 1, 1, 1),
+        transform: Matrix4.identity()..scaleByDouble(-1.0, 1.0, 1.0, 1.0),
         child: content,
       );
     }
@@ -422,6 +423,32 @@ final class _MediaPlayerViewState extends State<MediaPlayerView> {
         return _withCaptureBoundary(_withGestures(_withZoom(content)));
       },
     );
+  }
+
+  /// Builds — or reuses — the picture for [video].
+  ///
+  /// The cache is keyed on the output's identity and on the background painted
+  /// when there is none: both are the only inputs to the widget below, and the
+  /// fit, the alignment and the mirror are applied outside it (the fit through
+  /// the adapter's own notifier, the rest by the wrappers in [build]).
+  Widget _pictureFor(PlayerVideo? video) {
+    final background = _backgroundColor;
+
+    if (identical(video, _pictureOutput) && _pictureBackground == background && _picture != null) {
+      return _picture!;
+    }
+
+    _pictureOutput = video;
+    _pictureBackground = background;
+
+    return _picture = video == null
+        ? ColoredBox(color: background, child: const SizedBox.expand())
+        // Keyed per adapter instance: on a backend swap the old surface
+        // unmounts instead of being updated onto a foreign controller.
+        : KeyedSubtree(
+            key: ValueKey('${video.runtimeType}_${identityHashCode(video)}'),
+            child: video.build(),
+          );
   }
 
   /// Wraps [child] in the capture boundary when the host wants screenshots.
@@ -449,9 +476,7 @@ final class _MediaPlayerViewState extends State<MediaPlayerView> {
           return child!;
         }
 
-        return ClipRect(
-          child: Transform(transform: _zoom.matrix, child: child),
-        );
+        return ClipRect(child: Transform(transform: _zoom.matrix, child: child));
       },
     );
   }

@@ -4,6 +4,7 @@ description: Player UI for media_core - material, cupertino, fluent, macos, yaru
 
 
 version: 0.1.0
+publish_to: none
 repository: https://github.com/liuchuancong/media_core
 issue_tracker: https://github.com/liuchuancong/media_core/issues
 
@@ -20,7 +21,7 @@ dependencies:
   # The player the controls drive, its video view, the zoom controller and the
   # screenshot API.
   media_core:
-    ^0.1.0
+    path: ../media_core
 
 dev_dependencies:
   # Auto-hide timing is driven on a fake clock, not wall time.

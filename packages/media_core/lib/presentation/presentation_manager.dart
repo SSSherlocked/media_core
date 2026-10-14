@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:media_core/geometry/video_orientation.dart';
+import 'package:media_core/presentation/device_profile.dart';
 import 'package:media_core/presentation/floating_controller.dart';
 import 'package:media_core/presentation/fullscreen_controller.dart';
 import 'package:media_core/presentation/pip_controller.dart';
@@ -37,6 +38,7 @@ final class PresentationManager {
     FullscreenController? fullscreenController,
     PipController? pipController,
     FloatingController? floatingController,
+    this.deviceProfile = DeviceProfile.mobile,
   }) : _controller = controller,
        _fullscreenController = fullscreenController,
        _pipController = pipController,
@@ -53,6 +55,9 @@ final class PresentationManager {
   final PipController? _pipController;
 
   final FloatingController? _floatingController;
+
+  /// The detected device profile (mobile, tablet, or desktop).
+  final DeviceProfile deviceProfile;
 
   late final StreamSubscription<PresentationState> _subscription;
 
@@ -119,6 +124,15 @@ final class PresentationManager {
 
   /// Whether switching to floating.
   bool get isTransitioningToFloating => snapshot.isTransitioningToFloating;
+
+  /// Returns whether the current media should be forced to a vertical
+  /// layout (typical for mobile phones), or if it can be responsive
+  /// (typical for tablets and desktops).
+  bool get shouldForceVertical => deviceProfile == DeviceProfile.mobile;
+
+  /// Returns whether the media should occupy the full available screen
+  /// area regardless of its original aspect ratio (Zoom/Fill).
+  bool get shouldFillScreen => deviceProfile == DeviceProfile.mobile && isFullscreen;
 
   /// Updates the media orientation the presentation describes.
   void updateOrientation(VideoOrientation orientation) {

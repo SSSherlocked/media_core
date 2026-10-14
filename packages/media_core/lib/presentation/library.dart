@@ -16,6 +16,7 @@ library;
 // Public exports
 // ============================================================================
 
+export 'package:media_core/presentation/device_profile.dart';
 export 'package:media_core/presentation/floating_controller.dart';
 export 'package:media_core/presentation/floating_state.dart';
 export 'package:media_core/presentation/fullscreen_controller.dart';

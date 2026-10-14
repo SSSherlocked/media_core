@@ -1,6 +1,7 @@
 name: media_core_danmaku
 description: Danmaku sessions for media_core - platform-agnostic transport contract, message normalization, deduplication and filtering.
 version: 0.1.0
+publish_to: none
 repository: https://github.com/liuchuancong/media_core
 issue_tracker: https://github.com/liuchuancong/media_core/issues
 resolution: workspace
@@ -10,21 +11,25 @@ environment:
   flutter: ">=3.35.0"
 
 dependencies:
-  # Immutable session snapshot
-  equatable: ^3.0.0
-  flame_barrage: ^0.0.9
   flutter:
     sdk: flutter
-  # Similarity scoring for the fuzzy duplicate filter
-  fuzzywuzzy: ^1.1.6
   media_core:
-    ^0.1.0
+    path: ../media_core
   media_core_memory:
-    ^0.1.0
+    path: ../media_core_memory
+
+  flame_barrage: ^0.0.9
+
   # Session state and failure streams
   rxdart: ^0.28.0
 
+  # Immutable session snapshot
+  equatable: ^3.0.0
+
+  # Similarity scoring for the fuzzy duplicate filter
+  fuzzywuzzy: ^1.1.6
+
 dev_dependencies:
-  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
+  flutter_lints: ^6.0.0

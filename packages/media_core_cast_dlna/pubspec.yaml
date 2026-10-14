@@ -4,6 +4,7 @@ description: DLNA/UPnP casting backend for media_core - SSDP discovery, device d
 
 
 version: 0.1.0
+publish_to: none
 repository: https://github.com/liuchuancong/media_core
 issue_tracker: https://github.com/liuchuancong/media_core/issues
 
@@ -20,7 +21,7 @@ dependencies:
   # The protocol-neutral contract this package implements: MediaCastBackend,
   # CastDevice, CastMedia, CastPosition, CastEvent, CastException.
   media_core:
-    ^0.1.0
+    path: ../media_core
 
   # Device description and SOAP response documents.
   xml: ^6.6.1

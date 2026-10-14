@@ -25,3 +25,4 @@ export 'package:media_core/audio/audio_route.dart';
 export 'package:media_core/audio/audio_session.dart';
 export 'package:media_core/audio/audio_session_state.dart';
 export 'package:media_core/audio/audio_volume.dart';
+export 'package:media_core/audio/global_audio_coordinator.dart';

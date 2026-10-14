@@ -5,6 +5,7 @@ description: >-
   PlayerAdapter contract for engine backends, plus orchestration, registry,
   fallback, events and diagnostics.
 version: 0.1.0
+publish_to: none
 repository: https://github.com/liuchuancong/media_core
 issue_tracker: https://github.com/liuchuancong/media_core/issues
 
@@ -41,11 +42,11 @@ dependencies:
 
   # Levelled, categorised logging
   media_core_logging:
-    ^0.1.0
+    path: ../media_core_logging
 
   # Memory accounting and pressure
   media_core_memory:
-    ^0.1.0
+    path: ../media_core_memory
 
   # Metadata annotations
   meta: ^1.19.0

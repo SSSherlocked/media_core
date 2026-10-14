@@ -20,12 +20,10 @@ part of 'media_kit_player_adapter.dart';
 /// argument per entry needs no separator parsing at all, and it also survives
 /// an install directory whose path contains a comma.
 List<List<String>> mpvListOptionCommands(String key, List<Object?> entries) {
-  final commands = <List<String>>[
-    <String>['change-list', key, 'clr', ''],
-  ];
+  final commands = <List<String>>[<String>['change-list', key, 'clr', '']];
 
   for (final entry in entries) {
-    commands.add(<String>['change-list', key, 'append', if (entry == null) '' else '$entry']);
+    commands.add(<String>['change-list', key, 'append', entry == null ? '' : '$entry']);
   }
 
   return commands;
@@ -60,10 +58,15 @@ extension _MediaKitEngineConfig on MediaKitPlayerAdapter {
     if (native == null) return false;
 
     try {
+      // ignore: avoid_dynamic_calls
       await (native as dynamic).setProperty(name, value);
       return true;
-    } on Object catch (error) {
-      MediaCoreLog.warning(LogCategory.player, 'mpv rejected property "$name": $error', error: error);
+    } catch (error) {
+      MediaCoreLog.warning(
+        LogCategory.player,
+        'mpv rejected property "$name": $error',
+        error: error,
+      );
       return false;
     }
   }
@@ -75,7 +78,7 @@ extension _MediaKitEngineConfig on MediaKitPlayerAdapter {
   /// the live apply — cannot drift into different dialects. A [List] value
   /// is a list option and travels as a command; everything else is the
   /// scalar property write.
-  Future<bool> _applyNativeOption(EngineOption option) {
+  Future<bool> _applyNativeOption(EngineOption option) async {
     final value = option.value;
 
     if (value is List) {
@@ -100,12 +103,19 @@ extension _MediaKitEngineConfig on MediaKitPlayerAdapter {
       applied = await _runNativeCommand(command) && applied;
     }
 
-    MediaCoreLog.info(
-      LogCategory.renderer,
-      'mpv list option "$key" mounted ${await _readNativeProperty('$key-count') ?? '<unknown>'} of '
-      '${entries.length} entries',
-      fields: <String, Object?>{'entries': entries.length},
-    );
+    // The read-back costs one more native round trip for the whole option and
+    // exists only to put the mounted count in the log. Logging defaults to
+    // `nothing`, so a shipping build paid that round trip for a line nobody
+    // recorded — per list option, on every apply. Ask the logger first; the
+    // emitted set is unchanged, because this is the same predicate `log` uses.
+    if (MediaCoreLog.isEnabled(LogCategory.renderer, LogLevel.info)) {
+      MediaCoreLog.info(
+        LogCategory.renderer,
+        'mpv list option "$key" mounted ${await _readNativeProperty('$key-count') ?? '<unknown>'} of '
+            '${entries.length} entries',
+        fields: <String, Object?>{'entries': entries.length},
+      );
+    }
 
     return applied;
   }
@@ -117,13 +127,17 @@ extension _MediaKitEngineConfig on MediaKitPlayerAdapter {
     if (native == null) return null;
 
     try {
+      // ignore: avoid_dynamic_calls
       final value = await (native as dynamic).getProperty(name) as String?;
       return value;
-    } on Object catch (error) {
+    } catch (error) {
       // Not every list option carries a `-count`, and this write is already
       // decided by the commands above — the read-back only makes the answer
       // visible in the log.
-      MediaCoreLog.debug(LogCategory.renderer, 'mpv property "$name" was not readable: $error');
+      MediaCoreLog.debug(
+        LogCategory.renderer,
+        'mpv property "$name" was not readable: $error',
+      );
       return null;
     }
   }
@@ -139,10 +153,15 @@ extension _MediaKitEngineConfig on MediaKitPlayerAdapter {
     if (native == null) return false;
 
     try {
+      // ignore: avoid_dynamic_calls
       await (native as dynamic).command(command);
       return true;
-    } on Object catch (error) {
-      MediaCoreLog.warning(LogCategory.player, 'mpv rejected command "${command.join(' ')}": $error', error: error);
+    } catch (error) {
+      MediaCoreLog.warning(
+        LogCategory.player,
+        'mpv rejected command "${command.join(' ')}": $error',
+        error: error,
+      );
       return false;
     }
   }

@@ -4,6 +4,7 @@ description: Native platform capability probe for media_core - codec support, de
 
 
 version: 0.2.0
+publish_to: none
 repository: https://github.com/liuchuancong/media_core
 issue_tracker: https://github.com/liuchuancong/media_core/issues
 
@@ -20,7 +21,7 @@ dependencies:
   # The vocabulary the probe answers in: PlatformCapabilities,
   # PlatformDeviceProfile, PlatformCodecCapabilities.
   media_core:
-    ^0.1.0
+    path: ../media_core
 
   plugin_platform_interface: ^2.1.8
 
