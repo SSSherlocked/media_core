@@ -4,7 +4,7 @@ part of 'live_watchdogs.dart';
 /// stops: continuity (unexpected pause), buffering stall, video frame
 /// stall and position stall.
 ///
-/// Arming/cancelling only; the observations that drive them and the
+/// Arming only; the cancels, the observations that drive them and the
 /// public entry points live in the main class body.
 extension _LiveWatchdogArms on LiveWatchdogs {
   // ---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ extension _LiveWatchdogArms on LiveWatchdogs {
 
     try {
       handler(LiveWatchdogRecoveryAction.reassertPlay);
-    } catch (_) {
+    } on Object catch (_) {
       if (!_isWatchdogGenerationCurrent(generation)) {
         return;
       }
@@ -250,12 +250,6 @@ extension _LiveWatchdogArms on LiveWatchdogs {
         });
   }
 
-  /// Cancels the position-stall watchdog without deciding anything.
-  void _cancelPositionStall() {
-    _positionStallSubscription?.cancel();
-    _positionStallSubscription = null;
-  }
-
   /// Why the position-stall watchdog must not arm, or `null` when it may.
   String? _positionStallSkipReason() {
     if (!_canWatch) return 'watchdogs disabled';
@@ -274,7 +268,9 @@ extension _LiveWatchdogArms on LiveWatchdogs {
   /// condition stopped it.
   String? _frameStallSkipReason() {
     if (!_canWatch) return 'watchdogs disabled';
-    if (!_supportsVideoFrameProgress) return 'adapter does not declare frame progress';
+    if (!_supportsVideoFrameProgress) {
+      return 'adapter does not declare frame progress';
+    }
     if (!_videoExpected) return 'no video frames expected (audio-only)';
     if (videoFrameStallTimeout <= Duration.zero) return 'timeout disabled';
     if (!_presentationVisible) return 'presentation not visible';

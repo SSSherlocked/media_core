@@ -1,3 +1,6 @@
+import 'package:media_core/media_core.dart' show ErrorPolicy, PlayerAdapterCapabilities, PlayerErrorCode, PlayerFailure;
+import 'package:media_core_live/src/live_watchdogs.dart' show LiveWatchdogs;
+
 /// Stall kinds inferred by [LiveWatchdogs].
 ///
 /// A stall is an inference, not a backend report: the watchdog
@@ -39,10 +42,14 @@ enum LiveStallKind {
   positionStallTimeout,
 }
 
+/// The recovery command a watchdog can ask its owner to perform.
+///
+/// An action rather than an error: the watchdog never touches the player, so
+/// this says only what the owner is expected to do and leaves the how to it.
 enum LiveWatchdogRecoveryAction {
   /// Reassert playback after an unexpected pause.
   ///
-  /// The owner should forward this to [PlayerHandle.play] or the
+  /// The owner should forward this to `PlayerHandle.play` or the
   /// equivalent lifecycle-safe playback command.
   reassertPlay,
 }

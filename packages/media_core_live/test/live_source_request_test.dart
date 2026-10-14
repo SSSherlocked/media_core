@@ -39,10 +39,7 @@ void main() {
       sources.add(_line('https://b.example/live.flv'));
 
       expect(request.sources, hasLength(1));
-      expect(
-        () => request.sources.add(_line('https://c.example/live.flv')),
-        throwsUnsupportedError,
-      );
+      expect(() => request.sources.add(_line('https://c.example/live.flv')), throwsUnsupportedError);
     });
 
     test('engine fallback stays undecided unless the caller declares it', () {
@@ -50,10 +47,7 @@ void main() {
       // decision, not something inferred from the source count.
       expect(LiveSourceRequest(sources: [_line('https://a.example/l.flv')]).allowEngineFallback, isNull);
       expect(
-        LiveSourceRequest(
-          sources: [_line('https://a.example/l.flv')],
-          allowEngineFallback: false,
-        ).allowEngineFallback,
+        LiveSourceRequest(sources: [_line('https://a.example/l.flv')], allowEngineFallback: false).allowEngineFallback,
         isFalse,
       );
     });
@@ -87,22 +81,14 @@ void main() {
       });
 
       test('each line gets a distinct id', () {
-        final request = LiveSourceRequest.fromUrls(
-          ['https://a.example/one.flv', 'https://a.example/two.flv'],
-        );
+        final request = LiveSourceRequest.fromUrls(['https://a.example/one.flv', 'https://a.example/two.flv']);
 
-        expect(
-          request.sources[0].id,
-          isNot(request.sources[1].id),
-        );
+        expect(request.sources[0].id, isNot(request.sources[1].id));
       });
     });
 
     test('toString reports the shape, not the credentials', () {
-      final request = LiveSourceRequest(
-        sources: [_line('https://a.example/live.flv')],
-        title: 'room 1',
-      );
+      final request = LiveSourceRequest(sources: [_line('https://a.example/live.flv')], title: 'room 1');
 
       expect(request.toString(), contains('1 source(s)'));
       expect(request.toString(), contains('room 1'));
@@ -138,9 +124,7 @@ void main() {
     });
 
     test('the idle release window is carried through', () {
-      final config = const LivePoolPolicy(
-        releaseIdleAfter: Duration(seconds: 3),
-      ).toPoolConfig();
+      final config = const LivePoolPolicy(releaseIdleAfter: Duration(seconds: 3)).toPoolConfig();
 
       expect(config.idleTimeout, const Duration(seconds: 3));
     });

@@ -30,8 +30,7 @@ extension _LivePlaybackPipeline on LivePlaybackController {
               .where((id) {
                 final registration = kernel.registry.get(id);
 
-                return registration == null ||
-                    kernel.selector.formatMatches(registration.capabilities, source);
+                return registration == null || kernel.selector.formatMatches(registration.capabilities, source);
               })
               .toList(growable: false)
         : scored;
@@ -54,11 +53,7 @@ extension _LivePlaybackPipeline on LivePlaybackController {
       MediaCoreLog.warning(
         LogCategory.fallback,
         'pinned engine "$pinned" does not declare the source format — falling back to the scored order',
-        fields: <String, Object?>{
-          'pinned': pinned,
-          'format': source.format.name,
-          'tried': engines.join(','),
-        },
+        fields: <String, Object?>{'pinned': pinned, 'format': source.format.name, 'tried': engines.join(',')},
       );
 
       return engines;
@@ -74,10 +69,10 @@ extension _LivePlaybackPipeline on LivePlaybackController {
       _handleController.add(handle);
     }
 
-    handle.setRecoveryEnabled(false);
+    handle.recoveryEnabled = false;
 
     watchdogs.updateCapabilities(handle.adapter.capabilities);
-    watchdogs.setVideoExpected(!_audioOnly);
+    watchdogs.setVideoExpected(expected: !_audioOnly);
 
     // The staged engine plays *before* it is attached: open/play/verify
     // all run while nothing feeds the watchdogs, so their playing state is
@@ -86,28 +81,37 @@ extension _LivePlaybackPipeline on LivePlaybackController {
     // declared intent rather than the adapter mirror: live always declares
     // play intent, and the mirror can read "paused" for an engine that
     // paused itself mid-open (mpv does) even though playback is on.
-    watchdogs.onPlayingChanged(_playbackRequested, fromUserIntent: false);
+    watchdogs.onPlayingChanged(playing: _playbackRequested, fromUserIntent: false);
 
     _seedPlaybackState(handle);
 
-    _adapterSub?.cancel();
+    // Dropping these cancels is deliberate: cancelling stops delivery from the
+    // retiring handle, and its replacement listener is installed on the very
+    // next line, so awaiting would only defer the attach without changing what
+    // can still arrive. The cancels in [_releaseHandle] are awaited, because
+    // that is the boundary where the player itself goes away.
+    unawaited(_adapterSub?.cancel());
     _adapterSub = handle.adapterEvents.listen(_onAdapterEvent, onError: (Object _) {});
 
-    _backendSub?.cancel();
+    unawaited(_backendSub?.cancel());
     _backendSub = handle.backendChanges.listen((change) {
       watchdogs.updateCapabilities(change.adapter.capabilities);
-      watchdogs.setVideoExpected(!_audioOnly);
+      watchdogs.setVideoExpected(expected: !_audioOnly);
     });
 
     if (_audioOnly) {
-      unawaited(handle.setAudioOnly(true));
+      unawaited(handle.setAudioOnly(audioOnly: true));
     }
   }
 
   Future<void> _releaseHandle() async {
-    _adapterSub?.cancel();
+    // Awaited: `cancel` is the point at which the subscription guarantees it
+    // will call nothing further, and this method is precisely the "the player is
+    // going away" boundary. Dropping it would let a late event land on a handle
+    // that has already been released.
+    await _adapterSub?.cancel();
     _adapterSub = null;
-    _backendSub?.cancel();
+    await _backendSub?.cancel();
     _backendSub = null;
 
     final handle = _handle;
@@ -123,7 +127,7 @@ extension _LivePlaybackPipeline on LivePlaybackController {
     if (handle != null) {
       try {
         await kernel.release(handle.id);
-      } catch (_) {
+      } on Object catch (_) {
         // Best-effort release of an engine that may already be gone.
       }
     }
@@ -159,7 +163,7 @@ extension _LivePlaybackPipeline on LivePlaybackController {
 
     watchdogs.onRecoveryRequested = (action) {
       if (!_playbackRequested || _disposed) {
-        watchdogs.reportRecoveryResult(false);
+        watchdogs.reportRecoveryResult(resumed: false);
         return;
       }
 
@@ -168,16 +172,19 @@ extension _LivePlaybackPipeline on LivePlaybackController {
       final handle = _handle;
 
       if (handle == null || handle.disposed) {
-        watchdogs.reportRecoveryResult(false);
+        watchdogs.reportRecoveryResult(resumed: false);
         return;
       }
 
       unawaited(
-        handle.play().then((_) {
-          watchdogs.reportRecoveryResult(true);
-        }, onError: (Object _) {
-          watchdogs.reportRecoveryResult(false);
-        }),
+        handle.play().then(
+          (_) {
+            watchdogs.reportRecoveryResult(resumed: true);
+          },
+          onError: (Object _) {
+            watchdogs.reportRecoveryResult(resumed: false);
+          },
+        ),
       );
     };
   }
@@ -228,7 +235,18 @@ extension _LivePlaybackPipeline on LivePlaybackController {
         _setState(_liveState(PlayerPlaybackState.playing));
       case PlayerPlaybackState.paused:
         _setState(_liveState(PlayerPlaybackState.paused));
-      default:
+
+      // Everything else is a transition the sweep itself already reports
+      // (`opening`, `buffering`) or a state a live stream is not meant to
+      // reach, so mirroring it would overwrite the controller's own write.
+      case PlayerPlaybackState.idle:
+      case PlayerPlaybackState.opening:
+      case PlayerPlaybackState.buffering:
+      case PlayerPlaybackState.seeking:
+      case PlayerPlaybackState.stopping:
+      case PlayerPlaybackState.stopped:
+      case PlayerPlaybackState.completed:
+      case PlayerPlaybackState.error:
         break;
     }
   }
@@ -241,27 +259,27 @@ extension _LivePlaybackPipeline on LivePlaybackController {
     switch (event) {
       case PlayerAdapterPlaying():
         _setState(_liveState(PlayerPlaybackState.playing));
-        watchdogs.onPlayingChanged(true, fromUserIntent: false);
+        watchdogs.onPlayingChanged(playing: true, fromUserIntent: false);
 
       case PlayerAdapterPaused():
-        watchdogs.onPlayingChanged(false, fromUserIntent: !_playbackRequested);
+        watchdogs.onPlayingChanged(playing: false, fromUserIntent: !_playbackRequested);
 
         if (!_playbackRequested) {
           _setState(_liveState(PlayerPlaybackState.paused));
         }
 
-      case PlayerAdapterBuffering(buffering: final buffering):
+      case PlayerAdapterBuffering(:final buffering):
         _setState(_liveState(buffering ? PlayerPlaybackState.buffering : PlayerPlaybackState.playing));
-        watchdogs.onBufferingChanged(buffering);
+        watchdogs.onBufferingChanged(buffering: buffering);
 
-      case PlayerAdapterPositionChanged(position: final position):
+      case PlayerAdapterPositionChanged(:final position):
         watchdogs.onPositionProgress(position);
         _reconcileMirroredPlayback();
 
       case PlayerAdapterVideoFrameProgress():
         watchdogs.onFrameProgress();
 
-      case PlayerAdapterErrorEvent(message: final message):
+      case PlayerAdapterErrorEvent(:final message):
         MediaCoreLog.warning(
           LogCategory.error,
           'adapter error: $message',
@@ -370,7 +388,7 @@ extension _LivePlaybackPipeline on LivePlaybackController {
 
             return null;
           });
-        } catch (error) {
+        } on Object catch (error) {
           // A task that threw after its own completer was already settled
           // (or a manager-level failure) ends here; the task record keeps
           // the failure for diagnostics.

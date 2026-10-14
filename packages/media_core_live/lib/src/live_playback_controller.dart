@@ -25,10 +25,8 @@ part 'live_playback_pipeline.dart';
 /// the first engine's attempt — so the caller usually wants to refetch
 /// fresh lines here. Return the new sources to sweep from line 0, an
 /// empty list to reuse the current ones.
-typedef EngineFallbackSourceResolver = Future<List<PlayerSource>> Function(
-  String nextEngine,
-  List<PlayerSource> currentSources,
-);
+typedef EngineFallbackSourceResolver =
+    Future<List<PlayerSource>> Function(String nextEngine, List<PlayerSource> currentSources);
 
 /// Resolves fresh sources for a recovery attempt.
 ///
@@ -84,12 +82,16 @@ typedef RecoverySourceResolver = Future<List<PlayerSource>> Function(List<Player
 /// exactly one recovery path and the caller can read all of it here.
 
 final class LivePlaybackController {
-  LivePlaybackController(
-    this.kernel, {
-    LiveWatchdogs? watchdogs,
-    this.onEngineFallbackSources,
-    this.onRecoverySources,
-  }) : watchdogs = watchdogs ?? LiveWatchdogs() {
+  /// Creates a live playback owner on [kernel].
+  ///
+  /// [watchdogs] defaults to a bundle with this module's deadlines; pass one
+  /// with `enabled: false` to drive the sweep without stall detection, or a
+  /// shorter [LiveWatchdogs.sourceReadyTimeout] to shorten the sweep's
+  /// verification window. [onEngineFallbackSources] and [onRecoverySources]
+  /// are the caller's chances to hand over fresh lines before lines are
+  /// re-opened.
+  LivePlaybackController(this.kernel, {LiveWatchdogs? watchdogs, this.onEngineFallbackSources, this.onRecoverySources})
+    : watchdogs = watchdogs ?? LiveWatchdogs() {
     _wireWatchdogs();
   }
 
@@ -114,7 +116,7 @@ final class LivePlaybackController {
 
   /// Single-slot queue. Every user action and every recovery step is a
   /// task here; capacity one makes the controller sequential by design.
-  final TaskManager _tasks = TaskManager(maxConcurrentTasks: 1);
+  final TaskManager _tasks = TaskManager();
 
   final Map<TaskId, _PendingTask> _pending = <TaskId, _PendingTask>{};
 
@@ -138,6 +140,7 @@ final class LivePlaybackController {
   int _playGeneration = 0;
 
   LiveSourceRequest? _request;
+
   /// Ledger of the candidate lines and engines this sweep holds.
   ///
   /// The player being watched is counted by the kernel, not here: what this
@@ -151,7 +154,8 @@ final class LivePlaybackController {
   /// Reports the candidate lines and engines the sweep is holding.
   void _reportMemory() {
     final entries = _sources.length + _engines.length;
-    _memory.report(_memoryKey, 
+    _memory.report(
+      _memoryKey,
       items: entries,
       bytes: entries * MemoryEstimates.cacheEntry,
       note: '${_sources.length} line(s), ${_engines.length} engine(s) in the sweep',
@@ -168,6 +172,13 @@ final class LivePlaybackController {
   bool _engineFallbackAllowed = true;
   bool _playbackRequested = false;
   bool _audioOnly = false;
+
+  /// The playback state the controller mirrors for its consumers.
+  ///
+  /// Written on every transition the controller observes — the sweep's own
+  /// phases plus the adapter events it re-mirrors — and published on
+  /// [onStateChanged]; read directly by callers that want the current value
+  /// without subscribing.
   PlayerCoreState state = PlayerCoreState.idle;
 
   /// Line each engine's sweep starts from: the line that was being played
@@ -322,20 +333,24 @@ final class LivePlaybackController {
 
   /// Sets volume (0.0–1.0).
   Future<void> setVolume(double volume) {
-    return _handle?.setVolume(volume.clamp(0.0, 1.0).toDouble()) ?? Future<void>.value();
+    return _handle?.setVolume(volume.clamp(0.0, 1.0)) ?? Future<void>.value();
   }
 
   /// Mutes or unmutes audio output.
-  Future<void> setMute(bool muted) {
-    return _handle?.setMute(muted) ?? Future<void>.value();
+  ///
+  /// Mute lives on the attached engine, so with no handle yet — or a released
+  /// one — there is nothing to mute and the request is dropped quietly, like
+  /// every other transport command issued between playbacks.
+  Future<void> setMute({required bool muted}) {
+    return _handle?.setMute(muted: muted) ?? Future<void>.value();
   }
 
   /// Whether audio output is muted.
   bool get muted => _handle?.muted ?? false;
 
   /// Sets whether playback restarts after completion.
-  Future<void> setLoop(bool loop) {
-    return _handle?.setLoop(loop) ?? Future<void>.value();
+  Future<void> setLoop({required bool loop}) {
+    return _handle?.setLoop(loop: loop) ?? Future<void>.value();
   }
 
   /// Current playback position on the attached engine.
@@ -351,17 +366,21 @@ final class LivePlaybackController {
   Duration get duration => _handle?.duration ?? Duration.zero;
 
   /// Restricts playback to the audio track.
-  Future<void> setAudioOnly(bool audioOnly) async {
+  ///
+  /// The preference is remembered by the controller as well as the engine, so
+  /// an engine switch or a recovery that reopens a fresh adapter keeps audio
+  /// only instead of silently restoring video.
+  Future<void> setAudioOnly({required bool audioOnly}) async {
     _audioOnly = audioOnly;
 
-    watchdogs.setVideoExpected(!audioOnly);
+    watchdogs.setVideoExpected(expected: !audioOnly);
 
-    await _handle?.setAudioOnly(audioOnly);
+    await _handle?.setAudioOnly(audioOnly: audioOnly);
   }
 
   /// Marks whether the current route owns the mounted video presentation.
-  void setPresentationVisible(bool visible) {
-    watchdogs.setPresentationVisible(visible);
+  void setPresentationVisible({required bool visible}) {
+    watchdogs.setPresentationVisible(visible: visible);
   }
 
   /// Records that the app was backgrounded and the player was auto-paused.

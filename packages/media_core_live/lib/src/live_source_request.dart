@@ -1,4 +1,3 @@
-
 import 'package:media_core/media_core.dart';
 
 /// One live playback request: the sources to try, in order.
@@ -25,11 +24,12 @@ import 'package:media_core/media_core.dart';
 /// allowed engine has been tried. Pass `allowEngineFallback: false` to
 /// refuse engine escalation entirely and have the first failure surface.
 final class LiveSourceRequest {
-  LiveSourceRequest({
-    required List<PlayerSource> sources,
-    this.title,
-    this.allowEngineFallback,
-  }) : sources = List<PlayerSource>.unmodifiable(sources);
+  /// Declares the candidate lines to sweep, in the order the caller prefers.
+  ///
+  /// The list is copied into an unmodifiable one, so the sweep cannot see a
+  /// caller mutating it mid-fallback.
+  LiveSourceRequest({required List<PlayerSource> sources, this.title, this.allowEngineFallback})
+    : sources = List<PlayerSource>.unmodifiable(sources);
 
   /// Wraps raw URLs into sources, applying [headers] to every line.
   ///
@@ -43,19 +43,21 @@ final class LiveSourceRequest {
     bool? allowEngineFallback,
   }) {
     return LiveSourceRequest(
-      sources: urls.map((url) {
-        final uri = Uri.parse(url);
+      sources: urls
+          .map((url) {
+            final uri = Uri.parse(url);
 
-        return PlayerSource(
-          id: SourceId('live_${uri.host}${uri.path.hashCode}'),
-          uri: uri,
-          type: SourceType.live,
-          protocol: SourceProtocol.fromScheme(uri.scheme),
-          format: SourceFormat.fromUri(uri),
-          headers: headers.isEmpty ? null : SourceHeaders(headers),
-          title: title,
-        );
-      }).toList(growable: false),
+            return PlayerSource(
+              id: SourceId('live_${uri.host}${uri.path.hashCode}'),
+              uri: uri,
+              type: SourceType.live,
+              protocol: SourceProtocol.fromScheme(uri.scheme),
+              format: SourceFormat.fromUri(uri),
+              headers: headers.isEmpty ? null : SourceHeaders(headers),
+              title: title,
+            );
+          })
+          .toList(growable: false),
       title: title,
       allowEngineFallback: allowEngineFallback,
     );

@@ -34,9 +34,9 @@ extension _LivePlaybackSweep on LivePlaybackController {
     await _sweep();
   }
 
-  /// Whether the newer command that superseded [generation] is a play of
-  /// exactly [source] on [engine] - in which case committing the staged
-  /// player is correct, and discarding it would only fail the sweep and
+  /// Whether the newer command that superseded the current play generation
+  /// is a play of exactly [source] on [engine] - in which case committing the
+  /// staged player is correct, and discarding it would only fail the sweep and
   /// burn the request's single-use URLs on a replay.
   bool _supersededBySamePlayback(String engine, PlayerSource source) {
     return _playbackRequested &&
@@ -73,11 +73,11 @@ extension _LivePlaybackSweep on LivePlaybackController {
         await _openOn(engine, source);
 
         return;
-      } catch (error) {
+      } on Object catch (error) {
         MediaCoreLog.warning(
           LogCategory.recovery,
           'candidate failed: ${source.uri} on $engine'
-              '${first && startAtCurrent ? ' (reopen of the playing line)' : ''}',
+          '${first && startAtCurrent ? ' (reopen of the playing line)' : ''}',
           error: error,
           fields: <String, Object?>{'sourceIndex': _sourceIndex, 'engineIndex': _engineIndex},
         );
@@ -132,7 +132,7 @@ extension _LivePlaybackSweep on LivePlaybackController {
             fields: <String, Object?>{'nextEngine': nextEngine, 'lines': nextSources.length},
           );
         }
-      } catch (error) {
+      } on Object catch (error) {
         MediaCoreLog.warning(
           LogCategory.fallback,
           'engine switch source refresh failed — reusing the current lines',
@@ -206,7 +206,7 @@ extension _LivePlaybackSweep on LivePlaybackController {
         'recovery sources refreshed by the caller',
         fields: <String, Object?>{'lines': _sources.length, 'first': _sources.first.uri.toString()},
       );
-    } catch (error) {
+    } on Object catch (error) {
       MediaCoreLog.warning(
         LogCategory.recovery,
         'recovery source refresh failed — reusing the current lines',
@@ -242,15 +242,17 @@ extension _LivePlaybackSweep on LivePlaybackController {
 
     // Recovery is this module's job; the handle's own ladder stays
     // dormant so there is exactly one recovery path.
-    handle.setRecoveryEnabled(false);
-    handle.declarePlayIntent(true);
+    handle
+      ..recoveryEnabled = false
+      ..playIntent = true;
 
     // Every watchdog armed for a previous candidate is stale now: cancel
     // them, and clear the position observation so the new source starts
     // unobserved. The first position sample of the *new* source is then
     // what enables and arms the stall detector - exactly once.
-    watchdogs.cancelAll();
-    watchdogs.resetPositionSignal();
+    watchdogs
+      ..cancelAll()
+      ..resetPositionSignal();
 
     _sweepAdapterError = null;
 
@@ -324,21 +326,19 @@ extension _LivePlaybackSweep on LivePlaybackController {
     // and then reported "position frozen", blaming the stream for what the
     // engine had already stated. Observe errors only; playback state and the
     // watchdogs stay unattached until commit, exactly as before.
-    final stagedErrors = staged.adapterEvents.listen(
-      (event) {
-        if (event case PlayerAdapterErrorEvent(:final message)) {
-          _sweepAdapterError ??= message;
-        }
-      },
-      onError: (Object _) {},
-    );
+    final stagedErrors = staged.adapterEvents.listen((event) {
+      if (event case PlayerAdapterErrorEvent(:final message)) {
+        _sweepAdapterError ??= message;
+      }
+    }, onError: (Object _) {});
 
     try {
-      staged.setRecoveryEnabled(false);
-      staged.declarePlayIntent(true);
+      staged
+        ..recoveryEnabled = false
+        ..playIntent = true;
 
       if (_audioOnly) {
-        await staged.setAudioOnly(true);
+        await staged.setAudioOnly(audioOnly: true);
       }
 
       await staged.open(source);
@@ -374,16 +374,16 @@ extension _LivePlaybackSweep on LivePlaybackController {
       if (previous != null && !previous.disposed) {
         try {
           await kernel.release(previous.id);
-        } catch (_) {
+        } on Object catch (_) {
           // Best-effort release of the retired engine.
         }
       }
-    } catch (error) {
+    } on Object catch (_) {
       await stagedErrors.cancel();
 
       try {
         await kernel.release(staged.id);
-      } catch (_) {
+      } on Object catch (_) {
         // Best-effort cleanup of the failed staging.
       }
 
@@ -398,8 +398,8 @@ extension _LivePlaybackSweep on LivePlaybackController {
         _adapterSub = previous.adapterEvents.listen(_onAdapterEvent, onError: (Object _) {});
 
         watchdogs.updateCapabilities(previous.adapter.capabilities);
-        watchdogs.setVideoExpected(!_audioOnly);
-        watchdogs.onPlayingChanged(_playbackRequested, fromUserIntent: false);
+        watchdogs.setVideoExpected(expected: !_audioOnly);
+        watchdogs.onPlayingChanged(playing: _playbackRequested, fromUserIntent: false);
       }
 
       rethrow;
@@ -508,7 +508,8 @@ extension _LivePlaybackSweep on LivePlaybackController {
       _failureController.add(
         PlayerFailure(
           code: PlayerErrorCode.noPlayableStream,
-          message: 'Live playback failed after trying ${_sources.length} source(s)'
+          message:
+              'Live playback failed after trying ${_sources.length} source(s)'
               '${_engineFallbackAllowed ? ' across ${_engineIndex + 1} engine(s)' : ''}. '
               'Last attempt: ${source.uri} on $engine.',
         ),

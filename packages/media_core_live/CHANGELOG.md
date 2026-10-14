@@ -1,3 +1,7 @@
+## Unreleased
+
+- **Conformed to media_core's new signatures**: the live controller, pipeline and watchdogs call `setMute(muted:)`, `setAudioOnly(audioOnly:)`, `setBuffering(buffering:)` and read `PlayerKernel.presentationDriver` as assigned rather than attached, and the package's own boolean parameters became named. Public members are documented.
+
 ## 0.1.0
 
 Initial release.

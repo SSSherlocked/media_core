@@ -24,10 +24,7 @@ final class _EngineFactory implements PlayerAdapterFactory {
 FakePlayerAdapter _fake(String id, {Set<String> failOn = const {}}) {
   return FakePlayerAdapter(
     id: id,
-    behavior: FakePlayerAdapterBehavior(
-      failOn: failOn,
-      openDuration: const Duration(minutes: 3),
-    ),
+    behavior: FakePlayerAdapterBehavior(failOn: failOn),
   );
 }
 
@@ -60,10 +57,7 @@ PlayerSource _line(String url, {String? title}) {
 }
 
 LiveSourceRequest _request(List<String> urls, {bool? allowEngineFallback}) {
-  return LiveSourceRequest(
-    sources: urls.map((url) => _line(url)).toList(growable: false),
-    allowEngineFallback: allowEngineFallback,
-  );
+  return LiveSourceRequest(sources: urls.map(_line).toList(growable: false), allowEngineFallback: allowEngineFallback);
 }
 
 /// Watchdogs off: these tests drive the sweep, and a stall detector firing in
@@ -96,9 +90,7 @@ void main() {
       final failures = <PlayerFailure>[];
       final subscription = controller.onError.listen(failures.add);
 
-      await controller.play(
-        _request(['https://a.example/live.flv'], allowEngineFallback: false),
-      );
+      await controller.play(_request(['https://a.example/live.flv'], allowEngineFallback: false));
 
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
@@ -151,16 +143,15 @@ void main() {
       final failures = <PlayerFailure>[];
       final subscription = controller.onError.listen(failures.add);
 
-      await controller.play(
-        _request(['https://a.example/live.flv'], allowEngineFallback: false),
-      );
+      await controller.play(_request(['https://a.example/live.flv'], allowEngineFallback: false));
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
       expect(adapters['engine-a']!.calls, contains('open'));
       expect(
         adapters['engine-b']!.calls,
         isNot(contains('open')),
-        reason: 'the caller declined escalation, so the second engine must '
+        reason:
+            'the caller declined escalation, so the second engine must '
             'never be touched',
       );
       expect(failures, hasLength(1));
@@ -179,9 +170,7 @@ void main() {
       final kernel = _kernel(adapters);
       final controller = _controller(kernel);
 
-      final playing = controller.play(
-        _request(['https://first.example/live.flv', 'https://second.example/live.flv']),
-      );
+      final playing = controller.play(_request(['https://first.example/live.flv', 'https://second.example/live.flv']));
       await _pumpPosition(adapters.values);
       await playing;
 
@@ -209,9 +198,7 @@ void main() {
       final subscription = controller.onError.listen(failures.add);
 
       final started = DateTime.now();
-      await controller.play(
-        _request(['https://a.example/live.flv'], allowEngineFallback: false),
-      );
+      await controller.play(_request(['https://a.example/live.flv'], allowEngineFallback: false));
       final elapsed = DateTime.now().difference(started);
 
       expect(failures, hasLength(1));
@@ -239,9 +226,7 @@ void main() {
       final failures = <PlayerFailure>[];
       final subscription = controller.onError.listen(failures.add);
 
-      final playing = controller.play(
-        _request(['https://a.example/live.flv'], allowEngineFallback: false),
-      );
+      final playing = controller.play(_request(['https://a.example/live.flv'], allowEngineFallback: false));
 
       await Future<void>.delayed(const Duration(milliseconds: 1200));
       adapters['engine-a']!.updatePosition(const Duration(seconds: 1));
@@ -270,7 +255,7 @@ void main() {
       final sink = MediaCoreLog.attachMemorySink();
       MediaCoreLog.level = LogLevel.warning;
       addTearDown(() {
-        MediaCoreLog.removeSink(sink);
+        MediaCoreLog.removeSink(sink.call);
         MediaCoreLog.level = previousLevel;
       });
 
@@ -278,9 +263,7 @@ void main() {
       final subscription = controller.onError.listen(failures.add);
 
       final started = DateTime.now();
-      final playing = controller.play(
-        _request(['https://a.example/live.m3u8'], allowEngineFallback: false),
-      );
+      final playing = controller.play(_request(['https://a.example/live.m3u8'], allowEngineFallback: false));
 
       await _untilPlayRequested(adapters['engine-a']!);
       adapters['engine-a']!.emitError('Failed to open https://a.example/live.m3u8.');
@@ -322,9 +305,7 @@ void main() {
       final failures = <PlayerFailure>[];
       final subscription = controller.onError.listen(failures.add);
 
-      await controller.play(
-        _request(['https://a.example/live.flv'], allowEngineFallback: false),
-      );
+      await controller.play(_request(['https://a.example/live.flv'], allowEngineFallback: false));
       await Future<void>.delayed(const Duration(milliseconds: 50));
 
       expect(failures, isEmpty);
@@ -359,9 +340,7 @@ void main() {
       final failures = <PlayerFailure>[];
       final subscription = controller.onError.listen(failures.add);
 
-      final playing = controller.play(
-        _request(['https://a.example/live.flv'], allowEngineFallback: false),
-      );
+      final playing = controller.play(_request(['https://a.example/live.flv'], allowEngineFallback: false));
       await _pumpPosition(adapters.values);
       await playing;
 
@@ -373,10 +352,7 @@ void main() {
       expect(askedWith, [
         ['a.example'],
       ], reason: 'the refresh must be offered the lines that just died');
-      expect(controller.sources.map((source) => source.uri.host), [
-        'fresh.example',
-        'fresh-backup.example',
-      ]);
+      expect(controller.sources.map((source) => source.uri.host), ['fresh.example', 'fresh-backup.example']);
       expect(controller.sourceIndex, 0);
       expect(adapters['engine-a']!.openedSources.last.uri.host, 'fresh.example');
       expect(failures, isEmpty);
@@ -395,9 +371,7 @@ void main() {
       final gate = Completer<List<PlayerSource>>();
       final controller = _controller(kernel, onRecoverySources: (_) => gate.future);
 
-      final playing = controller.play(
-        _request(['https://a.example/live.flv'], allowEngineFallback: false),
-      );
+      final playing = controller.play(_request(['https://a.example/live.flv'], allowEngineFallback: false));
       await _pumpPosition(adapters.values);
       await playing;
 
@@ -405,9 +379,7 @@ void main() {
       // generation synchronously and queues its own task behind it.
       adapters['engine-a']!.emitError('Server returned 403 Forbidden');
       await Future<void>.delayed(const Duration(milliseconds: 100));
-      final next = controller.play(
-        _request(['https://b.example/live.flv'], allowEngineFallback: false),
-      );
+      final next = controller.play(_request(['https://b.example/live.flv'], allowEngineFallback: false));
       gate.complete(<PlayerSource>[_line('https://stale.example/live.flv')]);
 
       await _pumpPosition(adapters.values);
@@ -438,9 +410,7 @@ void main() {
       final failures = <PlayerFailure>[];
       final subscription = controller.onError.listen(failures.add);
 
-      final playing = controller.play(
-        _request(['https://a.example/live.flv'], allowEngineFallback: false),
-      );
+      final playing = controller.play(_request(['https://a.example/live.flv'], allowEngineFallback: false));
       await _pumpPosition(adapters.values);
       await playing;
 
@@ -501,14 +471,18 @@ void main() {
       Object? thrown;
       try {
         await controller.play(_request(['https://a.example/live.flv']));
-      } catch (error) {
+      } on Object catch (error) {
         thrown = error;
       }
       await Future<void>.delayed(const Duration(milliseconds: 50));
 
       expect(adapters['engine-a']!.calls, isNot(contains('open')));
       expect(controller.handle, isNull);
-      expect(thrown, anyOf(isNull, isA<StateError>()), reason: 'refusal must be quiet or explicit, not a half-started session');
+      expect(
+        thrown,
+        anyOf(isNull, isA<StateError>()),
+        reason: 'refusal must be quiet or explicit, not a half-started session',
+      );
 
       await kernel.dispose();
     }, timeout: const Timeout(Duration(seconds: 30)));
@@ -558,10 +532,7 @@ Future<void> _untilPlayRequested(FakePlayerAdapter adapter) async {
 /// rather than `controller.handle`, because the handle is only published once
 /// verification has already passed — during the sweep it is still staged.
 /// Verification polls every 250 ms inside its deadline, which this covers.
-Future<void> _pumpPosition(
-  Iterable<FakePlayerAdapter> adapters, {
-  Duration window = const Duration(seconds: 4),
-}) async {
+Future<void> _pumpPosition(Iterable<FakePlayerAdapter> adapters, {Duration window = const Duration(seconds: 4)}) async {
   final deadline = DateTime.now().add(window);
   var position = const Duration(seconds: 1);
 
@@ -569,7 +540,7 @@ Future<void> _pumpPosition(
     for (final adapter in adapters) {
       try {
         await adapter.seek(position);
-      } catch (_) {
+      } on Object catch (_) {
         // An adapter that failed to open has nothing to seek; the sweep is
         // about to move past it anyway.
       }

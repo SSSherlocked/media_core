@@ -93,6 +93,13 @@ part 'live_watchdog_arms.dart';
 /// that action through the lifecycle-safe PlayerHandle boundary and then
 /// reporting the result through [reportRecoveryResult].
 final class LiveWatchdogs {
+  /// Creates a watchdog bundle with the live module's deadlines.
+  ///
+  /// Every deadline is also a public field, so a caller tunes them
+  /// individually; `Duration.zero` on any of them means "this watchdog does
+  /// not judge" instead of "fire immediately". [capabilities] can be bound
+  /// up front, but [updateCapabilities] re-binds it whenever the active
+  /// adapter changes, so leaving it out is normal.
   LiveWatchdogs({
     PlayerAdapterCapabilities? capabilities,
     this.sourceReadyTimeout = const Duration(seconds: 18),
@@ -174,8 +181,8 @@ final class LiveWatchdogs {
   ///
   /// - after the handle is bound for a new source
   /// - after the engine is switched via `attachAdapter`
-  /// - with null on [close] and [dispose], so a stale snapshot never
-  ///   leaks into the next source
+  /// - with null when the player is released, and on [dispose], so a stale
+  ///   snapshot never leaks into the next source
   ///
   /// Passing null clears the snapshot; the frame-progress watchdog then
   /// treats the adapter as not supporting the signal.
@@ -384,7 +391,12 @@ final class LiveWatchdogs {
   // Playing state
   // ---------------------------------------------------------------------------
 
-  void onPlayingChanged(bool playing, {required bool fromUserIntent}) {
+  /// Reports the engine's playing state as the playback owner observed it.
+  ///
+  /// [playing] is the new state. [fromUserIntent] says whether a pause was
+  /// the caller's own: a pause the user asked for settles the deadlines, while
+  /// an unexpected one is what the continuity watchdog exists to catch.
+  void onPlayingChanged({required bool playing, required bool fromUserIntent}) {
     if (_disposed) {
       return;
     }
@@ -438,7 +450,13 @@ final class LiveWatchdogs {
   // Buffering state
   // ---------------------------------------------------------------------------
 
-  void onBufferingChanged(bool buffering) {
+  /// Reports the engine's buffering state.
+  ///
+  /// Buffering suspends the other detectors: while the engine is filling its
+  /// cache neither a frame nor a position advance is expected, so the
+  /// buffering deadline takes over, and the ones it replaced are re-armed when
+  /// it ends.
+  void onBufferingChanged({required bool buffering}) {
     if (_disposed) {
       return;
     }
@@ -537,9 +555,9 @@ final class LiveWatchdogs {
   /// Marks whether a route currently owns the mounted video presentation.
   ///
   /// Hidden presentations do not run the frame watchdog. Buffering state
-  /// is checked by [armVideoFrameStall] itself, so this method does not
+  /// is checked by `_armVideoFrameStall` itself, so this method does not
   /// need to duplicate it.
-  void setPresentationVisible(bool visible) {
+  void setPresentationVisible({required bool visible}) {
     if (_disposed) {
       return;
     }
@@ -563,7 +581,7 @@ final class LiveWatchdogs {
   ///
   /// This is a session-level mode rather than a per-source state, like
   /// [setPresentationVisible], so it survives source changes.
-  void setVideoExpected(bool expected) {
+  void setVideoExpected({required bool expected}) {
     if (_disposed) {
       return;
     }
@@ -584,6 +602,10 @@ final class LiveWatchdogs {
     }
   }
 
+  /// Whether the last state the owner reported was playing.
+  ///
+  /// Read-only view of the observation the watchdogs act on; the authority
+  /// stays with the caller that reported it through [onPlayingChanged].
   bool get isPlaying => _playing;
 
   // ---------------------------------------------------------------------------
@@ -605,7 +627,7 @@ final class LiveWatchdogs {
   /// If playback has not actually returned to a valid playing/buffering
   /// state yet, the failure grace window remains available so the normal
   /// playback-state callback can settle the result.
-  void reportRecoveryResult(bool resumed) {
+  void reportRecoveryResult({required bool resumed}) {
     if (_disposed) {
       return;
     }
@@ -654,42 +676,44 @@ final class LiveWatchdogs {
     });
   }
 
-
-
   // ---------------------------------------------------------------------------
   // Cancellation
   // ---------------------------------------------------------------------------
 
+  // Each helper cancels its own subscription without awaiting it: these are
+  // `TimerStream` subscriptions whose `cancel()` only stops a timer, the
+  // callbacks they would have run are generation-guarded (see
+  // [_isWatchdogGenerationCurrent]), and arming runs from synchronous
+  // observation entry points that must not become async mid-sweep.
+
   void _cancelSourceReady() {
-    final subscription = _sourceReadySubscription;
-
+    unawaited(_sourceReadySubscription?.cancel());
     _sourceReadySubscription = null;
-
-    subscription?.cancel();
   }
 
   void _cancelContinuity() {
-    final subscription = _continuitySubscription;
-
+    unawaited(_continuitySubscription?.cancel());
     _continuitySubscription = null;
-
-    subscription?.cancel();
   }
 
   void _cancelBufferingStall() {
-    final subscription = _bufferingSubscription;
-
+    unawaited(_bufferingSubscription?.cancel());
     _bufferingSubscription = null;
-
-    subscription?.cancel();
   }
 
   void _cancelVideoFrameStall() {
-    final subscription = _videoFrameSubscription;
-
+    unawaited(_videoFrameSubscription?.cancel());
     _videoFrameSubscription = null;
+  }
 
-    subscription?.cancel();
+  /// Cancels the position-stall watchdog without deciding anything.
+  ///
+  /// Lives with the other cancel helpers rather than beside the arms: the
+  /// subscription field is the class's own, and dropping it here is what lets
+  /// [cancelAll] and [dispose] release every watchdog the same way.
+  void _cancelPositionStall() {
+    unawaited(_positionStallSubscription?.cancel());
+    _positionStallSubscription = null;
   }
 
   /// Cancels every watchdog and clears the observations behind them.
@@ -756,8 +780,11 @@ final class LiveWatchdogs {
     onRecoveryRequested = null;
     _capabilities = null;
 
-    _positionProgress.close();
-    _frameProgress.close();
+    // Nothing awaits these closes: the only listeners of the two subjects are
+    // the watchdogs' own subscriptions, already cancelled above, and their
+    // callbacks are generation-guarded, so the completion has no observer.
+    unawaited(_positionProgress.close());
+    unawaited(_frameProgress.close());
   }
 
   /// Forgets the position signal of the previous engine or source.

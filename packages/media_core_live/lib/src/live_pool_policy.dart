@@ -13,6 +13,7 @@ import 'package:media_core/media_core.dart' show PlayerPoolConfig;
 /// for minutes is a bandwidth bill for a stream nobody is watching, so idle
 /// players are released quickly and only a single spare is kept.
 final class LivePoolPolicy {
+  /// Declares a standby policy; [defaults] covers the common live case.
   const LivePoolPolicy({
     this.warmStandbyEnabled = true,
     this.warmStandbyCount = 1,
@@ -41,11 +42,7 @@ final class LivePoolPolicy {
   /// where players come from and whether the kernel's instance pool is enabled.
   PlayerPoolConfig toPoolConfig() {
     return PlayerPoolConfig(
-      reuseIdlePlayers: true,
       preloadCount: warmStandbyEnabled ? warmStandbyCount : 0,
-      maxActivePlayers: 1,
-      playVisibilityThreshold: 0.6,
-      pauseVisibilityThreshold: 0.4,
       idleTimeout: releaseIdleAfter,
       keepWarm: warmStandbyEnabled,
       warmSize: warmStandbyEnabled ? warmStandbyCount + 1 : 0,
@@ -53,11 +50,11 @@ final class LivePoolPolicy {
     );
   }
 
-  LivePoolPolicy copyWith({
-    bool? warmStandbyEnabled,
-    int? warmStandbyCount,
-    Duration? releaseIdleAfter,
-  }) {
+  /// The same policy with the given fields replaced.
+  ///
+  /// A `null` argument keeps the current value, so a caller changes one
+  /// setting without restating the others.
+  LivePoolPolicy copyWith({bool? warmStandbyEnabled, int? warmStandbyCount, Duration? releaseIdleAfter}) {
     return LivePoolPolicy(
       warmStandbyEnabled: warmStandbyEnabled ?? this.warmStandbyEnabled,
       warmStandbyCount: warmStandbyCount ?? this.warmStandbyCount,

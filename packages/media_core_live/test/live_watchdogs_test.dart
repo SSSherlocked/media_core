@@ -26,15 +26,15 @@ LiveWatchdogs _watchdogs(
   PlayerAdapterCapabilities? capabilities,
 }) {
   return LiveWatchdogs(
-    capabilities: capabilities,
-    sourceReadyTimeout: sourceReadyTimeout,
-    unexpectedPauseGrace: unexpectedPauseGrace,
-    unexpectedPauseFailureGrace: unexpectedPauseFailureGrace,
-    bufferingStallTimeout: bufferingStallTimeout,
-    videoFrameStallTimeout: videoFrameStallTimeout,
-    positionStallTimeout: positionStallTimeout,
-    enabled: enabled,
-  )
+      capabilities: capabilities,
+      sourceReadyTimeout: sourceReadyTimeout,
+      unexpectedPauseGrace: unexpectedPauseGrace,
+      unexpectedPauseFailureGrace: unexpectedPauseFailureGrace,
+      bufferingStallTimeout: bufferingStallTimeout,
+      videoFrameStallTimeout: videoFrameStallTimeout,
+      positionStallTimeout: positionStallTimeout,
+      enabled: enabled,
+    )
     ..onStall = recorder.stalls.add
     ..onRecoveryRequested = recorder.actions.add;
 }
@@ -55,9 +55,10 @@ void main() {
 
     test('playing before the deadline cancels the arm', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder)..armSourceReady();
+      final watchdogs = _watchdogs(recorder)
+        ..armSourceReady()
+        ..onPlayingChanged(playing: true, fromUserIntent: false);
 
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
       await _settle();
 
       expect(recorder.stalls, isEmpty);
@@ -66,8 +67,7 @@ void main() {
 
     test('a zero timeout disables the arm instead of firing at once', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder, sourceReadyTimeout: Duration.zero)
-        ..armSourceReady();
+      final watchdogs = _watchdogs(recorder, sourceReadyTimeout: Duration.zero)..armSourceReady();
 
       await _settle();
 
@@ -91,10 +91,10 @@ void main() {
   group('unexpected pause', () {
     test('asks the owner to reassert playback', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder);
+      final watchdogs = _watchdogs(recorder)
+        ..onPlayingChanged(playing: true, fromUserIntent: false)
+        ..onPlayingChanged(playing: false, fromUserIntent: false);
 
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
-      watchdogs.onPlayingChanged(false, fromUserIntent: false);
       await _settle();
 
       expect(recorder.actions, [LiveWatchdogRecoveryAction.reassertPlay]);
@@ -105,10 +105,10 @@ void main() {
 
     test('a pause the user asked for is not a stall', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder);
+      final watchdogs = _watchdogs(recorder)
+        ..onPlayingChanged(playing: true, fromUserIntent: false)
+        ..onPlayingChanged(playing: false, fromUserIntent: true);
 
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
-      watchdogs.onPlayingChanged(false, fromUserIntent: true);
       await _settle();
 
       expect(recorder.actions, isEmpty);
@@ -118,15 +118,16 @@ void main() {
 
     test('a reassert that worked is silent', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder);
+      final watchdogs = _watchdogs(recorder)
+        ..onPlayingChanged(playing: true, fromUserIntent: false)
+        ..onPlayingChanged(playing: false, fromUserIntent: false);
 
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
-      watchdogs.onPlayingChanged(false, fromUserIntent: false);
       await _settle();
       expect(recorder.actions, hasLength(1));
 
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
-      watchdogs.reportRecoveryResult(true);
+      watchdogs
+        ..onPlayingChanged(playing: true, fromUserIntent: false)
+        ..reportRecoveryResult(resumed: true);
       await _settle();
 
       expect(recorder.stalls, isEmpty);
@@ -135,13 +136,13 @@ void main() {
 
     test('a reassert that did not take escalates to a timeout', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder);
+      final watchdogs = _watchdogs(recorder)
+        ..onPlayingChanged(playing: true, fromUserIntent: false)
+        ..onPlayingChanged(playing: false, fromUserIntent: false);
 
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
-      watchdogs.onPlayingChanged(false, fromUserIntent: false);
       await _settle();
 
-      watchdogs.reportRecoveryResult(false);
+      watchdogs.reportRecoveryResult(resumed: false);
       await _settle();
 
       expect(recorder.stalls, [LiveStallKind.unexpectedPauseTimeout]);
@@ -150,16 +151,13 @@ void main() {
 
     test('no failure grace means the failure is reported at once', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(
-        recorder,
-        unexpectedPauseFailureGrace: Duration.zero,
-      );
+      final watchdogs = _watchdogs(recorder, unexpectedPauseFailureGrace: Duration.zero)
+        ..onPlayingChanged(playing: true, fromUserIntent: false)
+        ..onPlayingChanged(playing: false, fromUserIntent: false);
 
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
-      watchdogs.onPlayingChanged(false, fromUserIntent: false);
       await _settle();
 
-      watchdogs.reportRecoveryResult(false);
+      watchdogs.reportRecoveryResult(resumed: false);
 
       expect(recorder.stalls, [LiveStallKind.unexpectedPauseResumeFailed]);
       watchdogs.dispose();
@@ -167,9 +165,8 @@ void main() {
 
     test('a recovery result with nothing pending is ignored', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder);
+      final watchdogs = _watchdogs(recorder)..reportRecoveryResult(resumed: false);
 
-      watchdogs.reportRecoveryResult(false);
       await _settle();
 
       expect(recorder.stalls, isEmpty);
@@ -180,10 +177,10 @@ void main() {
   group('buffering stall', () {
     test('buffering past the deadline is reported', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder);
+      final watchdogs = _watchdogs(recorder)
+        ..onPlayingChanged(playing: true, fromUserIntent: false)
+        ..onBufferingChanged(buffering: true);
 
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
-      watchdogs.onBufferingChanged(true);
       await _settle();
 
       expect(recorder.stalls, [LiveStallKind.bufferingStallTimeout]);
@@ -192,11 +189,11 @@ void main() {
 
     test('buffering that ends in time is not a stall', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder, bufferingStallTimeout: _long);
+      final watchdogs = _watchdogs(recorder, bufferingStallTimeout: _long)
+        ..onPlayingChanged(playing: true, fromUserIntent: false)
+        ..onBufferingChanged(buffering: true)
+        ..onBufferingChanged(buffering: false);
 
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
-      watchdogs.onBufferingChanged(true);
-      watchdogs.onBufferingChanged(false);
       await _settle();
 
       expect(recorder.stalls, isEmpty);
@@ -210,12 +207,9 @@ void main() {
       final recorder = _Recorder();
       final watchdogs = _watchdogs(
         recorder,
-        capabilities: const PlayerAdapterCapabilities(
-          supportsVideoFrameProgress: true,
-        ),
-      );
+        capabilities: const PlayerAdapterCapabilities(supportsVideoFrameProgress: true),
+      )..onPlayingChanged(playing: true, fromUserIntent: false);
 
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
       await _settle();
 
       expect(recorder.stalls, contains(LiveStallKind.videoFrameStallTimeout));
@@ -224,9 +218,8 @@ void main() {
 
     test('an engine with no frame heartbeat is never judged by one', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder);
+      final watchdogs = _watchdogs(recorder)..onPlayingChanged(playing: true, fromUserIntent: false);
 
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
       await _settle();
 
       expect(recorder.stalls, isNot(contains(LiveStallKind.videoFrameStallTimeout)));
@@ -238,12 +231,9 @@ void main() {
       final watchdogs = _watchdogs(
         recorder,
         videoFrameStallTimeout: _long,
-        capabilities: const PlayerAdapterCapabilities(
-          supportsVideoFrameProgress: true,
-        ),
-      );
+        capabilities: const PlayerAdapterCapabilities(supportsVideoFrameProgress: true),
+      )..onPlayingChanged(playing: true, fromUserIntent: false);
 
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
       for (var i = 0; i < 6; i++) {
         watchdogs.onFrameProgress();
         await Future<void>.delayed(_short);
@@ -255,15 +245,11 @@ void main() {
 
     test('a hidden presentation is not judged', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(
-        recorder,
-        capabilities: const PlayerAdapterCapabilities(
-          supportsVideoFrameProgress: true,
-        ),
-      );
+      final watchdogs =
+          _watchdogs(recorder, capabilities: const PlayerAdapterCapabilities(supportsVideoFrameProgress: true))
+            ..setPresentationVisible(visible: false)
+            ..onPlayingChanged(playing: true, fromUserIntent: false);
 
-      watchdogs.setPresentationVisible(false);
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
       await _settle();
 
       expect(recorder.stalls, isNot(contains(LiveStallKind.videoFrameStallTimeout)));
@@ -272,15 +258,11 @@ void main() {
 
     test('unbinding the capabilities stops judging frames', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(
-        recorder,
-        capabilities: const PlayerAdapterCapabilities(
-          supportsVideoFrameProgress: true,
-        ),
-      );
+      final watchdogs =
+          _watchdogs(recorder, capabilities: const PlayerAdapterCapabilities(supportsVideoFrameProgress: true))
+            ..updateCapabilities(null)
+            ..onPlayingChanged(playing: true, fromUserIntent: false);
 
-      watchdogs.updateCapabilities(null);
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
       await _settle();
 
       expect(watchdogs.capabilities, isNull);
@@ -290,16 +272,15 @@ void main() {
   });
 
   group('position stall', () {
-    test('a frozen position is caught on an engine with no frame heartbeat',
-        () async {
+    test('a frozen position is caught on an engine with no frame heartbeat', () async {
       // The detector of last resort: every adapter reports position, so a
       // picture that freezes while the engine still claims to be playing is
       // caught here even with nothing else to catch it.
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder);
+      final watchdogs = _watchdogs(recorder)
+        ..onPlayingChanged(playing: true, fromUserIntent: false)
+        ..onPositionProgress(const Duration(seconds: 1));
 
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
-      watchdogs.onPositionProgress(const Duration(seconds: 1));
       await _settle();
 
       expect(recorder.stalls, contains(LiveStallKind.positionStallTimeout));
@@ -310,9 +291,8 @@ void main() {
       // The watchdog only arms after the engine has proved it reports
       // position at all, so it never judges an engine that does not.
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder);
+      final watchdogs = _watchdogs(recorder)..onPlayingChanged(playing: true, fromUserIntent: false);
 
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
       await _settle();
 
       expect(recorder.stalls, isNot(contains(LiveStallKind.positionStallTimeout)));
@@ -321,9 +301,9 @@ void main() {
 
     test('a position that keeps advancing is healthy', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder, positionStallTimeout: _long);
+      final watchdogs = _watchdogs(recorder, positionStallTimeout: _long)
+        ..onPlayingChanged(playing: true, fromUserIntent: false);
 
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
       for (var second = 1; second <= 6; second++) {
         watchdogs.onPositionProgress(Duration(seconds: second));
         await Future<void>.delayed(_short);
@@ -333,14 +313,13 @@ void main() {
       watchdogs.dispose();
     });
 
-    test('resetting the signal stops the detector for the next source',
-        () async {
+    test('resetting the signal stops the detector for the next source', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder);
+      final watchdogs = _watchdogs(recorder)
+        ..onPlayingChanged(playing: true, fromUserIntent: false)
+        ..onPositionProgress(Duration.zero)
+        ..resetPositionSignal();
 
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
-      watchdogs.onPositionProgress(Duration.zero);
-      watchdogs.resetPositionSignal();
       await _settle();
 
       expect(recorder.stalls, isNot(contains(LiveStallKind.positionStallTimeout)));
@@ -351,13 +330,13 @@ void main() {
   group('master switch and teardown', () {
     test('disabled watchdogs arm nothing at all', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder, enabled: false);
+      final watchdogs = _watchdogs(recorder, enabled: false)
+        ..armSourceReady()
+        ..onPlayingChanged(playing: true, fromUserIntent: false)
+        ..onPlayingChanged(playing: false, fromUserIntent: false)
+        ..onBufferingChanged(buffering: true)
+        ..onPositionProgress(Duration.zero);
 
-      watchdogs.armSourceReady();
-      watchdogs.onPlayingChanged(true, fromUserIntent: false);
-      watchdogs.onPlayingChanged(false, fromUserIntent: false);
-      watchdogs.onBufferingChanged(true);
-      watchdogs.onPositionProgress(Duration.zero);
       await _settle();
 
       expect(recorder.stalls, isEmpty);
@@ -367,10 +346,10 @@ void main() {
 
     test('cancelAll stops every armed deadline', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder);
+      final watchdogs = _watchdogs(recorder)
+        ..armSourceReady()
+        ..cancelAll();
 
-      watchdogs.armSourceReady();
-      watchdogs.cancelAll();
       await _settle();
 
       expect(recorder.stalls, isEmpty);
@@ -379,12 +358,15 @@ void main() {
 
     test('nothing fires after dispose', () async {
       final recorder = _Recorder();
-      final watchdogs = _watchdogs(recorder);
 
-      watchdogs.armSourceReady();
-      watchdogs.dispose();
-      watchdogs.onPlayingChanged(false, fromUserIntent: false);
-      watchdogs.onPositionProgress(Duration.zero);
+      // No variable held: nothing after teardown is allowed to speak to the
+      // bundle, which is exactly what this test proves.
+      _watchdogs(recorder)
+        ..armSourceReady()
+        ..dispose()
+        ..onPlayingChanged(playing: false, fromUserIntent: false)
+        ..onPositionProgress(Duration.zero);
+
       await _settle();
 
       expect(recorder.stalls, isEmpty);
