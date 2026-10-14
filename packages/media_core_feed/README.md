@@ -11,6 +11,7 @@
 
 其余几条是这个模块存在的理由，不是别处能顺手拿到的：
 
+- **连滑只开落点那一页**：`showIndex` 在已有 attach 在飞时**替换目标**而不是排队。PageView 甩一把会连着报 1→2→…→8，逐页打开就等于把 8 次冷开串成一条可见的停顿；现在中间页只更新目标，引擎只在最后一个 index 上被碰（attach 前后各确认一次 `_index`，所以连"准备打开"都省了）。等待 `showIndex` 的调用方拿到的是同一条 settle future。
 - **开不完就弃**：`showIndex` 打开成功后先确认可见条目还是不是它（`currentIndex`）—— 用户在这条还在 loading 时继续往下滑是常态，旧页面不能再回来改状态。日志把这条单独记一行，因为"停在原地的页面"和"被放弃的打开"看起来一模一样。
 - **状态流是稳定的流，不是句柄快照**：`onPlaybackStateChanged` 内部按流身份重新挂接到当前播放器（`_reattachTransport`）。曾经的写法是 `_handle?.playbackStream ?? _pooledPlayer?... ?? Stream.empty()` 当场求值，于是在 `load()` 建出第一个播放器之前订阅的页面拿到一条空流，进度条永远停在 0。这里保留了重新挂接与 ValueStream 的当前值（时长不等到下一拍就出现）。
 - **错误只报可见条目**：`onItemError` 对每个失败条目发一次 `PlayerFailure`，跳过、重试还是删除由宿主决定。**正在播的条目卡住**不是这里的事，那是 [../media_core_live](../media_core_live) 的看门狗与扫描；信息流里混直播源就要自己把那一层接上。
@@ -33,7 +34,7 @@ feed.onPlaybackStateChanged.listen(drawProgress); // 换条目也不用重新订
 await feed.next();
 await feed.pause();
 await feed.setVolume(0.8);
-await feed.setMute(true);
+await feed.setMute(muted: true);
 await feed.dispose();                               // 不带池才把句柄还给 kernel
 ```
 

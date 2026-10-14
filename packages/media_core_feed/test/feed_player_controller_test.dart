@@ -15,18 +15,38 @@ final class _PoolHandle implements PoolPlayerHandle {
   int openCount = 0;
   double volume = 1;
 
+  /// Every source this handle was told to play, in order.
+  ///
+  /// A feed that attaches each page a fling passes through would list one
+  /// entry per page; a coalescing feed lists only where the viewer stopped.
+  final List<String> played = <String>[];
+
+  /// Set by the host to make engine work wait, standing in for a slow open.
+  Completer<void>? openGate;
+
   @override
   bool isDisposed = false;
 
   @override
   Future<void> open(PlayerSource source, {bool autoPlay = false}) async {
+    final gate = openGate;
+    if (gate != null && !gate.isCompleted) {
+      await gate.future;
+    }
     openedSource = source.id.value;
     openCount++;
     isPlaying = autoPlay;
+    if (autoPlay) played.add(source.id.value);
   }
 
   @override
-  Future<void> play() async => isPlaying = true;
+  Future<void> play() async {
+    isPlaying = true;
+    final source = openedSource;
+    if (source != null && (played.isEmpty || played.last != source)) {
+      played.add(source);
+    }
+  }
 
   @override
   Future<void> pause() async => isPlaying = false;
@@ -38,7 +58,7 @@ final class _PoolHandle implements PoolPlayerHandle {
   Future<void> setVolume(double value) async => volume = value;
 
   @override
-  Future<void> setMute(bool muted) async {}
+  Future<void> setMute({required bool muted}) async {}
 
   @override
   Stream<PlayerTransportState> get playbackStream => _transport.stream;
@@ -49,9 +69,12 @@ final class _PoolHandle implements PoolPlayerHandle {
 final class _PoolHost implements PoolPlayerHost {
   final List<_PoolHandle> handles = <_PoolHandle>[];
 
+  /// Handed to every handle created from now on: while it is set, opens wait.
+  Completer<void>? gate;
+
   @override
   Future<PoolPlayerHandle> acquire() async {
-    final handle = _PoolHandle('feed-pool${handles.length}');
+    final handle = _PoolHandle('feed-pool${handles.length}')..openGate = gate;
     handles.add(handle);
     return handle;
   }
@@ -61,6 +84,9 @@ final class _PoolHost implements PoolPlayerHost {
 
   @override
   Future<void> disposeHandle(PoolPlayerHandle handle) async {}
+
+  /// Sources the pool asked a player to play, across every handle it owns.
+  List<String> get playedSources => handles.expand((handle) => handle.played).toList();
 }
 
 PlayerSource _source(String id) => PlayerSource(
@@ -128,6 +154,36 @@ void main() {
 
       expect(controller.pooledPlayer?.id, host.handles.first.id);
       expect(controller.handle, isNull, reason: 'this host does not pool kernel handles');
+    });
+
+    test('a fling across pages opens where the viewer stopped, not every page', () async {
+      await controller.load(_items(10));
+      final playedBefore = host.playedSources.length;
+
+      // Every request arrives while the first attach is still suspended on
+      // engine work - the shape of a flung PageView.
+      final futures = <Future<void>>[for (var index = 1; index <= 6; index++) controller.showIndex(index)];
+      await Future.wait(futures);
+
+      expect(controller.currentIndex, 6);
+      expect(
+        controller.itemState,
+        FeedItemState.playing,
+        reason: 'the landed page is what reports its state, not the flown-over ones',
+      );
+      expect(host.playedSources.skip(playedBefore), <String>[
+        'item6',
+      ], reason: 'one play command for a six-page fling; the flown-over pages never touched an engine');
+    });
+
+    test('reloading at the same index attaches the new item behind it', () async {
+      await controller.load(_items(4));
+      expect(host.playedSources.last, 'item0');
+
+      await controller.load(<PlayerSource>[_source('refreshed')]);
+
+      expect(controller.currentIndex, 0);
+      expect(host.playedSources.last, 'refreshed', reason: 'a refresh must re-open, not no-op on index 0');
     });
 
     test('volume reaches the pooled player', () async {

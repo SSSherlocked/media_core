@@ -1,6 +1,6 @@
 import 'dart:async';
-
 import 'package:media_core/media_core.dart';
+import 'package:media_core_feed/src/feed_config.dart' show FeedConfig;
 
 /// Decision trail for the feed.
 ///
@@ -49,22 +49,23 @@ enum FeedItemState {
 /// ```
 ///
 /// Off-screen items are not kept warm by default: preloading a stream the
-/// user may never stop on costs bandwidth on live feeds. [preload] records
+/// user may never stop on costs bandwidth on live feeds. `preload` records
 /// the next item with the kernel's [PlayerKernel.preloadManager] so a
 /// host that wants to warm it up can; pass `preloadAhead: false` to skip.
 ///
 /// Errors on the visible item surface once on [onItemError]; the caller
 /// decides whether to skip the item, show a retry button or remove it.
 /// Recovery of a *playing* item (stalls, engine hiccups) is the live
-/// module's job — attach a [LivePlaybackController]-style sweep on top if
+/// module's job — attach a `LivePlaybackController`-style sweep on top if
 /// the feed serves live streams.
 final class FeedPlayerController {
+  /// Creates a controller bound to [kernel].
+  FeedPlayerController(this.kernel, {this.preloadAhead = true, this.pool});
 
   /// This instance's key in the shared account: a module can have several
   /// live instances, and a report sums their contributions rather than
   /// keeping whichever reported last.
   late final String _memoryKey = memoryContributorKey(this);
-  FeedPlayerController(this.kernel, {this.preloadAhead = true, this.pool});
 
   /// The kernel providing the player and the preload bookkeeping.
   final PlayerKernel kernel;
@@ -96,6 +97,21 @@ final class FeedPlayerController {
 
   int _index = -1;
 
+  /// Index the attach chain last brought onto the player.
+  ///
+  /// The pool is told to stand the *previously attached* item down when a new
+  /// one takes over; with coalescing that is not simply the index before the
+  /// current request, because a fling never attached the pages it passed.
+  int _attachedIndex = -1;
+
+  /// The index the running attach chain must land on, or `null` when the chain
+  /// has no newer request waiting.
+  int? _attachTarget;
+
+  /// Set while an attach chain is running; a superseded caller awaits it so a
+  /// fast swipe sequence pays for one open, not one per page crossed.
+  Completer<void>? _attachChain;
+
   bool _disposed = false;
 
   FeedItemState _itemState = FeedItemState.idle;
@@ -106,6 +122,9 @@ final class FeedPlayerController {
   final StreamController<PlayerTransportState> _transportController =
       StreamController<PlayerTransportState>.broadcast();
 
+  // The subscription is cancelled on dispose and on every re-attach; the
+  // analyzer cannot see that cancel through the local copies handed to it.
+  // ignore: cancel_subscriptions
   StreamSubscription<PlayerTransportState>? _transportSubscription;
 
   /// The stream currently forwarded into [_transportController], for
@@ -145,6 +164,11 @@ final class FeedPlayerController {
   Stream<PlayerFailure> get onItemError => _errorController.stream;
 
   /// Loads the feed and attaches [initialIndex].
+  ///
+  /// Reloading re-attaches even when the visible index did not change: the
+  /// item list is new, so the source behind that index may be a different
+  /// video. The pool keeps matching players, so a refresh does not restart
+  /// what is still the same item.
   Future<void> load(List<PlayerSource> items, {int initialIndex = 0}) {
     if (_disposed) {
       return Future<void>.value();
@@ -153,6 +177,7 @@ final class FeedPlayerController {
     _items
       ..clear()
       ..addAll(items);
+    _index = -1;
 
     _reportMemory();
     _log.debug(
@@ -161,7 +186,7 @@ final class FeedPlayerController {
     );
 
     final activePool = pool;
-    _poolItemsSync = activePool == null ? null : activePool.setItems(List<PlayerSource>.unmodifiable(_items));
+    _poolItemsSync = activePool?.setItems(List<PlayerSource>.unmodifiable(_items));
 
     return showIndex(initialIndex.clamp(0, items.isEmpty ? 0 : items.length - 1));
   }
@@ -169,34 +194,79 @@ final class FeedPlayerController {
   /// Attaches item [index]: re-opens the shared handle on its source.
   ///
   /// Safe to call for every page the pager scrolls through — the item
-  /// already visible is a no-op.
+  /// already visible is a no-op, and a page requested while an attach is still
+  /// running **replaces** that attach instead of queueing behind it: a fling
+  /// from 1 to 8 opens item 8, not eight items.
   Future<void> showIndex(int index) async {
-    if (_disposed || index < 0 || index >= _items.length || index == _index) {
+    if (_disposed || index < 0 || index >= _items.length) {
+      return;
+    }
+    if (index == _index && (_attachTarget == null || index == _attachTarget)) {
       return;
     }
 
-    final previousIndex = _index;
     _index = index;
     _emitIndex(index);
 
     _log.debug(
-      'feed page attached',
+      'feed page requested',
       fields: <String, Object?>{
-        'from': previousIndex,
         'to': index,
+        'attached': _attachedIndex,
         'itemCount': _items.length,
         'throughPool': pool != null,
+        'coalesced': _attachChain != null,
       },
     );
 
+    // A chain is already running: hand it the new target and let that caller
+    // await the same settling rather than starting a second attach.
+    final running = _attachChain;
+    if (running != null) {
+      _attachTarget = index;
+      return await running.future;
+    }
+
+    _attachTarget = index;
+    final settled = Completer<void>();
+    _attachChain = settled;
+    try {
+      while (!_disposed) {
+        final target = _attachTarget;
+        if (target == null) {
+          break;
+        }
+        _attachTarget = null;
+        await _attachTo(target);
+      }
+    } finally {
+      _attachChain = null;
+      if (!settled.isCompleted) settled.complete();
+    }
+  }
+
+  /// Brings [index] onto the player.
+  ///
+  /// The single place that talks to the engine; [showIndex] decides which
+  /// index is worth bringing at all.
+  Future<void> _attachTo(int index) async {
+    if (_disposed) {
+      return;
+    }
+
     final activePool = pool;
     if (activePool != null) {
-      await _showIndexThroughPool(activePool, index, previousIndex);
+      await _showIndexThroughPool(activePool, index);
       return;
     }
 
     if (_handle == null || _handle!.disposed) {
       _handle = await kernel.create();
+    }
+    if (_disposed || _index != index) {
+      // The player was built while the viewer was still moving: the newest
+      // request owns it now.
+      return;
     }
     _reattachTransport();
 
@@ -217,12 +287,13 @@ final class FeedPlayerController {
         return;
       }
 
+      _attachedIndex = index;
       _setItemState(FeedItemState.playing);
 
       if (preloadAhead && index + 1 < _items.length) {
         kernel.preload(_items[index + 1]);
       }
-    } catch (error) {
+    } on Object catch (error) {
       MediaCoreLog.error(
         LogCategory.recovery,
         'feed item failed: ${source.uri}',
@@ -249,12 +320,20 @@ final class FeedPlayerController {
   /// The pool opens the source, plays the active item and keeps the neighbours
   /// open; this controller only takes the resulting handle so volume, playback
   /// state and its own bookkeeping keep working.
-  Future<void> _showIndexThroughPool(PlaybackPoolOrchestrator activePool, int index, int previousIndex) async {
+  Future<void> _showIndexThroughPool(PlaybackPoolOrchestrator activePool, int index) async {
     final source = _items[index];
+    final previousIndex = _attachedIndex;
     _setItemState(FeedItemState.opening);
 
     try {
       await _poolItemsSync;
+      // Checked again before any engine work: the requests that arrived while
+      // this await was suspended already moved the target on, and opening a
+      // page the viewer has flown past is exactly the cost coalescing exists
+      // to avoid.
+      if (_disposed || _index != index) {
+        return;
+      }
       await activePool.onVisibilityChanged(index, 1);
       if (previousIndex >= 0 && previousIndex != index) {
         await activePool.onVisibilityChanged(previousIndex, 0);
@@ -277,8 +356,9 @@ final class FeedPlayerController {
       _pooledPlayer = pooled;
       _handle = pooled is KernelPoolPlayerHandle ? pooled.handle : null;
       _reattachTransport();
+      _attachedIndex = index;
       _setItemState(FeedItemState.playing);
-    } catch (error) {
+    } on Object catch (error) {
       MediaCoreLog.error(
         LogCategory.recovery,
         'feed item failed: ${source.uri}',
@@ -326,7 +406,8 @@ final class FeedPlayerController {
       _handle?.setVolume(volume) ?? _pooledPlayer?.setVolume(volume) ?? Future<void>.value();
 
   /// Mutes the visible item's player.
-  Future<void> setMute(bool muted) => _handle?.setMute(muted) ?? _pooledPlayer?.setMute(muted) ?? Future<void>.value();
+  Future<void> setMute({required bool muted}) =>
+      _handle?.setMute(muted: muted) ?? _pooledPlayer?.setMute(muted: muted) ?? Future<void>.value();
 
   /// Playback state stream of the visible item's player.
   ///
@@ -352,6 +433,13 @@ final class FeedPlayerController {
     _disposed = true;
     _memory.withdraw(_memoryKey);
 
+    // Nobody will settle the chain now; release the callers awaiting it.
+    _attachTarget = null;
+    final chain = _attachChain;
+    if (chain != null && !chain.isCompleted) {
+      chain.complete();
+    }
+
     final handle = _handle;
     _handle = null;
     _pooledPlayer = null;
@@ -366,7 +454,7 @@ final class FeedPlayerController {
     if (handle != null && pool == null) {
       try {
         await kernel.release(handle.id);
-      } catch (_) {
+      } on Object catch (_) {
         // Best-effort release.
       }
     }
@@ -379,7 +467,8 @@ final class FeedPlayerController {
 
   /// Reports the retained item list.
   void _reportMemory() {
-    _memory.report(_memoryKey, 
+    _memory.report(
+      _memoryKey,
       items: _items.length,
       bytes: _items.length * MemoryEstimates.playbackItem,
       note: '${_items.length} feed item(s), at $_index',
@@ -411,11 +500,13 @@ final class FeedPlayerController {
     if (stream == null) return;
 
     _transportSubscription = stream.listen(
-      (PlayerTransportState state) {
+      (state) {
         if (!_transportController.isClosed) _transportController.add(state);
       },
       onError: (Object error, StackTrace stackTrace) {
-        if (!_transportController.isClosed) _transportController.addError(error, stackTrace);
+        if (!_transportController.isClosed) {
+          _transportController.addError(error, stackTrace);
+        }
       },
     );
   }

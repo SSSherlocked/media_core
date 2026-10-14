@@ -2,6 +2,7 @@ import 'package:media_core/media_core.dart' show PlayerPoolConfig;
 
 /// Tunables for a vertical feed.
 final class FeedConfig {
+  /// Creates a feed configuration.
   const FeedConfig({this.preloadAhead = true});
 
   /// Caller-accepted defaults.
@@ -20,16 +21,12 @@ final class FeedConfig {
   /// three players then cover an unlimited feed, and a swipe is a source swap
   /// on a player that is already open.
   static const PlayerPoolConfig recommendedPoolConfig = PlayerPoolConfig(
-    reuseIdlePlayers: true,
-    preloadCount: 1,
-    maxActivePlayers: 1,
-    playVisibilityThreshold: 0.6,
-    pauseVisibilityThreshold: 0.4,
     idleTimeout: Duration(seconds: 30),
     keepWarm: true,
     warmSize: 3,
     preloadTimeout: Duration(seconds: 10),
   );
 
+  /// Returns a copy of this config with the supplied fields replaced.
   FeedConfig copyWith({bool? preloadAhead}) => FeedConfig(preloadAhead: preloadAhead ?? this.preloadAhead);
 }
