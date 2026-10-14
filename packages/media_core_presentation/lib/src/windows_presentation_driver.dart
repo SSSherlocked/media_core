@@ -1,18 +1,16 @@
 import 'dart:io' show Platform;
-
 import 'package:flutter/widgets.dart';
 import 'package:media_core/media_core.dart';
-import 'package:window_manager/window_manager.dart';
-
+import 'package:media_core_presentation/media_core_presentation.dart' show MediaCorePresentation;
 import 'package:media_core_presentation/src/presentation_capability_config.dart';
+import 'package:window_manager/window_manager.dart';
 
 /// Desktop presentation driver backed by window_manager.
 ///
-/// **Superseded.** The three modes this driver bundles are now separate
-/// packages with one feature each — `media_core_fullscreen`, `media_core_pip`
-/// and `media_core_floating` — composed through `PresentationDriverChain`. This
-/// class is kept for consumers that already depend on it and is not extended
-/// with new modes.
+/// **Superseded.** The modes this driver bundles now have dedicated packages -
+/// `media_core_fullscreen` and `media_core_pip` - composed through
+/// `PresentationDriverChain`. This class is kept for consumers that already
+/// depend on it and is not extended with new modes.
 ///
 /// Works on Windows (primary target), macOS and Linux where
 /// window_manager is available.

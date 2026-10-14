@@ -4,14 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:media_core_presentation/media_core_presentation.dart';
 
 void main() {
-  testWidgets('debug two layers', (WidgetTester tester) async {
+  testWidgets('debug two layers', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
           body: MediaPlayerOverlay(
-            hoverMode: true,
             hoverAutoHideDelay: Duration(seconds: 5),
-            child: ColoredBox(color: Colors.black),
             layers: [
               PlayerOverlayLayer(
                 slot: PlayerOverlaySlot.bottom,
@@ -20,6 +18,7 @@ void main() {
               ),
               PlayerOverlayLayer(slot: PlayerOverlaySlot.center, builder: _anyContent),
             ],
+            child: ColoredBox(color: Colors.black),
           ),
         ),
       ),

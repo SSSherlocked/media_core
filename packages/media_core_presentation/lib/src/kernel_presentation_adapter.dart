@@ -8,8 +8,8 @@ import 'package:media_core_presentation/src/media_core_presentation.dart';
 /// presentation module's [PresentationAdapter] contract.
 ///
 /// Use this when wiring through `PresentationController` /
-/// `PresentationCoordinator` instead of (or alongside) the kernel
-/// `attachPresentation` path:
+/// `PresentationCoordinator` instead of (or alongside) assigning
+/// [PlayerKernel.presentationDriver]:
 ///
 /// ```dart
 /// final driver = MediaCorePresentation();
@@ -19,20 +19,23 @@ import 'package:media_core_presentation/src/media_core_presentation.dart';
 /// final controller = PresentationController();
 /// // PresentationRequest flows: controller → adapter → driver → platform
 /// ```
+///
+/// Nothing in this repository constructs it: every current host reaches the
+/// driver through the kernel. It is kept for a host that owns the adapter
+/// contract, and is not exercised by any test here.
 final class KernelPresentationAdapter extends PresentationAdapterBase {
   /// Creates the adapter wrapping [driver].
-  KernelPresentationAdapter(this.driver)
-    : super(initialCapabilities: _capabilitiesFor(driver));
+  KernelPresentationAdapter(this.driver) : super(initialCapabilities: _capabilitiesFor(driver));
 
   /// The wrapped capability driver.
   final MediaCorePresentation driver;
 
   static PresentationCapabilities _capabilitiesFor(MediaCorePresentation driver) {
     return PresentationCapabilities(
-      fullscreen: true,
-      // PiP is only served on desktop (floating window) for now.
-      pip: driver.supportsFloatingWindow,
-      floating: driver.supportsFloatingWindow,
+      // PiP and the in-window floating mode are only served on desktop here;
+      // system picture-in-picture belongs to media_core_pip's own drivers.
+      pip: driver.supportsPresentationWindow,
+      floating: driver.supportsPresentationWindow,
     );
   }
 

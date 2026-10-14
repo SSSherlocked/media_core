@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:media_core/media_core.dart';
 
 import 'package:media_core_presentation/src/presentation_capability_config.dart';
@@ -14,10 +14,12 @@ import 'package:media_core_presentation/src/windows_presentation_driver.dart';
 ///
 /// ```text
 /// Windows / macOS / Linux → WindowManagerPresentationDriver
-///                           (fullscreen + always-on-top PiP)
+///                           (fullscreen + always-on-top small window)
 /// Android / iOS / other   → throws on apply
-///                           (use media_core_presentation_mobile there:
-///                            system PiP + a host-owned small window)
+///                           (system picture-in-picture is served there by
+///                            media_core_pip, on native_picture_in_picture;
+///                            the old application-owned floating window is
+///                            gone from this project)
 /// ```
 ///
 /// It also tracks the active video orientation from adapter
@@ -29,11 +31,15 @@ import 'package:media_core_presentation/src/windows_presentation_driver.dart';
 /// ```dart
 /// final presentation = MediaCorePresentation();
 /// await presentation.initialize();
-/// kernel.attachPresentation(presentation);
+/// kernel.presentationDriver = presentation;
+/// presentation.observeKernel(kernel);
 ///
 /// await kernel.enterFullscreen(playerId);
-/// await kernel.enterPip(playerId);          // Windows: small window
+/// await kernel.enterPip(playerId);         // desktop: small window
 /// ```
+///
+/// Background playback and pause-on-hidden belong to [PlayerKernel], not to
+/// this driver: it only moves the picture between presentation modes.
 final class MediaCorePresentation implements KernelPresentationDriver {
   /// Creates the driver.
   MediaCorePresentation({
@@ -55,12 +61,12 @@ final class MediaCorePresentation implements KernelPresentationDriver {
   /// Latest video orientation observed from adapter events.
   VideoOrientation get orientation => _orientation;
 
-  /// Whether this platform serves PiP/floating requests.
+  /// Whether this platform serves PiP/floating requests through a
+  /// desktop always-on-top window.
   ///
-  /// Desktop platforms serve them through an always-on-top
-  /// window. Mobile platforms are served by
-  /// `media_core_presentation_mobile` instead, not by this class.
-  bool get supportsFloatingWindow => _desktop != null;
+  /// Mobile PiP is served by `media_core_pip` (system picture-in-picture),
+  /// not by this class.
+  bool get supportsPresentationWindow => _desktop != null;
 
   /// Whether overlays should use hover show/hide on this device.
   ///
@@ -104,13 +110,20 @@ final class MediaCorePresentation implements KernelPresentationDriver {
   // Kernel wiring
   // ---------------------------------------------------------------------------
 
-  /// Called by the kernel (or manually) to start observing video
-  /// size events from [kernel]'s event bus.
+  /// Starts observing video size events from [kernel]'s event bus.
   ///
-  /// Video orientation feeds PiP window sizing and overlay
-  /// layouts.
+  /// The host calls this next to assigning [PlayerKernel.presentationDriver];
+  /// the kernel itself never wires it up. Video orientation feeds PiP window
+  /// sizing and overlay layouts.
   void observeKernel(PlayerKernel kernel) {
-    _eventSub?.cancel();
+    final previous = _eventSub;
+    if (previous != null) {
+      _eventSub = null;
+      // Deliberately not awaited: the kernel's bus is a broadcast stream, so
+      // cancel() has already detached this listener when it returns; its
+      // future only reports the cancellation itself.
+      unawaited(previous.cancel());
+    }
     _eventSub = kernel.events.listen((event) {
       final orientation = _orientationFromEvent(event);
       if (orientation == null) {
@@ -160,8 +173,9 @@ final class MediaCorePresentation implements KernelPresentationDriver {
     throw UnsupportedError(
       'Presentation mode "${request.mode.name}" is not implemented on '
       '${Platform.operatingSystem}. This driver serves Windows/macOS/Linux '
-      '(fullscreen and floating PiP windows); use media_core_presentation_mobile '
-      'on Android/iOS.',
+      '(fullscreen and an always-on-top small window); on Android/iOS, '
+      'picture-in-picture is served by media_core_pip through '
+      'native_picture_in_picture.',
     );
   }
 

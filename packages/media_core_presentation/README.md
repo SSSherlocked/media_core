@@ -12,7 +12,7 @@
 
 `MediaCorePresentation` 只服务 **Windows / macOS / Linux**（`window_manager` 的全屏 + 常驻小窗 PiP）。在 Android/iOS 上 `apply` 抛 `UnsupportedError`——移动端请改用按平台拆分的独立包（见下）。
 
-> 说明：`WindowManagerPresentationDriver`（本包内那个把全屏/PiP/悬浮捆在一起的驱动）**已被取代**。三种模式现在是各管一件事的独立包——[media_core_fullscreen](../media_core_fullscreen)、[media_core_pip](../media_core_pip)、[media_core_floating](../media_core_floating)——经 `PresentationDriverChain` 组合。本类的捆绑驱动仅为已有依赖者的兼容保留，不再新增模式；本包仍在演进的是上面的**朝向几何**与**图层系统**。
+> 说明：`WindowManagerPresentationDriver`（本包内那个把全屏/PiP/悬浮捆在一起的驱动）**已被取代**。这些模式现在是各管一件事的独立包——[media_core_fullscreen](../media_core_fullscreen)、[media_core_pip](../media_core_pip)——经 `PresentationDriverChain` 组合。本类的捆绑驱动仅为已有依赖者的兼容保留，不再新增模式；本包仍在演进的是上面的**朝向几何**与**图层系统**。
 
 ## 用法
 
@@ -38,7 +38,8 @@ PresentationStage(
 // 作为桌面演示驱动接进内核（仅 Win/macOS/Linux）。
 final presentation = MediaCorePresentation();
 await presentation.initialize();
-kernel.attachPresentation(presentation);
+kernel.presentationDriver = presentation;
+presentation.observeKernel(kernel);
 await kernel.enterFullscreen(playerId);
 ```
 
@@ -51,12 +52,11 @@ await kernel.enterFullscreen(playerId);
 | `PresentationStage` / `MediaPlayerOverlay` / 几何 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `MediaCorePresentation` 演示驱动 | ✅ | ✅ | ✅ | ❌ 抛 `UnsupportedError` | ❌ 抛 `UnsupportedError` | ❌ |
 
-`PresentationStage`、图层系统与几何计算是纯 widget/计算逻辑，任何平台可渲染；`apply` 里的窗口调用只在桌面成立。移动端的系统 PiP 与宿主小窗由 [media_core_pip](../media_core_pip) / [media_core_floating](../media_core_floating) 承担。
+`PresentationStage`、图层系统与几何计算是纯 widget/计算逻辑，任何平台可渲染；`apply` 里的窗口调用只在桌面成立。移动端的系统 PiP 由 [media_core_pip](../media_core_pip) 承担；应用内浮层归宿主（`PresentationMode.floating` 是内核词汇，任何 widget 都能实现它）。
 
 ## 相关文档
 
 - 全屏：[../media_core_fullscreen](../media_core_fullscreen)
 - 画中画：[../media_core_pip](../media_core_pip)
-- 应用内悬浮窗：[../media_core_floating](../media_core_floating)
 - 主包与 `PresentationDriverChain`：[../media_core](../media_core)
 - 仓库总览：[../../README.md](../../README.md)

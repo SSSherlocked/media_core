@@ -13,11 +13,17 @@ enum PlayerOverlaySlot {
   /// Entire video area (e.g. gesture catcher, letterbox art).
   center,
 
-  /// A corner (e.g. PiP badge, resolution tag).
+  /// Top-left corner (e.g. a back affordance or live badge).
   topLeft,
+
+  /// Top-right corner (e.g. a resolution or settings tag).
   topRight,
+
+  /// Bottom-left corner (e.g. a subtitle or caption track label).
   bottomLeft,
-  bottomRight;
+
+  /// Bottom-right corner (e.g. a picture-in-picture entry button).
+  bottomRight,
 }
 
 /// How an overlay layer reacts to pointer visibility.
@@ -35,7 +41,7 @@ enum PlayerOverlayVisibility {
 
   /// Revealed together with the controls, but does not extend the
   /// hover area itself (input-transparent when hidden).
-  withControlsPassthrough;
+  withControlsPassthrough,
 }
 
 /// One layer above the video surface.
@@ -115,8 +121,8 @@ final class PlayerOverlayLayer {
 class MediaPlayerOverlay extends StatefulWidget {
   /// Creates the overlay.
   const MediaPlayerOverlay({
-    super.key,
     required this.child,
+    super.key,
     this.layers = const <PlayerOverlayLayer>[],
     this.hoverMode = true,
     this.hoverAutoHideDelay = const Duration(seconds: 3),
@@ -182,24 +188,80 @@ class _MediaPlayerOverlayState extends State<MediaPlayerOverlay> {
   }
 
   void _onHover(bool hovering) {
+    // Clear as well as cancel: a cancelled-but-set timer reads as "a countdown
+    // is already running" to [_scheduleHide], which would then never arm one
+    // again and the layers would stay up for the rest of the session.
     _hideTimer?.cancel();
+    _hideTimer = null;
+
+    if (_hovering == hovering) {
+      return;
+    }
+
     setState(() => _hovering = hovering);
     _scheduleHide();
   }
 
-  /// (Re)starts the idle auto-hide countdown.
+  /// A pointer move inside the region.
   ///
-  /// Called on enter and on every pointer move so an actively
-  /// moving mouse keeps the layers visible.
-  void _scheduleHide() {
-    _hideTimer?.cancel();
-    if (_hovering && widget.hoverMode) {
-      _hideTimer = Timer(widget.hoverAutoHideDelay, () {
-        if (mounted) {
-          setState(() => _hovering = false);
-        }
-      });
+  /// Movement is activity - the layers stay up while the mouse is being moved -
+  /// and it is also the only signal that the viewer is still here after an idle
+  /// fade, because a pointer that never left the region cannot send another
+  /// enter event. Moving therefore brings the layers back, but only that
+  /// transition calls [setState]: a desktop mouse reports a hundred times a
+  /// second, and rebuilding the whole overlay on each report is a stutter the
+  /// host would feel while reaching for a control.
+  void _onPointerMove() {
+    if (!_hovering) {
+      _onHover(true);
+
+      return;
     }
+
+    _scheduleHide();
+  }
+
+  /// Whether the pointer moved while the current countdown was running.
+  ///
+  /// `onHover` fires on every move - a hundred or more times a second on a
+  /// desktop - and each one used to cancel the countdown and build a new Timer.
+  /// What the viewer expects is only "the layers stay up while I am moving, and
+  /// fall after a quiet stretch", so the running countdown now notes the
+  /// movement and re-arms once when it expires: same behaviour, one timer per
+  /// window instead of one per pointer event.
+  bool _movedWhileCounting = false;
+
+  /// Starts the idle auto-hide countdown, or marks the running one as touched.
+  void _scheduleHide() {
+    if (!(_hovering && widget.hoverMode)) {
+      return;
+    }
+
+    if (_hideTimer != null) {
+      _movedWhileCounting = true;
+
+      return;
+    }
+
+    _movedWhileCounting = false;
+    _hideTimer = Timer(widget.hoverAutoHideDelay, _onHideDeadline);
+  }
+
+  void _onHideDeadline() {
+    _hideTimer = null;
+
+    if (!mounted) {
+      return;
+    }
+
+    if (_movedWhileCounting) {
+      // Still moving: give the viewer another full window.
+      _scheduleHide();
+
+      return;
+    }
+
+    setState(() => _hovering = false);
   }
 
   @override
@@ -213,7 +275,7 @@ class _MediaPlayerOverlayState extends State<MediaPlayerOverlay> {
       opaque: false,
       onEnter: widget.hoverMode ? (_) => _onHover(true) : null,
       onExit: widget.hoverMode ? (_) => _onHover(false) : null,
-      onHover: widget.hoverMode ? (_) => _scheduleHide() : null,
+      onHover: widget.hoverMode ? (_) => _onPointerMove() : null,
       child: GestureDetector(
         behavior: HitTestBehavior.deferToChild,
         onTap: widget.onTap,
@@ -225,13 +287,7 @@ class _MediaPlayerOverlayState extends State<MediaPlayerOverlay> {
 
             // Layer slots.
             for (final (index, layer) in widget.layers.indexed)
-              _buildSlot(
-                layer,
-                index: index,
-                showControls: showControls,
-                topStrip: topStrip,
-                bottomStrip: bottomStrip,
-              ),
+              _buildSlot(layer, index: index, showControls: showControls, topStrip: topStrip, bottomStrip: bottomStrip),
           ],
         ),
       ),
@@ -247,14 +303,10 @@ class _MediaPlayerOverlayState extends State<MediaPlayerOverlay> {
   }) {
     final shown = switch (layer.visibility) {
       PlayerOverlayVisibility.always => true,
-      PlayerOverlayVisibility.withControls ||
-      PlayerOverlayVisibility.withControlsPassthrough => showControls,
+      PlayerOverlayVisibility.withControls || PlayerOverlayVisibility.withControlsPassthrough => showControls,
     };
 
-    Widget content = Padding(
-      padding: layer.padding ?? EdgeInsets.zero,
-      child: layer.builder(context),
-    );
+    Widget content = Padding(padding: layer.padding ?? EdgeInsets.zero, child: layer.builder(context));
 
     if (layer.visibility != PlayerOverlayVisibility.always) {
       content = AnimatedOpacity(
@@ -264,8 +316,8 @@ class _MediaPlayerOverlayState extends State<MediaPlayerOverlay> {
       );
     }
 
-    final ignore = layer.ignorePointer ||
-        (layer.visibility == PlayerOverlayVisibility.withControlsPassthrough && !shown);
+    final ignore =
+        layer.ignorePointer || (layer.visibility == PlayerOverlayVisibility.withControlsPassthrough && !shown);
 
     // Positioned must be the direct child of the Stack; the slot
     // geometry is computed here per layer.slot.

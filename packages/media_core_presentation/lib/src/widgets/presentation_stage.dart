@@ -41,9 +41,9 @@ import 'package:media_core_presentation/src/widgets/player_overlay.dart';
 class PresentationStage extends StatelessWidget {
   /// Creates the stage.
   const PresentationStage({
-    super.key,
     required this.presentation,
     required this.videoBuilder,
+    super.key,
     this.orientation,
     this.layers = const <PlayerOverlayLayer>[],
     this.onTap,
@@ -93,7 +93,7 @@ class PresentationStage extends StatelessWidget {
           ),
         };
       case VideoOrientation.square:
-        video = Center(child: AspectRatio(aspectRatio: 1.0, child: videoBuilder(context, orientation)));
+        video = Center(child: AspectRatio(aspectRatio: 1, child: videoBuilder(context, orientation)));
       case VideoOrientation.unknown:
         video = Center(child: videoBuilder(context, orientation));
     }
@@ -116,7 +116,9 @@ class _Filled extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox.expand(child: FittedBox(fit: BoxFit.cover, child: video));
+    return SizedBox.expand(
+      child: FittedBox(fit: BoxFit.cover, child: video),
+    );
   }
 }
 

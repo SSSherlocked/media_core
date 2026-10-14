@@ -18,7 +18,7 @@ enum PortraitFullscreenStrategy {
   /// Users holding the phone sideways to watch a portrait video.
   /// Rotation is applied by the presentation layer, not by the
   /// backend.
-  rotate;
+  rotate,
 }
 
 /// Strategy for presenting landscape videos on portrait screens.
@@ -27,7 +27,7 @@ enum LandscapeOnPortraitStrategy {
   fit,
 
   /// Crop vertically to fill a portrait screen.
-  fill;
+  fill,
 }
 
 /// Configuration for the presentation capability.
