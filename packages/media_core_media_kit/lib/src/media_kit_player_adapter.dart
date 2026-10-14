@@ -6,6 +6,7 @@ import 'package:media_core/media_core.dart';
 import 'package:media_kit/media_kit.dart' as mk;
 import 'package:media_kit_video/media_kit_video.dart' as mkv;
 import 'package:media_core_media_kit/media_core_media_kit.dart';
+import 'package:media_core_media_kit/src/mpv_error_gate.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform, ValueListenable;
 
 
@@ -162,6 +163,14 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
   mkv.VideoController? _videoController;
 
   final List<StreamSubscription<dynamic>> _subscriptions = [];
+
+  /// Holds mpv's non-fatal error lines until playback shows whether they
+  /// mattered; see [MpvErrorGate].
+  late final MpvErrorGate _errorGate = MpvErrorGate(
+    onReport: _reportMpvError,
+    onHeld: (message) => MediaCoreLog.info(LogCategory.error, 'held until playback progresses: $message'),
+    onDropped: (message) => MediaCoreLog.info(LogCategory.error, 'dropped, playback progressed: $message'),
+  );
 
 
   /// What the device is, as far as the platform probe could say.
@@ -385,6 +394,8 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
 
   @override
   Future<void> onBeforeOpen(PlayerSource source) async {
+    // Error lines of the previous source must not judge this one.
+    _errorGate.reset();
     _liveSource = source.isLive;
     _hasDecodedVideoFrame = false;
     _lastFrameHeartbeatMs = -frameHeartbeatIntervalMs;
@@ -620,6 +631,7 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
 
   @override
   Future<void> onStop() async {
+    _errorGate.reset();
     await player.stop();
 
     _playingNow = false;
@@ -652,6 +664,7 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
 
   @override
   Future<void> onClose() async {
+    _errorGate.reset();
     await player.stop();
 
     _hasOpened = false;
@@ -669,6 +682,8 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
 
   @override
   Future<void> onDispose() async {
+    _errorGate.close();
+
     await Future.wait(_subscriptions.map((subscription) => subscription.cancel()));
 
     _subscriptions.clear();
@@ -904,6 +919,8 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
     _hasDecodedVideoFrame = true;
 
     emitVideoFrameProgress();
+
+    _errorGate.progress();
   }
 
   void _onPlaying(bool playing) {
@@ -940,6 +957,9 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
     if (!_hasOpened) return;
 
     emitPositionChanged(position);
+
+    // A moving position proves a held error line was not fatal.
+    _errorGate.position(position);
   }
 
   void _onDuration(Duration duration) {
@@ -997,6 +1017,13 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
       return;
     }
 
+    // Every other line goes through the gate: a terminal one is reported at
+    // once, a transient one (a corrupt packet, a decoder fallback, a
+    // reconnect) only when playback makes no progress after it.
+    _errorGate.error(message);
+  }
+
+  void _reportMpvError(String message) {
     MediaCoreLog.warning(LogCategory.error, message);
 
     reportEngineError(message: message);
