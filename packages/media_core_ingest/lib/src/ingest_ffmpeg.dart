@@ -13,5 +13,4 @@ abstract interface class IngestFfmpegProcess {
 }
 
 /// Starts FFmpeg with [arguments] and returns the running process.
-typedef IngestFfmpegStarter =
-    Future<IngestFfmpegProcess> Function(List<String> arguments);
+typedef IngestFfmpegStarter = Future<IngestFfmpegProcess> Function(List<String> arguments);

@@ -15,12 +15,8 @@ final class _StallingUpstream {
   _StallingUpstream._(this._server, this._answersHeaders);
 
   static Future<_StallingUpstream> start({required bool answersHeaders}) async {
-    final HttpServer server = await HttpServer.bind(
-      InternetAddress.loopbackIPv4,
-      0,
-      shared: false,
-    );
-    final _StallingUpstream fake = _StallingUpstream._(server, answersHeaders);
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final fake = _StallingUpstream._(server, answersHeaders);
     server.listen(fake._handle, onError: (Object _) {});
     return fake;
   }
@@ -28,20 +24,13 @@ final class _StallingUpstream {
   final HttpServer _server;
   final bool _answersHeaders;
 
-  Uri get media => Uri(
-    scheme: 'http',
-    host: InternetAddress.loopbackIPv4.address,
-    port: _server.port,
-    path: '/tree/media.m3u8',
-  );
+  Uri get media =>
+      Uri(scheme: 'http', host: InternetAddress.loopbackIPv4.address, port: _server.port, path: '/tree/media.m3u8');
 
   Future<void> _handle(HttpRequest request) async {
     if (request.uri.path == '/tree/media.m3u8') {
       request.response.statusCode = HttpStatus.ok;
-      request.response.headers.contentType = ContentType(
-        'application',
-        'vnd.apple.mpegurl',
-      );
+      request.response.headers.contentType = ContentType('application', 'vnd.apple.mpegurl');
       request.response.write('#EXTM3U\n#EXTINF:2.0,\nseg.mp4\n#EXT-X-ENDLIST\n');
       await request.response.close();
       return;
@@ -65,16 +54,16 @@ final class _StallingUpstream {
 /// torn down before one could be read), the bytes that did arrive, and whether
 /// it ended early.
 Future<({int status, int bytes, bool endedEarly})> _fetchChild(Uri url) async {
-  final HttpClient client = HttpClient();
-  int bytes = 0;
+  final client = HttpClient();
+  var bytes = 0;
   try {
-    final HttpClientResponse response = await (await client.getUrl(url)).close();
-    final int status = response.statusCode;
+    final response = await (await client.getUrl(url)).close();
+    final status = response.statusCode;
     try {
       await for (final List<int> chunk in response) {
         bytes += chunk.length;
       }
-    } catch (_) {
+    } on Object catch (_) {
       return (status: status, bytes: bytes, endedEarly: true);
     }
     return (status: status, bytes: bytes, endedEarly: false);
@@ -88,9 +77,9 @@ Future<({int status, int bytes, bool endedEarly})> _fetchChild(Uri url) async {
 }
 
 Future<String> _readManifest(Uri url) async {
-  final HttpClient client = HttpClient();
+  final client = HttpClient();
   try {
-    final HttpClientResponse response = await (await client.getUrl(url)).close();
+    final response = await (await client.getUrl(url)).close();
     return await response.transform(utf8.decoder).join();
   } finally {
     client.close(force: true);
@@ -102,26 +91,20 @@ final _childUrl = RegExp(r'http://127\.0\.0\.1:\d+/[a-z0-9]+/r[0-9a-z]+\.mp4');
 void main() {
   group('a stalled child is answered on the relay clock', () {
     test('an upstream that never returns headers is refused', () async {
-      final _StallingUpstream stalled = await _StallingUpstream.start(
-        answersHeaders: false,
-      );
+      final stalled = await _StallingUpstream.start(answersHeaders: false);
       addTearDown(stalled.close);
-      final LoopbackIngestRelay relay = await LoopbackIngestRelay.start(
+      final relay = await LoopbackIngestRelay.start(
         source: stalled.media,
         childIdleTimeout: const Duration(milliseconds: 300),
       );
       addTearDown(relay.close);
 
-      final RegExpMatch? child = _childUrl.firstMatch(
-        await _readManifest(relay.inputUri),
-      );
+      final child = _childUrl.firstMatch(await _readManifest(relay.inputUri));
       expect(child, isNotNull, reason: 'the rewritten manifest must list a child');
 
-      final DateTime started = DateTime.now();
-      final ({int status, int bytes, bool endedEarly}) result = await _fetchChild(
-        Uri.parse(child!.group(0)!),
-      );
-      final Duration elapsed = DateTime.now().difference(started);
+      final started = DateTime.now();
+      final result = await _fetchChild(Uri.parse(child!.group(0)!));
+      final elapsed = DateTime.now().difference(started);
 
       // Nothing had reached the player yet, so a status is still available.
       expect(result.status, HttpStatus.badGateway);
@@ -129,43 +112,36 @@ void main() {
       expect(
         elapsed,
         lessThan(const Duration(seconds: 3)),
-        reason: 'a response the relay never finishes leaves the player waiting '
+        reason:
+            'a response the relay never finishes leaves the player waiting '
             'for the sweep to notice instead of on a deadline anyone can read',
       );
     }, timeout: const Timeout(Duration(seconds: 30)));
 
     test('an upstream that stops mid-body is cut off', () async {
-      final _StallingUpstream stalled = await _StallingUpstream.start(
-        answersHeaders: true,
-      );
+      final stalled = await _StallingUpstream.start(answersHeaders: true);
       addTearDown(stalled.close);
-      final LoopbackIngestRelay relay = await LoopbackIngestRelay.start(
+      final relay = await LoopbackIngestRelay.start(
         source: stalled.media,
         childIdleTimeout: const Duration(milliseconds: 300),
       );
       addTearDown(relay.close);
 
-      final RegExpMatch? child = _childUrl.firstMatch(
-        await _readManifest(relay.inputUri),
-      );
+      final child = _childUrl.firstMatch(await _readManifest(relay.inputUri));
       expect(child, isNotNull);
 
-      final DateTime started = DateTime.now();
-      final ({int status, int bytes, bool endedEarly}) result = await _fetchChild(
-        Uri.parse(child!.group(0)!),
-      );
-      final Duration elapsed = DateTime.now().difference(started);
+      final started = DateTime.now();
+      final result = await _fetchChild(Uri.parse(child!.group(0)!));
+      final elapsed = DateTime.now().difference(started);
 
       // The response had already started, so no status can take it back: what
       // the player has to get is an *end* — a read it can act on, not a
       // connection held open for bytes that are never coming.
+      // ignore: avoid_print
+      print('MIDBODY RESULT: status=${result.status} bytes=${result.bytes} early=${result.endedEarly}');
       expect(result.endedEarly, isTrue);
       expect(result.bytes, lessThan(4096));
-      expect(
-        elapsed,
-        lessThan(const Duration(seconds: 3)),
-        reason: 'a stalled body must be cut on the relay clock',
-      );
+      expect(elapsed, lessThan(const Duration(seconds: 3)), reason: 'a stalled body must be cut on the relay clock');
     }, timeout: const Timeout(Duration(seconds: 30)));
   });
 }

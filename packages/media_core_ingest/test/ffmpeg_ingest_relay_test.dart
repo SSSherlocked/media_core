@@ -24,15 +24,12 @@ final class _FakeProcess implements IngestFfmpegProcess {
 void main() {
   group('ffmpeg ingest arguments', () {
     test('a copy remux publishes a rolling local playlist', () {
-      final List<String> arguments = FfmpegIngestRelay.buildIngestArguments(
+      final arguments = FfmpegIngestRelay.buildIngestArguments(
         source: Uri.parse('https://example.com/live.flv'),
         outputDirectory: r'C:\tmp\ingest',
       );
 
-      expect(
-        arguments,
-        containsAllInOrder(<String>['-i', 'https://example.com/live.flv']),
-      );
+      expect(arguments, containsAllInOrder(<String>['-i', 'https://example.com/live.flv']));
       expect(arguments, containsAllInOrder(<String>['-c', 'copy']));
       expect(arguments, containsAllInOrder(<String>['-f', 'hls']));
       expect(arguments, containsAllInOrder(<String>['-hls_list_size', '4']));
@@ -42,29 +39,20 @@ void main() {
     });
 
     test('headers are one CRLF-delimited field list', () {
-      final List<String> arguments = FfmpegIngestRelay.buildIngestArguments(
+      final arguments = FfmpegIngestRelay.buildIngestArguments(
         source: Uri.parse('https://example.com/live.m3u8'),
         outputDirectory: '/tmp/ingest',
-        headers: const <String, String>{
-          'Referer': 'https://twitcasting.tv/',
-          'Origin': 'https://twitcasting.tv',
-        },
+        headers: const <String, String>{'Referer': 'https://twitcasting.tv/', 'Origin': 'https://twitcasting.tv'},
       );
 
-      final int index = arguments.indexOf('-headers');
+      final index = arguments.indexOf('-headers');
       expect(index, greaterThanOrEqualTo(0));
-      expect(
-        arguments[index + 1],
-        contains('Referer: https://twitcasting.tv/\r\n'),
-      );
-      expect(
-        arguments[index + 1],
-        contains('Origin: https://twitcasting.tv\r\n'),
-      );
+      expect(arguments[index + 1], contains('Referer: https://twitcasting.tv/\r\n'));
+      expect(arguments[index + 1], contains('Origin: https://twitcasting.tv\r\n'));
     });
 
     test('a transcode declares the codecs instead of copying', () {
-      final List<String> arguments = FfmpegIngestRelay.buildIngestArguments(
+      final arguments = FfmpegIngestRelay.buildIngestArguments(
         source: Uri.parse('https://example.com/live.flv'),
         outputDirectory: '/tmp/ingest',
         copyStreams: false,
@@ -86,22 +74,18 @@ void main() {
       await expectLater(
         FfmpegIngestRelay.start(
           source: Uri.parse('https://example.com/live.flv'),
-          startFfmpeg: (List<String> _) async => process,
+          startFfmpeg: (_) async => process,
           startupTimeout: const Duration(milliseconds: 300),
         ),
         throwsA(isA<TimeoutException>()),
       );
-      expect(
-        process.stopped,
-        isTrue,
-        reason: 'a failed start must not leak the process',
-      );
+      expect(process.stopped, isTrue, reason: 'a failed start must not leak the process');
     });
 
     test('a process that exits before publishing reports its code', () async {
-      final Future<FfmpegIngestRelay> started = FfmpegIngestRelay.start(
+      final started = FfmpegIngestRelay.start(
         source: Uri.parse('https://example.com/live.flv'),
-        startFfmpeg: (List<String> _) async => process,
+        startFfmpeg: (_) async => process,
         startupTimeout: const Duration(seconds: 5),
       );
       scheduleMicrotask(() => process.exitNow(1));

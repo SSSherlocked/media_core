@@ -4,7 +4,7 @@ import 'package:media_core_ingest/media_core_ingest.dart';
 void main() {
   group('manifest child classification', () {
     test('bare names need the manifest base', () {
-      final HlsManifestKind kind = classifyHlsManifest(
+      final kind = classifyHlsManifest(
         '#EXTM3U\n#EXTINF:2.0,\nmedia.95.mp4\n#EXTINF:2.0,\nmedia.96.mp4\n#EXT-X-ENDLIST\n',
       );
 
@@ -15,16 +15,14 @@ void main() {
     });
 
     test('absolute paths need it as well', () {
-      final HlsManifestKind kind = classifyHlsManifest(
-        '#EXTM3U\n#EXTINF:2.0,\n/tc.livehls/v1/streams/1/hls/1.0/media.95.mp4\n',
-      );
+      final kind = classifyHlsManifest('#EXTM3U\n#EXTINF:2.0,\n/tc.livehls/v1/streams/1/hls/1.0/media.95.mp4\n');
 
       expect(kind.absolutePathChildren, 1);
       expect(kind.requiresRewrite, isTrue);
     });
 
     test('absolute URLs do not', () {
-      final HlsManifestKind kind = classifyHlsManifest(
+      final kind = classifyHlsManifest(
         '#EXTM3U\n'
         '#EXT-X-STREAM-INF:BANDWIDTH=800000\n'
         'https://cdn.example.com/live/media.m3u8\n',
@@ -35,7 +33,7 @@ void main() {
     });
 
     test('a relative key or map URI counts as a child', () {
-      final HlsManifestKind kind = classifyHlsManifest(
+      final kind = classifyHlsManifest(
         '#EXTM3U\n'
         '#EXT-X-KEY:METHOD=AES-128,URI="key.bin"\n'
         '#EXT-X-MAP:URI="init.mp4"\n'
@@ -54,9 +52,7 @@ void main() {
     });
 
     test('a scheme-relative child needs the base too', () {
-      final HlsManifestKind kind = classifyHlsManifest(
-        '#EXTM3U\n//cdn.example.com/seg1.ts\n',
-      );
+      final kind = classifyHlsManifest('#EXTM3U\n//cdn.example.com/seg1.ts\n');
 
       expect(kind.schemeRelativeChildren, 1);
       expect(kind.requiresRewrite, isTrue);

@@ -43,15 +43,18 @@ enum IngestStrategy {
 
 /// The resolved delivery decision for one source.
 final class IngestPlan {
-  const IngestPlan.direct()
-    : strategy = IngestStrategy.direct,
-      needs = const <IngestNeed>{};
+  /// A plan that hands the source to the player unchanged.
+  const IngestPlan.direct() : strategy = IngestStrategy.direct, needs = const <IngestNeed>{};
 
   const IngestPlan._(this.strategy, this.needs);
 
+  /// The delivery strategy chosen for the source.
   final IngestStrategy strategy;
+
+  /// What the relay has to do before the source is playable.
   final Set<IngestNeed> needs;
 
+  /// Whether this plan plays the source directly, with no relay work.
   bool get isDirect => strategy == IngestStrategy.direct;
 
   @override
@@ -63,31 +66,18 @@ final class IngestPlan {
 /// some providers use (`/playlist`, `/master_playlist`).
 bool isHlsManifestUri(Uri uri) => _manifestPath.hasMatch(uri.path);
 
-final RegExp _manifestPath = RegExp(
-  r'(\.m3u8|/(master_)?playlist)$',
-  caseSensitive: false,
-);
+final RegExp _manifestPath = RegExp(r'(\.m3u8|/(master_)?playlist)$', caseSensitive: false);
 
 /// Source kinds that are already playable as-is; everything else needs a reason.
 ///
 /// FFmpeg relaying costs a process, a port and one to three seconds of startup,
 /// so a plain HLS/FLV source must stay on the direct path. Only a declared need
 /// moves it.
-IngestPlan resolveIngestPlan({
-  required Set<IngestNeed> needs,
-  bool sourceIsManifest = true,
-}) {
+IngestPlan resolveIngestPlan({required Set<IngestNeed> needs, bool sourceIsManifest = true}) {
   if (needs.isEmpty) return const IngestPlan.direct();
-  if (needs.contains(IngestNeed.legacyContainer) ||
-      needs.contains(IngestNeed.expiringUrl)) {
-    return IngestPlan._(
-      IngestStrategy.ffmpegRelay,
-      Set<IngestNeed>.unmodifiable(needs),
-    );
+  if (needs.contains(IngestNeed.legacyContainer) || needs.contains(IngestNeed.expiringUrl)) {
+    return IngestPlan._(IngestStrategy.ffmpegRelay, Set<IngestNeed>.unmodifiable(needs));
   }
   if (!sourceIsManifest) return const IngestPlan.direct();
-  return IngestPlan._(
-    IngestStrategy.manifestRelay,
-    Set<IngestNeed>.unmodifiable(needs),
-  );
+  return IngestPlan._(IngestStrategy.manifestRelay, Set<IngestNeed>.unmodifiable(needs));
 }

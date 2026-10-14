@@ -6,21 +6,31 @@ import 'dart:io';
 /// reference arbitrary CDN hosts; it must not grant one host access to another
 /// host's session. Cross-origin cookie sharing is not supported by this relay.
 class HlsSessionCookies {
+  /// Creates an empty jar; [now] overrides the clock for deterministic tests.
   HlsSessionCookies({DateTime Function()? now}) : _now = now ?? DateTime.now;
 
+  /// Most cookies kept before the oldest are evicted.
   static const maximumCount = 64;
-  static const maximumCharacters = 16 * 1024;
+
+  /// Most characters of cookie value retained across the whole jar.
+  static const int maximumCharacters = 16 * 1024;
+
+  /// Most characters a single `Set-Cookie` value may have to be considered.
   static const maximumCookieCharacters = 4096;
   final DateTime Function() _now;
   final Map<(String, String, String), _SessionCookie> _cookies = {};
   int _sequence = 0;
 
+  /// Number of cookies currently retained.
   int get count => _cookies.length;
-  int get retainedCharacters =>
-      _cookies.values.fold(0, (sum, cookie) => sum + cookie.size);
 
+  /// Total characters of cookie value retained across the jar.
+  int get retainedCharacters => _cookies.values.fold(0, (sum, cookie) => sum + cookie.size);
+
+  /// Forgets every retained cookie.
   void clear() => _cookies.clear();
 
+  /// Records the `Set-Cookie` [values] the origin [uri] answered with.
   void receive(Uri uri, Iterable<String> values) {
     final now = _now();
     _prune(now);
@@ -31,6 +41,9 @@ class HlsSessionCookies {
         cookie = Cookie.fromSetCookieValue(value);
       } on FormatException {
         continue;
+        // Malformed cookie values surface as an ArgumentError from dart:io;
+        // dropping the one bad value is the intended handling.
+        // ignore: avoid_catching_errors
       } on ArgumentError {
         continue;
       } on HttpException {
@@ -41,34 +54,24 @@ class HlsSessionCookies {
       if (domain != null) {
         if (domain.startsWith('.')) domain = domain.substring(1);
         final exact = uri.host == domain;
-        final parent =
-            InternetAddress.tryParse(uri.host) == null &&
-            uri.host.endsWith('.$domain');
+        final parent = InternetAddress.tryParse(uri.host) == null && uri.host.endsWith('.$domain');
         if (domain.isEmpty || (!exact && !parent)) continue;
       }
       if (cookie.secure && uri.scheme != 'https') continue;
-      if (cookie.name.startsWith('__Secure-') &&
-          (!cookie.secure || uri.scheme != 'https')) {
+      if (cookie.name.startsWith('__Secure-') && (!cookie.secure || uri.scheme != 'https')) {
         continue;
       }
       if (cookie.name.startsWith('__Host-') &&
-          (!cookie.secure ||
-              uri.scheme != 'https' ||
-              domain != null ||
-              cookie.path != '/')) {
+          (!cookie.secure || uri.scheme != 'https' || domain != null || cookie.path != '/')) {
         continue;
       }
-      final path = cookie.path?.startsWith('/') == true
-          ? cookie.path!
-          : _defaultPath(uri.path);
+      final path = cookie.path?.startsWith('/') == true ? cookie.path! : _defaultPath(uri.path);
       final key = (uri.origin, path, cookie.name);
       // Max-Age takes precedence over Expires. Cap extreme lifetime values to
       // one year before arithmetic, avoiding hostile integer overflow.
       final expires = cookie.maxAge == null
           ? cookie.expires
-          : now.add(
-              Duration(seconds: cookie.maxAge!.clamp(0, 365 * 24 * 60 * 60)),
-            );
+          : now.add(Duration(seconds: cookie.maxAge!.clamp(0, 365 * 24 * 60 * 60)));
       final previous = _cookies.remove(key);
       if (expires != null && !expires.isAfter(now)) continue;
       final entry = _SessionCookie(
@@ -81,8 +84,7 @@ class HlsSessionCookies {
       );
       if (entry.size > maximumCookieCharacters) continue;
       _cookies[key] = entry;
-      while (_cookies.length > maximumCount ||
-          retainedCharacters > maximumCharacters) {
+      while (_cookies.length > maximumCount || retainedCharacters > maximumCharacters) {
         _cookies.remove(_cookies.keys.first);
       }
     }
@@ -93,38 +95,22 @@ class HlsSessionCookies {
   String? headerFor(Uri uri, {String? initialHeader}) {
     _prune(_now());
     final selected =
-        _cookies.values
-            .where(
-              (cookie) =>
-                  cookie.origin == uri.origin &&
-                  _pathMatches(uri.path, cookie.path),
-            )
-            .toList()
+        _cookies.values.where((cookie) => cookie.origin == uri.origin && _pathMatches(uri.path, cookie.path)).toList()
           ..sort((a, b) {
             final pathOrder = b.path.length.compareTo(a.path.length);
-            return pathOrder != 0
-                ? pathOrder
-                : a.sequence.compareTo(b.sequence);
+            return pathOrder != 0 ? pathOrder : a.sequence.compareTo(b.sequence);
           });
     final names = selected.map((cookie) => cookie.name).toSet();
-    final initial = (initialHeader ?? '')
-        .split(';')
-        .map((pair) => pair.trim())
-        .where((pair) {
-          final separator = pair.indexOf('=');
-          return separator > 0 &&
-              !names.contains(pair.substring(0, separator).trim());
-        });
-    final pairs = [
-      ...selected.map((cookie) => '${cookie.name}=${cookie.value}'),
-      ...initial,
-    ];
+    final initial = (initialHeader ?? '').split(';').map((pair) => pair.trim()).where((pair) {
+      final separator = pair.indexOf('=');
+      return separator > 0 && !names.contains(pair.substring(0, separator).trim());
+    });
+    final pairs = [...selected.map((cookie) => '${cookie.name}=${cookie.value}'), ...initial];
     return pairs.isEmpty ? null : pairs.join('; ');
   }
 
-  void _prune(DateTime now) => _cookies.removeWhere(
-    (_, cookie) => cookie.expires != null && !cookie.expires!.isAfter(now),
-  );
+  void _prune(DateTime now) =>
+      _cookies.removeWhere((_, cookie) => cookie.expires != null && !cookie.expires!.isAfter(now));
 
   static String _defaultPath(String path) {
     final lastSlash = path.lastIndexOf('/');
@@ -133,9 +119,7 @@ class HlsSessionCookies {
 
   static bool _pathMatches(String request, String cookie) =>
       request == cookie ||
-      (request.startsWith(cookie) &&
-          (cookie.endsWith('/') ||
-              request.substring(cookie.length).startsWith('/')));
+      (request.startsWith(cookie) && (cookie.endsWith('/') || request.substring(cookie.length).startsWith('/')));
 }
 
 class _SessionCookie {

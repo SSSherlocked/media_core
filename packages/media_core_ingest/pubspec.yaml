@@ -16,6 +16,6 @@ dependencies:
   # [IngestFfmpegStarter], so adding this package never links a second copy.
 
 dev_dependencies:
+  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0

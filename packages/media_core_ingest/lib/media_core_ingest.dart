@@ -26,6 +26,8 @@
 /// second or two of startup, so only a declared [IngestNeed] moves a source.
 library;
 
+import 'package:media_core_ingest/src/ingest_plan.dart' show IngestNeed;
+
 export 'src/ffmpeg_ingest_relay.dart';
 export 'src/hls_manifest_kind.dart';
 export 'src/hls_session_cookies.dart';

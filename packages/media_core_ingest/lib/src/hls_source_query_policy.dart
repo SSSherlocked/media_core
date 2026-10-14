@@ -12,7 +12,7 @@ class HlsSourceQueryPolicy {
   /// responsible for validating their production HTTPS source contracts.
   factory HlsSourceQueryPolicy.fromSource(Uri source) {
     try {
-      return _fromSource(source);
+      return HlsSourceQueryPolicy._fromSource(source);
     } on FormatException {
       // URI decoders may include their input in errors. Never expose a source
       // signature through a policy-construction diagnostic.
@@ -20,10 +20,8 @@ class HlsSourceQueryPolicy {
     }
   }
 
-  static HlsSourceQueryPolicy _fromSource(Uri source) {
-    if (!_eligible(source) ||
-        source.hasFragment ||
-        source.toString().length > 16384) {
+  factory HlsSourceQueryPolicy._fromSource(Uri source) {
+    if (!_eligible(source) || source.hasFragment || source.toString().length > 16384) {
       throw const FormatException('Invalid HLS token source');
     }
     final parts = source.pathSegments;
@@ -31,22 +29,13 @@ class HlsSourceQueryPolicy {
       throw const FormatException('Missing HLS source path');
     }
     final tokens = source.queryParametersAll['token'];
-    if (tokens == null ||
-        tokens.length != 1 ||
-        tokens.single.isEmpty ||
-        _control.hasMatch(tokens.single)) {
+    if (tokens == null || tokens.length != 1 || tokens.single.isEmpty || _control.hasMatch(tokens.single)) {
       throw const FormatException('Expected one nonempty HLS source token');
     }
     final tokenPair = source.query
         .split('&')
-        .singleWhere(
-          (pair) => Uri.decodeQueryComponent(pair.split('=').first) == 'token',
-        );
-    return HlsSourceQueryPolicy._(
-      source,
-      List.unmodifiable(parts.take(parts.length - 1)),
-      tokenPair,
-    );
+        .singleWhere((pair) => Uri.decodeQueryComponent(pair.split('=').first) == 'token');
+    return HlsSourceQueryPolicy._(source, List.unmodifiable(parts.take(parts.length - 1)), tokenPair);
   }
 
   static final RegExp _control = RegExp(r'[\x00-\x20\x7f]');
@@ -58,6 +47,8 @@ class HlsSourceQueryPolicy {
   /// source, including another quality/path or a freshly signed root URL.
   bool matchesSource(Uri source) => source == _source;
 
+  /// Returns [target] with the source's `token` appended when it is a child
+  /// that the policy's provider signs, or unchanged otherwise.
   Uri apply(Uri target) {
     try {
       return _apply(target);
@@ -82,28 +73,19 @@ class HlsSourceQueryPolicy {
     // An explicit child token, even empty or repeated, belongs to that URL.
     // Never overwrite it or rebuild other signed/duplicate query parameters.
     if (target.queryParametersAll.containsKey('token')) return target;
-    final query = target.query.isEmpty
-        ? _tokenPair
-        : '${target.query}&$_tokenPair';
+    final query = target.query.isEmpty ? _tokenPair : '${target.query}&$_tokenPair';
     return target.replace(query: query);
   }
 
   static bool _eligible(Uri uri) {
-    if (!const {'http', 'https'}.contains(uri.scheme) ||
-        uri.host.isEmpty ||
-        uri.userInfo.isNotEmpty) {
+    if (!const {'http', 'https'}.contains(uri.scheme) || uri.host.isEmpty || uri.userInfo.isNotEmpty) {
       return false;
     }
     // Reject ambiguous decoded paths rather than guessing a CDN's handling of
     // encoded traversal, separators or controls. Standard relative paths are
     // resolved by the caller before this policy is applied.
     return uri.pathSegments.every(
-      (part) =>
-          part != '.' &&
-          part != '..' &&
-          !part.contains('/') &&
-          !part.contains('\\') &&
-          !_control.hasMatch(part),
+      (part) => part != '.' && part != '..' && !part.contains('/') && !part.contains(r'\') && !_control.hasMatch(part),
     );
   }
 }

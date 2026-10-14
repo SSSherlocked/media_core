@@ -10,6 +10,7 @@ import 'dart:convert';
 /// tree has to be rewritten before the player ever sees it, without knowing
 /// anything about the provider.
 final class HlsManifestKind {
+  /// Creates a manifest summary from the per-form child counts.
   const HlsManifestKind({
     required this.childCount,
     required this.relativeChildren,
@@ -34,8 +35,7 @@ final class HlsManifestKind {
   final int absoluteChildren;
 
   /// Children that only work while the reader still knows the manifest URL.
-  int get childrenNeedingBase =>
-      relativeChildren + absolutePathChildren + schemeRelativeChildren;
+  int get childrenNeedingBase => relativeChildren + absolutePathChildren + schemeRelativeChildren;
 
   /// Whether the manifest must be rewritten over loopback before playback.
   bool get requiresRewrite => childrenNeedingBase > 0;
@@ -54,17 +54,17 @@ final class HlsManifestKind {
 /// Attribute URIs (`#EXT-X-KEY:URI="key.bin"`, `#EXT-X-MAP:...`) count as
 /// children too: an encrypted or fMP4 stream fails the same way, one step later.
 HlsManifestKind classifyHlsManifest(String body) {
-  int childCount = 0;
-  int relative = 0;
-  int absolutePath = 0;
-  int schemeRelative = 0;
-  int absolute = 0;
+  var childCount = 0;
+  var relative = 0;
+  var absolutePath = 0;
+  var schemeRelative = 0;
+  var absolute = 0;
 
   void count(String raw) {
-    final String value = raw.trim();
+    final value = raw.trim();
     if (value.isEmpty) return;
     childCount++;
-    final Uri? uri = Uri.tryParse(value);
+    final uri = Uri.tryParse(value);
     if (uri == null) {
       relative++;
       return;
@@ -84,11 +84,11 @@ HlsManifestKind classifyHlsManifest(String body) {
     relative++;
   }
 
-  for (final String line in const LineSplitter().convert(body)) {
-    final String trimmed = line.trim();
+  for (final line in const LineSplitter().convert(body)) {
+    final trimmed = line.trim();
     if (trimmed.isEmpty) continue;
     if (trimmed.startsWith('#')) {
-      for (final RegExpMatch match in _uriAttribute.allMatches(line)) {
+      for (final match in _uriAttribute.allMatches(line)) {
         count(match.group(1)!);
       }
       continue;
@@ -105,4 +105,4 @@ HlsManifestKind classifyHlsManifest(String body) {
   );
 }
 
-final RegExp _uriAttribute = RegExp(r'URI="([^"]+)"', caseSensitive: false);
+final RegExp _uriAttribute = RegExp('URI="([^"]+)"', caseSensitive: false);

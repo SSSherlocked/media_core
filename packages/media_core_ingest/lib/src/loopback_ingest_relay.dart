@@ -4,7 +4,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'hls_session_cookies.dart';
+import 'package:media_core_ingest/src/hls_session_cookies.dart';
 
 /// Rewrites an HLS manifest tree so every child is an absolute loopback URL.
 ///
@@ -73,22 +73,10 @@ final class LoopbackIngestRelay {
     Duration childIdleTimeout = const Duration(seconds: 10),
     int maximumManifestBytes = 8 * 1024 * 1024,
   }) async {
-    if (!const <String>{
-          'http',
-          'https',
-        }.contains(source.scheme.toLowerCase()) ||
-        source.host.isEmpty) {
-      throw ArgumentError.value(
-        source,
-        'source',
-        'Loopback ingest needs an http(s) source',
-      );
+    if (!const <String>{'http', 'https'}.contains(source.scheme.toLowerCase()) || source.host.isEmpty) {
+      throw ArgumentError.value(source, 'source', 'Loopback ingest needs an http(s) source');
     }
-    final server = await HttpServer.bind(
-      InternetAddress.loopbackIPv4,
-      0,
-      shared: false,
-    );
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     final client = HttpClient()..connectionTimeout = manifestTimeout;
     if (findProxy != null) client.findProxy = findProxy;
     final relay = LoopbackIngestRelay._(
@@ -111,14 +99,8 @@ final class LoopbackIngestRelay {
   }
 
   static final Random _random = Random.secure();
-  static final RegExp _uriAttribute = RegExp(
-    r'URI="([^"]+)"',
-    caseSensitive: false,
-  );
-  static final RegExp _manifestPath = RegExp(
-    r'(\.m3u8|/(master_)?playlist)$',
-    caseSensitive: false,
-  );
+  static final RegExp _uriAttribute = RegExp('URI="([^"]+)"', caseSensitive: false);
+  static final RegExp _manifestPath = RegExp(r'(\.m3u8|/(master_)?playlist)$', caseSensitive: false);
 
   final HttpServer _server;
   final HttpClient _client;
@@ -143,12 +125,8 @@ final class LoopbackIngestRelay {
   bool _closed = false;
 
   /// The URL the player opens.
-  Uri get inputUri => Uri(
-    scheme: 'http',
-    host: InternetAddress.loopbackIPv4.address,
-    port: _server.port,
-    path: '/$_secret/root.m3u8',
-  );
+  Uri get inputUri =>
+      Uri(scheme: 'http', host: InternetAddress.loopbackIPv4.address, port: _server.port, path: '/$_secret/root.m3u8');
 
   /// Number of distinct children handed out so far (diagnostics/tests).
   int get childCount => _children.length - 1;
@@ -157,23 +135,20 @@ final class LoopbackIngestRelay {
   bool get isClosed => _closed;
 
   static String _newSecret() {
-    const String alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    return List<String>.generate(
-      24,
-      (_) => alphabet[_random.nextInt(alphabet.length)],
-    ).join();
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    return List<String>.generate(24, (_) => alphabet[_random.nextInt(alphabet.length)]).join();
   }
 
   Future<void> _handle(HttpRequest request) async {
-    final String prefix = '/$_secret/';
-    final String path = request.uri.path;
+    final prefix = '/$_secret/';
+    final path = request.uri.path;
     if (_closed || !path.startsWith(prefix)) {
       request.response.statusCode = HttpStatus.notFound;
       await request.response.close();
       return;
     }
-    final String name = path.substring(prefix.length);
-    final _Child? child = _children[name];
+    final name = path.substring(prefix.length);
+    final child = _children[name];
     if (child == null) {
       request.response.statusCode = HttpStatus.notFound;
       await request.response.close();
@@ -185,24 +160,20 @@ final class LoopbackIngestRelay {
       } else {
         await _proxyChild(request, child.uri);
       }
-    } catch (_) {
+    } on Object catch (_) {
       // A failed child is the player's error to report: closing the response
       // with a status keeps it from waiting forever.
       await _fail(request, HttpStatus.badGateway);
     }
   }
 
-  Future<void> _serveManifest(
-    HttpRequest request,
-    String name,
-    Uri manifest,
-  ) async {
-    final String? preloaded = _servedBodies.remove(name);
+  Future<void> _serveManifest(HttpRequest request, String name, Uri manifest) async {
+    final preloaded = _servedBodies.remove(name);
     final String body;
     if (preloaded != null) {
       body = preloaded;
     } else {
-      final HttpClientResponse upstream = await _open('GET', manifest);
+      final upstream = await _open('GET', manifest);
       if (upstream.statusCode != HttpStatus.ok) {
         await upstream.drain<void>();
         await _fail(request, upstream.statusCode);
@@ -211,20 +182,17 @@ final class LoopbackIngestRelay {
       body = await _readManifest(upstream);
     }
     if (_closed) return;
-    final String rewritten = _rewrite(body, manifest);
-    final HttpResponse response = request.response;
-    response.statusCode = HttpStatus.ok;
-    response.headers.contentType = ContentType(
-      'application',
-      'vnd.apple.mpegurl',
-    );
-    response.headers.set(HttpHeaders.cacheControlHeader, 'no-store');
-    response.write(rewritten);
+    final rewritten = _rewrite(body, manifest);
+    final response = request.response
+      ..statusCode = HttpStatus.ok
+      ..headers.contentType = ContentType('application', 'vnd.apple.mpegurl')
+      ..headers.set(HttpHeaders.cacheControlHeader, 'no-store')
+      ..write(rewritten);
     await response.close();
   }
 
   Future<String> _readManifest(HttpClientResponse upstream) async {
-    final BytesBuilder builder = BytesBuilder(copy: false);
+    final builder = BytesBuilder(copy: false);
     await for (final List<int> chunk in upstream.timeout(_manifestTimeout)) {
       builder.add(chunk);
       if (builder.length > _maximumManifestBytes) {
@@ -240,19 +208,17 @@ final class LoopbackIngestRelay {
   /// child lines are both resolved against [manifest], which is the part a
   /// native resolver gets wrong when it no longer knows the manifest URL.
   String _rewrite(String body, Uri manifest) {
-    final bool hadTrailingNewline = body.endsWith('\n');
-    final List<String> output = <String>[];
-    for (final String rawLine in const LineSplitter().convert(body)) {
-      final String line = rawLine.endsWith('\r')
-          ? rawLine.substring(0, rawLine.length - 1)
-          : rawLine;
-      final String trimmed = line.trim();
+    final hadTrailingNewline = body.endsWith('\n');
+    final output = <String>[];
+    for (final rawLine in const LineSplitter().convert(body)) {
+      final line = rawLine.endsWith('\r') ? rawLine.substring(0, rawLine.length - 1) : rawLine;
+      final trimmed = line.trim();
       if (trimmed.isEmpty) {
         output.add('');
       } else if (trimmed.startsWith('#')) {
         output.add(
-          line.replaceAllMapped(_uriAttribute, (Match match) {
-            final String? local = _localUrl(manifest, match.group(1)!);
+          line.replaceAllMapped(_uriAttribute, (match) {
+            final local = _localUrl(manifest, match.group(1)!);
             return local == null ? match.group(0)! : 'URI="$local"';
           }),
         );
@@ -260,29 +226,24 @@ final class LoopbackIngestRelay {
         output.add(_localUrl(manifest, trimmed) ?? line);
       }
     }
-    final String value = output.join('\n');
+    final value = output.join('\n');
     return hadTrailingNewline ? '$value\n' : value;
   }
 
   /// Registers [raw] (resolved against [manifest]) and returns its loopback URL.
   String? _localUrl(Uri manifest, String raw) {
-    final Uri? resolved = Uri.tryParse(raw) == null
-        ? null
-        : manifest.resolve(raw);
+    final resolved = Uri.tryParse(raw) == null ? null : manifest.resolve(raw);
     if (resolved == null ||
-        !const <String>{
-          'http',
-          'https',
-        }.contains(resolved.scheme.toLowerCase()) ||
+        !const <String>{'http', 'https'}.contains(resolved.scheme.toLowerCase()) ||
         resolved.host.isEmpty ||
         resolved.userInfo.isNotEmpty) {
       return null;
     }
-    final bool isManifest = _manifestPath.hasMatch(resolved.path);
-    final String key = resolved.toString();
-    String? name = _byUpstream[key];
+    final isManifest = _manifestPath.hasMatch(resolved.path);
+    final key = resolved.toString();
+    var name = _byUpstream[key];
     if (name == null) {
-      final String id = 'r${(_nextId++).toRadixString(36)}';
+      final id = 'r${(_nextId++).toRadixString(36)}';
       name = '$id${isManifest ? '.m3u8' : _extensionOf(resolved)}';
       _children[name] = _Child(uri: resolved, manifest: isManifest);
       _byUpstream[key] = name;
@@ -296,8 +257,8 @@ final class LoopbackIngestRelay {
   }
 
   static String _extensionOf(Uri uri) {
-    final String last = uri.pathSegments.isEmpty ? '' : uri.pathSegments.last;
-    final int dot = last.lastIndexOf('.');
+    final last = uri.pathSegments.isEmpty ? '' : uri.pathSegments.last;
+    final dot = last.lastIndexOf('.');
     if (dot <= 0 || dot == last.length - 1) return '';
     return last.substring(dot).toLowerCase();
   }
@@ -311,7 +272,7 @@ final class LoopbackIngestRelay {
     // provider gets blamed for a fetch this relay never finished. The deadline
     // also has to sit inside the sweep's verification window, or the verdict
     // arrives before the reason does.
-    final HttpClientResponse response = await _open(
+    final response = await _open(
       request.method,
       upstream,
       range: request.headers.value(HttpHeaders.rangeHeader),
@@ -320,43 +281,43 @@ final class LoopbackIngestRelay {
       await response.drain<void>();
       return;
     }
-    final HttpResponse target = request.response;
-    target.statusCode = response.statusCode;
-    target.headers.contentType = response.headers.contentType;
-    for (final String header in const <String>[
+    // A proxy must not hold the player's bytes in userspace: with the default
+    // buffering, a small child (an init segment, a low-bitrate slice) sits in
+    // this process until the buffer fills or the response closes, so every
+    // range request pays an extra round of latency for no reason.
+    final target = request.response
+      ..bufferOutput = false
+      ..statusCode = response.statusCode
+      ..headers.contentType = response.headers.contentType;
+    for (final header in const <String>[
       HttpHeaders.contentLengthHeader,
       HttpHeaders.contentRangeHeader,
       HttpHeaders.acceptRangesHeader,
       HttpHeaders.etagHeader,
       HttpHeaders.lastModifiedHeader,
     ]) {
-      final String? value = response.headers.value(header);
+      final value = response.headers.value(header);
       if (value != null) target.headers.set(header, value);
     }
     await target.addStream(response.timeout(_childIdleTimeout));
     await target.close();
   }
 
-  Future<HttpClientResponse> _open(
-    String method,
-    Uri uri, {
-    String? range,
-  }) async {
+  Future<HttpClientResponse> _open(String method, Uri uri, {String? range}) async {
     // The policy and the cookie jar describe the *upstream* contract, so they
     // apply to the request we make, never to the loopback URL the player sees.
-    final Uri upstream = _childUriPolicy?.call(uri) ?? uri;
-    final HttpClientRequest request = await _client.openUrl(method, upstream);
+    final upstream = _childUriPolicy?.call(uri) ?? uri;
+    final request = await _client.openUrl(method, upstream);
     _headers.forEach(request.headers.set);
     if (range != null && range.isNotEmpty) {
       request.headers.set(HttpHeaders.rangeHeader, range);
     }
-    final String? cookie = _cookies?.headerFor(upstream);
+    final cookie = _cookies?.headerFor(upstream);
     if (cookie != null) {
       request.headers.set(HttpHeaders.cookieHeader, cookie);
     }
-    final HttpClientResponse response = await request.close();
-    final List<String>? setCookie =
-        response.headers[HttpHeaders.setCookieHeader];
+    final response = await request.close();
+    final setCookie = response.headers[HttpHeaders.setCookieHeader];
     if (setCookie != null) {
       _cookies?.receive(upstream, setCookie);
     }
@@ -364,10 +325,23 @@ final class LoopbackIngestRelay {
   }
 
   Future<void> _fail(HttpRequest request, int status) async {
+    final target = request.response;
     try {
-      request.response.statusCode = status;
-      await request.response.close();
-    } catch (_) {
+      // A status can only be chosen while the headers are still unsent; a body
+      // that already started cannot take one back.
+      target.statusCode = status;
+    } on Object catch (_) {
+      // Mid-body failure: the answer is a clean end, not a status.
+    }
+    try {
+      // Closing is what the player waits for. Skipping it (the old shape: the
+      // status assignment above threw, so the close was never reached) tore the
+      // connection down with the headers and the already-forwarded bytes still
+      // in the output buffer, and the reader saw "the relay is dead" instead of
+      // "this segment ended early" - which it reports as a stream failure and
+      // retries as one.
+      await target.close();
+    } on Object catch (_) {
       // The player closed the connection first; nothing left to answer.
     }
   }

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'ingest_ffmpeg.dart';
+import 'package:media_core_ingest/src/ingest_ffmpeg.dart';
 
 /// Remuxes an upstream with FFmpeg into a rolling loopback HLS tree.
 ///
@@ -43,16 +43,9 @@ final class FfmpegIngestRelay {
     String? audioCodec,
     Duration startupTimeout = const Duration(seconds: 12),
   }) async {
-    final Directory directory = await Directory.systemTemp.createTemp(
-      'media_core_ingest_',
-    );
-    final HttpServer server = await HttpServer.bind(
-      InternetAddress.loopbackIPv4,
-      0,
-      shared: false,
-    );
-    final String playlistPath =
-        '${directory.path}${Platform.pathSeparator}$ingestPlaylistName';
+    final directory = await Directory.systemTemp.createTemp('media_core_ingest_');
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final playlistPath = '${directory.path}${Platform.pathSeparator}$ingestPlaylistName';
     IngestFfmpegProcess? execution;
     try {
       execution = await startFfmpeg(
@@ -67,24 +60,16 @@ final class FfmpegIngestRelay {
           audioCodec: audioCodec,
         ),
       );
-      final relay = FfmpegIngestRelay._(
-        server: server,
-        directory: directory,
-        execution: execution,
-        source: source,
-      );
+      final relay = FfmpegIngestRelay._(server: server, directory: directory, execution: execution, source: source);
       // One subscription records the exit; `exitCode` is only readable once.
       unawaited(
-        execution.exitCode.then((int code) {
-          relay._exited = true;
-          relay._exitCode = code;
+        execution.exitCode.then((code) {
+          relay
+            .._exited = true
+            .._exitCode = code;
         }),
       );
-      server.listen(
-        relay._handle,
-        onError: (Object _) {},
-        cancelOnError: false,
-      );
+      server.listen(relay._handle, onError: (Object _) {}, cancelOnError: false);
       await relay._awaitPlaylist(File(playlistPath), startupTimeout);
       return relay;
     } catch (_) {
@@ -114,16 +99,9 @@ final class FfmpegIngestRelay {
     int playlistSize = 4,
     Duration startupTimeout = const Duration(seconds: 12),
   }) async {
-    final Directory directory = await Directory.systemTemp.createTemp(
-      'media_core_dash_',
-    );
-    final HttpServer server = await HttpServer.bind(
-      InternetAddress.loopbackIPv4,
-      0,
-      shared: false,
-    );
-    final String playlistPath =
-        '${directory.path}${Platform.pathSeparator}$ingestPlaylistName';
+    final directory = await Directory.systemTemp.createTemp('media_core_dash_');
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final playlistPath = '${directory.path}${Platform.pathSeparator}$ingestPlaylistName';
     IngestFfmpegProcess? execution;
     try {
       execution = await startFfmpeg(
@@ -144,16 +122,13 @@ final class FfmpegIngestRelay {
         source: videoSource,
       );
       unawaited(
-        execution.exitCode.then((int code) {
-          relay._exited = true;
-          relay._exitCode = code;
+        execution.exitCode.then((code) {
+          relay
+            .._exited = true
+            .._exitCode = code;
         }),
       );
-      server.listen(
-        relay._handle,
-        onError: (Object _) {},
-        cancelOnError: false,
-      );
+      server.listen(relay._handle, onError: (Object _) {}, cancelOnError: false);
       await relay._awaitPlaylist(File(playlistPath), startupTimeout);
       return relay;
     } catch (_) {
@@ -175,19 +150,14 @@ final class FfmpegIngestRelay {
     String? videoCodec,
     String? audioCodec,
   }) {
-    final String separator = Platform.pathSeparator;
-    final List<String> arguments = <String>[
+    final separator = Platform.pathSeparator;
+    final arguments = <String>[
       '-hide_banner',
       '-loglevel',
       'warning',
       if (headers.isNotEmpty) ...<String>[
         '-headers',
-        headers.entries
-            .map(
-              (MapEntry<String, String> entry) =>
-                  '${entry.key}: ${entry.value}\r\n',
-            )
-            .join(),
+        headers.entries.map((entry) => '${entry.key}: ${entry.value}\r\n').join(),
       ],
       '-i',
       source.toString(),
@@ -235,25 +205,18 @@ final class FfmpegIngestRelay {
     Duration segmentDuration = const Duration(seconds: 2),
     int playlistSize = 4,
   }) {
-    final String separator = Platform.pathSeparator;
-    final Map<String, String> effectiveAudioHeaders = audioHeaders ?? headers;
+    final separator = Platform.pathSeparator;
+    final effectiveAudioHeaders = audioHeaders ?? headers;
     return <String>[
       '-hide_banner',
       '-loglevel',
       'warning',
-      if (headers.isNotEmpty) ...<String>[
-        '-headers',
-        headers.entries
-            .map((MapEntry<String, String> e) => '${e.key}: ${e.value}\r\n')
-            .join(),
-      ],
+      if (headers.isNotEmpty) ...<String>['-headers', headers.entries.map((e) => '${e.key}: ${e.value}\r\n').join()],
       '-i',
       videoSource.toString(),
       if (effectiveAudioHeaders.isNotEmpty) ...<String>[
         '-headers',
-        effectiveAudioHeaders.entries
-            .map((MapEntry<String, String> e) => '${e.key}: ${e.value}\r\n')
-            .join(),
+        effectiveAudioHeaders.entries.map((e) => '${e.key}: ${e.value}\r\n').join(),
       ],
       '-i',
       audioSource.toString(),
@@ -288,50 +251,38 @@ final class FfmpegIngestRelay {
   int? _exitCode;
 
   /// The URL the player opens.
-  Uri get inputUri => Uri(
-    scheme: 'http',
-    host: InternetAddress.loopbackIPv4.address,
-    port: _server.port,
-    path: '/$ingestPlaylistName',
-  );
+  Uri get inputUri =>
+      Uri(scheme: 'http', host: InternetAddress.loopbackIPv4.address, port: _server.port, path: '/$ingestPlaylistName');
 
   /// Whether FFmpeg has stopped, and with which code.
   bool get hasExited => _exited;
+
+  /// FFmpeg's exit code once it has stopped, or `null` while it runs.
   int? get exitCode => _exitCode;
 
   Future<void> _awaitPlaylist(File playlist, Duration timeout) async {
-    final DateTime deadline = DateTime.now().add(timeout);
+    final deadline = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(deadline)) {
-      if (await playlist.exists()) return;
+      if (playlist.existsSync()) return;
       if (_exited) {
-        throw FormatException(
-          'FFmpeg ingest stopped (exit $_exitCode) before publishing a playlist',
-        );
+        throw FormatException('FFmpeg ingest stopped (exit $_exitCode) before publishing a playlist');
       }
       await Future<void>.delayed(const Duration(milliseconds: 100));
     }
-    throw TimeoutException(
-      'FFmpeg ingest published no playlist in ${timeout.inSeconds}s',
-      timeout,
-    );
+    throw TimeoutException('FFmpeg ingest published no playlist in ${timeout.inSeconds}s', timeout);
   }
 
   Future<void> _handle(HttpRequest request) async {
-    final String name = request.uri.pathSegments.isEmpty
-        ? ''
-        : request.uri.pathSegments.last;
+    final name = request.uri.pathSegments.isEmpty ? '' : request.uri.pathSegments.last;
     // The playlist is the only dynamic name; everything else must be one of the
     // segments FFmpeg wrote, so a request can never walk out of the directory.
-    if (name.isEmpty ||
-        name.contains('..') ||
-        name.contains('/') ||
-        name.contains(r'\')) {
+    if (name.isEmpty || name.contains('..') || name.contains('/') || name.contains(r'\')) {
       request.response.statusCode = HttpStatus.notFound;
       await request.response.close();
       return;
     }
-    final File file = File('${_directory.path}${Platform.pathSeparator}$name');
-    if (!await file.exists()) {
+    final file = File('${_directory.path}${Platform.pathSeparator}$name');
+    if (!file.existsSync()) {
       // The player retries; a missing segment is not an error worth closing on.
       request.response.statusCode = HttpStatus.notFound;
       await request.response.close();
@@ -357,8 +308,8 @@ final class FfmpegIngestRelay {
 
   static Future<void> _deleteQuietly(Directory directory) async {
     try {
-      if (await directory.exists()) await directory.delete(recursive: true);
-    } catch (_) {
+      if (directory.existsSync()) await directory.delete(recursive: true);
+    } on Object catch (_) {
       // Staging cleanup is best-effort: the OS temp sweeper is the backstop.
     }
   }
