@@ -1,7 +1,7 @@
-import 'package:media_core_ijk_player/src/flv_lzc_player_adapter.dart';
 import 'package:media_core/media_core.dart';
+import 'package:media_core_ijk_player/src/flv_lzc_player_adapter.dart';
 
-
+/// Backend id the ijkplayer adapter registers under.
 const String kIjkPlayerBackendId = 'ijk';
 
 /// [PlayerAdapterFactory] that creates [FlvLzcPlayerAdapter] instances.
@@ -15,11 +15,14 @@ final class FlvLzcPlayerAdapterFactory implements PlayerAdapterFactory {
     this.configure,
   });
 
+  /// Capabilities reported for every adapter this factory creates.
   final PlayerAdapterCapabilities capabilities;
 
   /// Native ijkplayer options applied by every created adapter before
   /// each open.
   final List<EngineOption> options;
+
+  /// Optional per-instance hook run after each adapter is constructed.
   final void Function(FlvLzcPlayerAdapter adapter)? configure;
 
   @override

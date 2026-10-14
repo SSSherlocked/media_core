@@ -7,8 +7,13 @@ import 'package:flutter/material.dart';
 import 'package:media_core/media_core.dart';
 import 'package:media_core_ijk_player/media_core_ijk_player.dart';
 
-
+/// A [PlayerAdapter] backed by the flv_lzc (IJK) engine.
+///
+/// Drives a [FijkPlayer] and exposes its video surface through [PlayerVideo],
+/// translating media_core's playback commands into the engine's own calls.
 final class FlvLzcPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
+  /// Creates an adapter, optionally injecting a pre-configured [player] and the
+  /// native [options] applied before each open.
   FlvLzcPlayerAdapter({
     super.id = kIjkPlayerBackendId,
     super.capabilities = defaultCapabilities,
@@ -38,17 +43,13 @@ final class FlvLzcPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
 
   /// The effective option list for the next open.
   List<EngineOption> get _effectiveOptions {
-    return <EngineOption>[
-      ..._options,
-      ..._runtimeOptions.values,
-    ];
+    return <EngineOption>[..._options, ..._runtimeOptions.values];
   }
 
   // ---------------------------------------------------------------------------
   // Runtime setOption passthrough for edge cases
   // (mid-playback proxy switch, dynamic header swaps, ...)
   // ---------------------------------------------------------------------------
-
 
   @override
   Future<List<EngineOptionOutcome>> onApplyEngineOptions(List<EngineOption> options) async {
@@ -72,7 +73,7 @@ final class FlvLzcPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
         // contract. The caller asks for immediate effect by letting the
         // handle rebuild the engine.
         outcomes.add(EngineOptionOutcome.stagedForNextOpen);
-      } catch (_) {
+      } on Object catch (_) {
         outcomes.add(EngineOptionOutcome.unsupported);
       }
     }
@@ -100,7 +101,7 @@ final class FlvLzcPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
   /// Normalizes an option value into what `setOption` accepts (int/String).
   static Object _fijkOptionValue(Object? value) {
     return switch (value) {
-      bool flag => flag ? 1 : 0,
+      final bool flag => flag ? 1 : 0,
       null => '',
       final Object accepted => accepted,
     };
@@ -138,8 +139,11 @@ final class FlvLzcPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
   final ValueNotifier<BoxFit> _fitNotifier = ValueNotifier<BoxFit>(BoxFit.contain);
 
   BoxFit _videoFit = BoxFit.contain;
+
+  /// How the video is sized within its box, mirrored by [setVideoFit].
   BoxFit get videoFit => _videoFit;
 
+  @override
   void setVideoFit(BoxFit fit) {
     if (_videoFit == fit) return;
     _videoFit = fit;
@@ -247,7 +251,7 @@ final class FlvLzcPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
     }
     if (isDisposed) return;
 
-    await _player.setDataSource(source.uri.toString(), autoPlay: false);
+    await _player.setDataSource(source.uri.toString());
     if (isDisposed) return;
 
     await _player.start();
@@ -317,7 +321,7 @@ final class FlvLzcPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
 
     try {
       await _player.release();
-    } catch (_) {
+    } on Object catch (_) {
       // Release races surface here on some devices; disposal
       // continues regardless.
     }
@@ -331,7 +335,7 @@ final class FlvLzcPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
   /// `disable-vid` option: the decoder is switched off, the stream is
   /// not merely hidden.
   @override
-  Future<void> onSetAudioOnly(bool audioOnly) => _applyAudioOnly(audioOnly);
+  Future<void> onSetAudioOnly({required bool audioOnly}) => _applyAudioOnly(audioOnly);
 
   Future<void> _applyAudioOnly(bool audioOnly) async {
     if (isDisposed) return;
@@ -345,7 +349,7 @@ final class FlvLzcPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
   /// back to capturing the rendered surface, which really does produce PNG.
   ///
   /// The engine only serves snapshots when the `enable-snapshot` host option is
-  /// set, which [FijkHelper.applyConfig] does for every open. Platforms whose
+  /// set, which the open path does for every open. Platforms whose
   /// native implementation is missing answer with an error, which is reported
   /// as "no frame" as well.
   @override
@@ -357,7 +361,7 @@ final class FlvLzcPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
       final bytes = await _player.takeSnapShot();
 
       return bytes.isEmpty ? null : bytes;
-    } catch (error) {
+    } on Object catch (error) {
       MediaCoreLog.warning(LogCategory.renderer, 'captureFrame failed: $error', error: error);
 
       return null;
@@ -404,11 +408,11 @@ final class FlvLzcPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
     if (isBufferingState) {
       if (!_sourceBuffering) {
         _sourceBuffering = true;
-        emitBuffering(true);
+        emitBuffering(buffering: true);
       }
     } else if (_sourceBuffering) {
       _sourceBuffering = false;
-      emitBuffering(false);
+      emitBuffering(buffering: false);
     }
 
     switch (state) {
@@ -458,42 +462,15 @@ final class FlvLzcPlayerAdapter extends PlayerAdapterBase implements PlayerVideo
     supportsMuteControl: true,
     supportsAudioOnly: true,
     supportsEngineOptions: true,
-    supportsVideoFrameProgress: false,
     supportsVideoSizeChanged: true,
-    supportsVideoReconfig: false,
-    supportsHwdecInfo: false,
-    supportsVideoFilters: false,
     // IJKPlayer's native snapshot returns a JPEG. The kernel asks for PNG by
     // default and falls back to the rendered surface when this adapter answers
     // null, so declaring the capability does not mean "any format".
     supportsScreenshot: true,
-    supportsAudioReconfig: false,
-    supportsAudioDeviceSelection: false,
-    supportsAudioFilters: false,
-    supportsTrackSelection: false,
-    supportsSubtitleTrack: false,
-    supportsExternalSubtitle: false,
-    supportsCacheState: false,
-    supportsBufferingProgress: false,
-    supportsChapterControl: false,
-    supportsLoop: false,
-    supportsMetadata: false,
-    supportsPlaylist: false,
-    supportsPlaylistControl: false,
-    supportsClientMessage: false,
-    supportsLogMessages: false,
     supportsHardwareDecoder: true,
-    supportsSoftwareDecoder: true,
-    supportsPictureInPicture: false,
     supportsFullscreen: true,
     // Source matching.
     supportedProtocols: IjkFormats.supportedProtocols,
     supportedFormats: IjkFormats.supportedFormats,
-    // IJKPlayer is an FFmpeg-backed single-URL engine: it opens one
-    // data source and demuxes whatever that source contains. There
-    // is no side channel for an external audio essence and no
-    // merging API, so the planner refuses a composite here instead of
-    // opening the video URL and dropping the audio.
-    compositeSupport: CompositeSupport.none,
   );
 }

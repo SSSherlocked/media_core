@@ -24,15 +24,11 @@ void main() {
       // unchecked name would forge additional header lines in the request the
       // CDN sees. Refusing is the framework's rule, not this adapter's.
       expect(
-        () => FijkHelper.sourceHeaderOptions(<String, String>{
-          'X-Bad\r\nInjected: yes': 'value',
-        }),
+        () => FijkHelper.sourceHeaderOptions(<String, String>{'X-Bad\r\nInjected: yes': 'value'}),
         throwsA(isA<HttpHeaderError>()),
       );
       expect(
-        () => FijkHelper.sourceHeaderOptions(<String, String>{
-          'Host:evil.example.com': 'value',
-        }),
+        () => FijkHelper.sourceHeaderOptions(<String, String>{'Host:evil.example.com': 'value'}),
         throwsA(isA<HttpHeaderError>()),
       );
     });
@@ -41,28 +37,14 @@ void main() {
       // Replacing the newline with a space would send a cookie the site never
       // issued, and the request would fail in a way that points nowhere.
       expect(
-        () => FijkHelper.sourceHeaderOptions(<String, String>{
-          'Cookie': 'a=1\r\nX-Injected: yes',
-        }),
-        throwsA(
-          isA<HttpHeaderError>().having(
-            (e) => e.headerName,
-            'headerName',
-            'Cookie',
-          ),
-        ),
+        () => FijkHelper.sourceHeaderOptions(<String, String>{'Cookie': 'a=1\r\nX-Injected: yes'}),
+        throwsA(isA<HttpHeaderError>().having((e) => e.headerName, 'headerName', 'Cookie')),
       );
     });
 
     test('an empty name or value is refused', () {
-      expect(
-        () => FijkHelper.sourceHeaderOptions(<String, String>{'': 'value'}),
-        throwsA(isA<HttpHeaderError>()),
-      );
-      expect(
-        () => FijkHelper.sourceHeaderOptions(<String, String>{'X-Empty': '   '}),
-        throwsA(isA<HttpHeaderError>()),
-      );
+      expect(() => FijkHelper.sourceHeaderOptions(<String, String>{'': 'value'}), throwsA(isA<HttpHeaderError>()));
+      expect(() => FijkHelper.sourceHeaderOptions(<String, String>{'X-Empty': '   '}), throwsA(isA<HttpHeaderError>()));
     });
 
     test('an empty map produces an empty option and no user agent', () {

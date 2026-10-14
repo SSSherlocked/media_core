@@ -20,10 +20,7 @@ abstract final class FijkHelper {
     final buffer = StringBuffer();
     sanitized.forEach((name, value) => buffer.write('$name:$value\r\n'));
 
-    return <String, Object>{
-      'headers': buffer.toString(),
-      if (userAgent != null) 'user_agent': userAgent,
-    };
+    return <String, Object>{'headers': buffer.toString(), 'user_agent': ?userAgent};
   }
 
   /// Level the engine was last told to log at.
@@ -87,6 +84,10 @@ abstract final class FijkHelper {
     return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
   }
 
+  /// Maps a Flutter [BoxFit] to the closest [FijkFit] the engine understands.
+  ///
+  /// BoxFit gains and deprecates values across Flutter releases, so an
+  /// explicit default falls back to the safest fit rather than breaking here.
   static FijkFit getIjkBoxFit(BoxFit videoFit) {
     switch (videoFit) {
       case BoxFit.contain:
@@ -99,6 +100,9 @@ abstract final class FijkHelper {
         return FijkFit.fitHeight;
       case BoxFit.fitWidth:
         return FijkFit.fitWidth;
+      // BoxFit may carry deprecated or newly added members; a default keeps
+      // this mapping compiling across SDK versions.
+      // ignore: no_default_cases
       default:
         return FijkFit.contain;
     }
