@@ -1,7 +1,6 @@
 import 'package:flutter/painting.dart' show Rect;
-import 'package:window_manager/window_manager.dart';
-
 import 'package:media_core_fullscreen/src/fullscreen_window.dart';
+import 'package:window_manager/window_manager.dart';
 
 /// [FullscreenWindow] backed by `window_manager`.
 final class WindowManagerFullscreenWindow implements FullscreenWindow {
@@ -16,7 +15,7 @@ final class WindowManagerFullscreenWindow implements FullscreenWindow {
   }
 
   @override
-  Future<void> setFullscreen(bool value, {Rect? restoreBounds}) async {
+  Future<void> setFullscreen({required bool value, Rect? restoreBounds}) async {
     await windowManager.setFullScreen(value);
     if (!value && restoreBounds != null) {
       await windowManager.setBounds(restoreBounds);

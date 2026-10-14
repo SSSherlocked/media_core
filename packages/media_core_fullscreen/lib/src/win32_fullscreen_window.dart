@@ -1,9 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/painting.dart' show Rect;
-import 'package:media_core_win32/media_core_win32.dart';
-
 import 'package:media_core_fullscreen/src/fullscreen_window.dart';
+import 'package:media_core_win32/media_core_win32.dart';
 
 /// [FullscreenWindow] implemented with direct user32 calls.
 ///
@@ -34,7 +33,7 @@ final class Win32FullscreenWindow implements FullscreenWindow {
   Future<Rect> captureBounds() async => Win32WindowFfi.bounds(_windowHandle) ?? Rect.zero;
 
   @override
-  Future<void> setFullscreen(bool value, {Rect? restoreBounds}) async {
+  Future<void> setFullscreen({required bool value, Rect? restoreBounds}) async {
     if (value) {
       _snapshot = Win32WindowFfi.capture(_windowHandle);
       Win32WindowFfi.setScreenFullscreen(_windowHandle, fullscreen: true, snapshot: _snapshot);

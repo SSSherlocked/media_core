@@ -15,14 +15,14 @@ dependencies:
   media_core:
     ^0.1.0
 
-  # Desktop window fullscreen
-  window_manager: ^0.5.2
-
   # Direct user32 window-state calls (Win32FullscreenWindow)
   media_core_win32:
     ^0.1.0
 
+  # Desktop window fullscreen
+  window_manager: ^0.5.2
+
 dev_dependencies:
+  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0

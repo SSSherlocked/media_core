@@ -8,6 +8,7 @@ import 'package:media_core/media_core.dart' show FullscreenFitStrategy, VideoOri
 /// phone is either letterboxed or cropped. Encoding the two answers here keeps
 /// the decision out of every host widget.
 final class FullscreenConfig {
+  /// Creates a fullscreen configuration with the given fit strategies.
   const FullscreenConfig({
     this.restorePreviousBounds = true,
     this.portraitStrategy = FullscreenFitStrategy.fit,
@@ -34,6 +35,7 @@ final class FullscreenConfig {
   /// Orientation assumed when the video size is unknown.
   final VideoOrientation fallbackOrientation;
 
+  /// Returns a copy of this config with the supplied fields replaced.
   FullscreenConfig copyWith({
     bool? restorePreviousBounds,
     FullscreenFitStrategy? portraitStrategy,

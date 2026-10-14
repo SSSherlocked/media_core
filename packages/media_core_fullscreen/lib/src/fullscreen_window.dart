@@ -9,5 +9,5 @@ abstract interface class FullscreenWindow {
   Future<Rect> captureBounds();
 
   /// Enters or leaves system fullscreen, restoring [restoreBounds] on exit.
-  Future<void> setFullscreen(bool value, {Rect? restoreBounds});
+  Future<void> setFullscreen({required bool value, Rect? restoreBounds});
 }
