@@ -1,16 +1,14 @@
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:flame_barrage/flame_barrage.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:media_core/media_core.dart';
-import 'package:rxdart/rxdart.dart';
-
 import 'package:media_core_danmaku/media_core_danmaku.dart';
+import 'package:rxdart/rxdart.dart';
 
 /// Records what the binding asked the engine to do.
 final class _RecordingEngine implements BarrageEngineApi {
   final calls = <String>[];
   final seeks = <Duration>[];
-  double rate = 1.0;
+  double rate = 1;
 
   @override
   void pause() => calls.add('pause');
@@ -76,16 +74,12 @@ final class _RecordingEngine implements BarrageEngineApi {
   bool get rasterizationActive => false;
 }
 
-PlayerTransportState _state(
-  PlaybackCommand command, {
-  Duration position = Duration.zero,
-  double rate = 1.0,
-}) {
+PlayerTransportState _state(PlaybackCommand command, {Duration position = Duration.zero, double rate = 1.0}) {
   return PlayerTransportState(
     command: command,
     position: position,
     duration: const Duration(minutes: 10),
-    volume: 1.0,
+    volume: 1,
     rate: rate,
     initialized: true,
     updatedAt: null,
@@ -94,10 +88,7 @@ PlayerTransportState _state(
 
 PlayerSource _source(String id) {
   return ProgressiveMediaSource(
-    track: MediaTrack(
-      uri: Uri.parse('https://example.com/$id.mp4'),
-      kind: MediaTrackType.video,
-    ),
+    track: MediaTrack(uri: Uri.parse('https://example.com/$id.mp4'), kind: MediaTrackType.video),
   ).toPlayerSource();
 }
 
@@ -112,8 +103,7 @@ void main() {
       engine = _RecordingEngine();
       controller = BarrageController()..attach(engine);
       playback = BehaviorSubject<PlayerTransportState>();
-      binding = DanmakuPlayerBinding(controller: controller, playback: playback)
-        ..attach();
+      binding = DanmakuPlayerBinding(controller: controller, playback: playback)..attach();
     });
 
     tearDown(() async {
@@ -140,19 +130,14 @@ void main() {
     });
 
     test('buffering does not pause the comment clock', () async {
-      playback.add(_state(const PlaybackCommand.buffering(true)));
+      playback.add(_state(const PlaybackCommand.buffering(value: true)));
       await Future<void>.delayed(Duration.zero);
 
       expect(engine.calls, isEmpty);
     });
 
     test('a seek moves the timeline to the same position', () async {
-      playback.add(
-        _state(
-          const PlaybackCommand.seek(Duration(seconds: 90)),
-          position: const Duration(seconds: 90),
-        ),
-      );
+      playback.add(_state(const PlaybackCommand.seek(Duration(seconds: 90)), position: const Duration(seconds: 90)));
       await Future<void>.delayed(Duration.zero);
 
       expect(engine.seeks, [const Duration(seconds: 90)]);
@@ -160,11 +145,7 @@ void main() {
 
     test('seek sync can be turned off', () async {
       await binding.detach();
-      final detached = DanmakuPlayerBinding(
-        controller: controller,
-        playback: playback,
-        syncSeek: false,
-      )..attach();
+      final detached = DanmakuPlayerBinding(controller: controller, playback: playback, syncSeek: false)..attach();
       addTearDown(detached.dispose);
 
       playback.add(_state(const PlaybackCommand.seek(Duration(seconds: 5))));
@@ -174,7 +155,7 @@ void main() {
     });
 
     test('the playback rate is mirrored', () async {
-      playback.add(_state(const PlaybackCommand.rate(2.0), rate: 2.0));
+      playback.add(_state(const PlaybackCommand.rate(2), rate: 2));
       await Future<void>.delayed(Duration.zero);
 
       expect(controller.playbackRate, 2.0);
@@ -182,11 +163,7 @@ void main() {
 
     test('a source change wipes the screen and resets the rate', () async {
       final sources = BehaviorSubject<PlayerSource?>();
-      final bound = DanmakuPlayerBinding(
-        controller: controller,
-        playback: playback,
-        sourceChanges: sources,
-      )..attach();
+      final bound = DanmakuPlayerBinding(controller: controller, playback: playback, sourceChanges: sources)..attach();
       addTearDown(bound.dispose);
       addTearDown(sources.close);
 
@@ -203,11 +180,7 @@ void main() {
     test('a hidden surface stays paused even when the player plays', () async {
       await binding.detach();
       final visible = BehaviorSubject<bool>.seeded(true);
-      final bound = DanmakuPlayerBinding(
-        controller: controller,
-        playback: playback,
-        visible: visible,
-      )..attach();
+      final bound = DanmakuPlayerBinding(controller: controller, playback: playback, visible: visible)..attach();
       addTearDown(bound.dispose);
       addTearDown(visible.close);
 
@@ -239,8 +212,9 @@ void main() {
     });
 
     test('attach is idempotent', () async {
-      binding.attach();
-      binding.attach();
+      binding
+        ..attach()
+        ..attach();
 
       playback.add(_state(const PlaybackCommand.play()));
       await Future<void>.delayed(Duration.zero);

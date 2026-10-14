@@ -49,12 +49,7 @@ final class FlameBarrageSink implements DanmakuSink {
 
   @override
   void onDanmaku(DanmakuMessage message, {bool immediate = false}) {
-    controller.send(
-      BarrageItemMapper.toItem(
-        message,
-        priority: _priorityOf?.call(message) ?? 0,
-      ),
-    );
+    controller.send(BarrageItemMapper.toItem(message, priority: _priorityOf?.call(message) ?? 0));
   }
 
   @override
@@ -66,7 +61,7 @@ final class FlameBarrageSink implements DanmakuSink {
         MediaCoreLog.warning(
           LogCategory.danmaku,
           'a superchat arrived with no card handler; it is not rendered as '
-              'barrage text. Pass onSuperChatCard to FlameBarrageSink.',
+          'barrage text. Pass onSuperChatCard to FlameBarrageSink.',
         );
       }
       host.onSuperChat(message);
@@ -76,8 +71,7 @@ final class FlameBarrageSink implements DanmakuSink {
   }
 
   @override
-  void onAudienceUpdate(DanmakuAudienceUpdate update) =>
-      host.onAudienceUpdate(update);
+  void onAudienceUpdate(DanmakuAudienceUpdate update) => host.onAudienceUpdate(update);
 
   @override
   void onNotice(DanmakuNotice notice) => host.onNotice(notice);

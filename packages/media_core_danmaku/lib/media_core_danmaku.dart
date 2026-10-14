@@ -9,6 +9,8 @@
 /// else implements [DanmakuSink] instead.
 library;
 
+import 'package:media_core_danmaku/media_core_danmaku.dart' show DanmakuSink, DanmakuTransport, FlameBarrageSink;
+
 export 'package:media_core_danmaku/src/barrage_item_mapper.dart';
 export 'package:media_core_danmaku/src/danmaku_config.dart';
 export 'package:media_core_danmaku/src/danmaku_controller.dart';

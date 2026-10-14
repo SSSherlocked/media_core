@@ -1,6 +1,6 @@
 import 'dart:collection';
-
 import 'package:fuzzywuzzy/fuzzywuzzy.dart';
+import 'package:media_core_danmaku/src/danmaku_repeated_filter.dart' show DanmakuRepeatedFilter;
 
 /// Suppresses messages that are *almost* the same as one recently shown.
 ///
@@ -22,6 +22,9 @@ import 'package:fuzzywuzzy/fuzzywuzzy.dart';
 /// [lastComparisonCount] reports the work done for the most recent call and
 /// exists for performance regression tests, not for callers.
 final class DanmakuSimilarityFilter {
+  /// Creates a filter that scores each new text against the newest
+  /// [maxComparisons] of a [maxCacheSize]-message cache; [clock] is injectable
+  /// so tests control expiry.
   DanmakuSimilarityFilter({
     int similarityThreshold = 85,
     Duration cacheDuration = const Duration(seconds: 3),
@@ -68,7 +71,9 @@ final class DanmakuSimilarityFilter {
   /// Shrinking [maxCacheSize] trims immediately so the bound is never
   /// temporarily exceeded.
   void updateConfig({int? similarityThreshold, Duration? cacheDuration, int? maxCacheSize}) {
-    if (similarityThreshold != null) _similarityThreshold = similarityThreshold.clamp(0, 100);
+    if (similarityThreshold != null) {
+      _similarityThreshold = similarityThreshold.clamp(0, 100);
+    }
     if (cacheDuration != null) _cacheDuration = cacheDuration;
     if (maxCacheSize != null) {
       _maxCacheSize = maxCacheSize.clamp(1, 1000);

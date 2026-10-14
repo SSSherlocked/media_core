@@ -39,7 +39,18 @@ void main() {
       final filter = DanmakuSimilarityFilter(maxCacheSize: 50, maxComparisons: 2);
       // Deliberately dissimilar words: similar ones would be collapsed by the
       // filter itself and never reach the cache.
-      const words = <String>['alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot', 'golf', 'hotel', 'india', 'juliet'];
+      const words = <String>[
+        'alpha',
+        'bravo',
+        'charlie',
+        'delta',
+        'echo',
+        'foxtrot',
+        'golf',
+        'hotel',
+        'india',
+        'juliet',
+      ];
 
       for (final word in words) {
         expect(filter.shouldDisplay(word), isTrue);
@@ -54,7 +65,7 @@ void main() {
 
     test('forgets messages once the cache duration passes', () {
       var now = DateTime(2026, 9, 26, 12);
-      final filter = DanmakuSimilarityFilter(cacheDuration: const Duration(seconds: 3), clock: () => now);
+      final filter = DanmakuSimilarityFilter(clock: () => now);
 
       expect(filter.shouldDisplay('666'), isTrue);
       expect(filter.shouldDisplay('666'), isFalse);

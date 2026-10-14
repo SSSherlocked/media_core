@@ -1,6 +1,6 @@
 import 'dart:collection';
-
 import 'package:media_core_danmaku/src/danmaku_message.dart';
+import 'package:media_core_danmaku/src/danmaku_message_gate.dart' show DanmakuMessageGate;
 
 /// Collapses a short burst of identical text into its first message.
 ///
@@ -21,7 +21,10 @@ import 'package:media_core_danmaku/src/danmaku_message.dart';
 ///   re-enabling starts a fresh window rather than suppressing text that was
 ///   seen before the filter was turned off.
 final class DanmakuRepeatedFilter {
-  DanmakuRepeatedFilter({this.maxEntries = 1024}) : assert(maxEntries > 0);
+  /// Creates a filter remembering at most [maxEntries] texts; a window larger
+  /// than that evicts the oldest text first.
+  DanmakuRepeatedFilter({this.maxEntries = 1024})
+    : assert(maxEntries > 0, 'maxEntries must leave room for at least one text');
 
   /// Upper bound on remembered texts. Bounds memory in a busy room.
   final int maxEntries;

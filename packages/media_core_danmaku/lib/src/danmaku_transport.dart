@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show immutable;
+
 import 'package:media_core_danmaku/src/danmaku_message.dart';
 
 /// Identifies the room a transport attaches to.
@@ -6,10 +8,15 @@ import 'package:media_core_danmaku/src/danmaku_message.dart';
 /// value this module interprets: the module never branches on it. It exists so
 /// a session key can be formed and so a transport registry can pick the
 /// implementation that handles that platform.
+@immutable
 final class DanmakuRoomRef {
+  /// A room on a [platform], identified by its [roomId].
   const DanmakuRoomRef({required this.platform, required this.roomId});
 
+  /// The caller's own platform identifier; this module never branches on it.
   final String platform;
+
+  /// The platform's room id.
   final String roomId;
 
   /// Session key: two refs with the same key describe the same room.
@@ -36,15 +43,22 @@ final class DanmakuRoomRef {
 /// a transport that needs more must say so by failing its `start`, not by
 /// requiring the caller to guess.
 final class DanmakuAuth {
+  /// Credentials for a room, every field optional; an empty one is anonymous.
   const DanmakuAuth({this.userId = '', this.token = '', this.cookies = const <String, String>{}});
 
   /// No credentials: anonymous read-only chat.
   const DanmakuAuth.none() : userId = '', token = '', cookies = const <String, String>{};
 
+  /// The sending viewer's id, empty for anonymous access.
   final String userId;
+
+  /// Auth token the platform's send API requires, empty when none.
   final String token;
+
+  /// Named cookies for platforms that authenticate through a session cookie.
   final Map<String, String> cookies;
 
+  /// Whether no credential is present: an anonymous, read-only session.
   bool get isEmpty => userId.isEmpty && token.isEmpty && cookies.isEmpty;
 }
 
@@ -57,14 +71,21 @@ final class DanmakuAuth {
 /// so a caller can pass credentials without the framework inventing an
 /// abstraction for each one.
 final class DanmakuTransportRequest {
+  /// Everything one transport needs to attach to [room]; [extras] is owned by
+  /// the transport and never interpreted by this module.
   DanmakuTransportRequest({
     required this.room,
     this.auth = const DanmakuAuth.none(),
     Map<String, Object?> extras = const <String, Object?>{},
   }) : extras = Map<String, Object?>.unmodifiable(extras);
 
+  /// The room to attach to.
   final DanmakuRoomRef room;
+
+  /// Credentials to send with, when the platform needs any.
   final DanmakuAuth auth;
+
+  /// Platform-specific handshake material, decoded by the transport itself.
   final Map<String, Object?> extras;
 
   @override

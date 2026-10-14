@@ -2,9 +2,8 @@ import 'dart:async';
 import 'dart:collection';
 
 import 'package:flame_barrage/flame_barrage.dart';
-import 'package:media_core_memory/media_core_memory.dart';
-
 import 'package:media_core_danmaku/src/danmaku_message.dart';
+import 'package:media_core_memory/media_core_memory.dart';
 
 /// One message scheduled on a small surface.
 ///
@@ -13,6 +12,8 @@ import 'package:media_core_danmaku/src/danmaku_message.dart';
 /// that renders it with its own painter read the same numbers from the same
 /// place. Nothing is scaled or invented on the way through.
 final class DanmakuOverlayItem {
+  /// A message queued for a small surface, with every presentation value
+  /// already resolved from the session's [BarrageConfig].
   const DanmakuOverlayItem({
     required this.message,
     required this.enqueuedAt,
@@ -23,6 +24,7 @@ final class DanmakuOverlayItem {
     required this.displayAreaFraction,
   });
 
+  /// The message this item draws.
   final DanmakuMessage message;
 
   /// When the item entered the overlay. The host's renderer animates from here.
@@ -91,10 +93,11 @@ final class DanmakuOverlayItem {
 /// ## Binding instead of depending
 ///
 /// [bindVisibility] takes the visibility stream of whatever surface this
-/// overlay belongs to — `PipDriver.onPipChanged`, `FloatingDriver.
-/// onFloatingChanged`, or a host's own signal. The danmaku package therefore
-/// knows nothing about picture-in-picture, floating windows or their platform
-/// drivers, and those packages need no danmaku dependency to be usable.
+/// overlay belongs to — `PipDriver.onPipChanged`, a host's own
+/// floating-mode signal, or any other visibility stream. The danmaku package
+/// therefore knows nothing about picture-in-picture, floating windows or
+/// their platform drivers, and those packages need no danmaku dependency to
+/// be usable.
 final class DanmakuOverlaySession {
   /// Creates an overlay driven by [config].
   ///
@@ -102,12 +105,9 @@ final class DanmakuOverlaySession {
   /// why they live here and not in [BarrageConfig]: whether a hidden surface
   /// keeps its queue is a decision about this session, not about how a message
   /// looks.
-  DanmakuOverlaySession({
-    BarrageConfig config = const BarrageConfig(),
-    this.clearOnHide = true,
-    bool enabled = true,
-  }) : _config = config,
-       _enabled = enabled;
+  DanmakuOverlaySession({BarrageConfig config = const BarrageConfig(), this.clearOnHide = true, bool enabled = true})
+    : _config = config,
+      _enabled = enabled;
 
   BarrageConfig _config;
   bool _enabled;
@@ -170,13 +170,21 @@ final class DanmakuOverlaySession {
   /// subscription so a surface swap cannot leave two feeds running.
   void bindVisibility(Stream<bool> visibility) {
     _ensureNotDisposed();
-    _visibilitySubscription?.cancel();
+    // The previous subscription is replaced on the next line, so cancelling it
+    // is fire-and-forget: nothing awaits it and the reassignment does not
+    // depend on the cancel completing first.
+    final previous = _visibilitySubscription;
+    if (previous != null) unawaited(previous.cancel());
     _visibilitySubscription = visibility.listen(_handleVisibility, onError: (_) {});
   }
 
   /// Stops following the bound surface.
   void unbindVisibility() {
-    _visibilitySubscription?.cancel();
+    // Same reasoning as [bindVisibility]: the handle is nulled immediately and
+    // [_handleVisibility] runs synchronously, so no event can slip in between
+    // the cancel and the state update.
+    final previous = _visibilitySubscription;
+    if (previous != null) unawaited(previous.cancel());
     _visibilitySubscription = null;
     _handleVisibility(false);
   }
@@ -196,7 +204,7 @@ final class DanmakuOverlaySession {
   ///
   /// Turning it off empties it: a disabled overlay that keeps messages would
   /// replay them the moment it is enabled again.
-  void setEnabled(bool enabled) {
+  void setEnabled({required bool enabled}) {
     _ensureNotDisposed();
     if (_enabled == enabled) {
       return;
@@ -267,8 +275,7 @@ final class DanmakuOverlaySession {
   }
 
   /// Display area for a surface of [surfaceHeight], in logical pixels.
-  double displayAreaFor(double surfaceHeight) =>
-      surfaceHeight * _config.area.clamp(0.1, 1.0);
+  double displayAreaFor(double surfaceHeight) => surfaceHeight * _config.area.clamp(0.1, 1.0);
 
   /// Releases the overlay.
   Future<void> dispose() async {
@@ -288,7 +295,8 @@ final class DanmakuOverlaySession {
   // ---------------------------------------------------------------------------
 
   void _reportMemory({String? note}) {
-    _memory.report(_memoryKey,
+    _memory.report(
+      _memoryKey,
       items: _items.length,
       bytes: _items.length * MemoryEstimates.danmakuMessage,
       note: note ?? '${_items.length}/${_config.maxVisibleCount} queued',
@@ -306,7 +314,7 @@ final class DanmakuOverlaySession {
     _notifyActiveChanged();
   }
 
-  DanmakuOverlayItem _buildItem(DanmakuMessage message, {double? surfaceWidth, required DateTime at}) {
+  DanmakuOverlayItem _buildItem(DanmakuMessage message, {required DateTime at, double? surfaceWidth}) {
     final style = message.style;
     final fontSize = style?.fontSize ?? _config.fontSize;
     final speed = _config.baseSpeed <= 0 ? 1.0 : _config.baseSpeed;

@@ -42,6 +42,7 @@ enum DanmakuSessionPhase {
 /// - DanmakuController
 /// - DanmakuTransport
 final class DanmakuSessionState extends Equatable {
+  /// A snapshot, defaulting to the idle phase with nothing installed.
   const DanmakuSessionState({
     this.phase = DanmakuSessionPhase.idle,
     this.roomKey,
@@ -53,6 +54,7 @@ final class DanmakuSessionState extends Equatable {
     this.installed = false,
   });
 
+  /// The lifecycle phase captured in this snapshot.
   final DanmakuSessionPhase phase;
 
   /// Session key of the room this snapshot describes, when one is owned.
@@ -62,6 +64,7 @@ final class DanmakuSessionState extends Equatable {
   /// display this one.
   final String? roomId;
 
+  /// Platform identifier the room belongs to, when known.
   final String? platform;
 
   /// Transport identifier currently installed.
@@ -81,13 +84,17 @@ final class DanmakuSessionState extends Equatable {
   /// caller simply never installs one.
   final bool installed;
 
+  /// Whether the session's transport is attached and delivering.
   bool get isConnected => phase == DanmakuSessionPhase.connected;
 
+  /// Whether a handshake is currently in flight.
   bool get isConnecting => phase == DanmakuSessionPhase.connecting;
 
   /// Whether anything currently owns the room.
   bool get ownsRoom => roomKey != null && phase != DanmakuSessionPhase.closed && phase != DanmakuSessionPhase.failed;
 
+  /// A copy with the given fields replaced; [clearFailure] and [clearRoom]
+  /// drop those values instead of replacing them.
   DanmakuSessionState copyWith({
     DanmakuSessionPhase? phase,
     String? roomKey,

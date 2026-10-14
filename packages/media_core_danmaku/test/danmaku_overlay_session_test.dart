@@ -62,8 +62,9 @@ void main() {
 
       visibility.add(true);
       await Future<void>.delayed(Duration.zero);
-      overlay.enqueue(chat('one'));
-      overlay.enqueue(chat('two'));
+      overlay
+        ..enqueue(chat('one'))
+        ..enqueue(chat('two'));
       expect(overlay.length, 2);
 
       visibility.add(false);
@@ -92,14 +93,15 @@ void main() {
     });
 
     test('the queue bound is the engine own maxVisibleCount', () async {
-      final overlay = DanmakuOverlaySession(config: BarrageConfig(maxVisibleCount: 2));
+      final overlay = DanmakuOverlaySession(config: const BarrageConfig(maxVisibleCount: 2));
       addTearDown(overlay.dispose);
       overlay.bindVisibility(Stream<bool>.value(true));
       await Future<void>.delayed(Duration.zero);
 
-      overlay.enqueue(chat('first'));
-      overlay.enqueue(chat('second'));
-      overlay.enqueue(chat('third'));
+      overlay
+        ..enqueue(chat('first'))
+        ..enqueue(chat('second'))
+        ..enqueue(chat('third'));
 
       expect(overlay.items.map((item) => item.message.text).toList(), <String>['second', 'third']);
     });
@@ -119,9 +121,9 @@ void main() {
       addTearDown(overlay.dispose);
       overlay.bindVisibility(Stream<bool>.value(true));
       await Future<void>.delayed(Duration.zero);
-      overlay.enqueue(chat('hello'));
-
-      overlay.setEnabled(false);
+      overlay
+        ..enqueue(chat('hello'))
+        ..setEnabled(enabled: false);
 
       expect(overlay.length, 0);
       expect(overlay.isEnabled, isFalse);
@@ -137,7 +139,7 @@ void main() {
         overlay.enqueue(chat('message $index'));
       }
 
-      overlay.updateConfig(BarrageConfig(maxVisibleCount: 2));
+      overlay.updateConfig(const BarrageConfig(maxVisibleCount: 2));
 
       expect(overlay.length, 2);
     });
@@ -162,8 +164,9 @@ void main() {
       overlay.onActiveChanged.listen(reported.add);
       overlay.bindVisibility(visibility.stream);
 
-      visibility.add(true);
-      visibility.add(true);
+      visibility
+        ..add(true)
+        ..add(true);
       await Future<void>.delayed(Duration.zero);
       visibility.add(false);
       await Future<void>.delayed(Duration.zero);
@@ -176,9 +179,9 @@ void main() {
       addTearDown(overlay.dispose);
       overlay.bindVisibility(Stream<bool>.value(true));
       await Future<void>.delayed(Duration.zero);
-      overlay.enqueue(chat('hello'));
-
-      overlay.unbindVisibility();
+      overlay
+        ..enqueue(chat('hello'))
+        ..unbindVisibility();
 
       expect(overlay.isSurfaceVisible, isFalse);
       expect(overlay.length, 0);
@@ -214,15 +217,14 @@ void main() {
 
   group('DanmakuOverlaySession presentation', () {
     test('the font size is the config one, and the message may override it', () async {
-      final overlay = DanmakuOverlaySession(config: BarrageConfig(fontSize: 14));
+      final overlay = DanmakuOverlaySession(config: const BarrageConfig(fontSize: 14));
       addTearDown(overlay.dispose);
       overlay.bindVisibility(Stream<bool>.value(true));
       await Future<void>.delayed(Duration.zero);
 
-      overlay.enqueue(chat('plain'));
-      overlay.enqueue(
-        chat('styled', style: const DanmakuStyle(fontSize: 22, baseSpeed: 60, fontWeight: 400)),
-      );
+      overlay
+        ..enqueue(chat('plain'))
+        ..enqueue(chat('styled', style: const DanmakuStyle(fontSize: 22, baseSpeed: 60, fontWeight: 400)));
 
       expect(overlay.items[0].fontSize, 14);
       expect(overlay.items[1].fontSize, 22);
@@ -232,8 +234,8 @@ void main() {
       // One vocabulary: the same knob the engine reads decides the size here,
       // so a host cannot end up with two surfaces drawing at sizes neither
       // config ever mentioned.
-      final main = DanmakuOverlaySession(config: BarrageConfig(fontSize: 24));
-      final small = DanmakuOverlaySession(config: BarrageConfig(fontSize: 12));
+      final main = DanmakuOverlaySession(config: const BarrageConfig(fontSize: 24));
+      final small = DanmakuOverlaySession(config: const BarrageConfig(fontSize: 12));
       addTearDown(main.dispose);
       addTearDown(small.dispose);
 
@@ -242,14 +244,12 @@ void main() {
     });
 
     test('opacity combines the message own with the config one', () async {
-      final overlay = DanmakuOverlaySession(config: BarrageConfig(opacity: 0.5));
+      final overlay = DanmakuOverlaySession(config: const BarrageConfig(opacity: 0.5));
       addTearDown(overlay.dispose);
       overlay.bindVisibility(Stream<bool>.value(true));
       await Future<void>.delayed(Duration.zero);
 
-      overlay.enqueue(
-        chat('x', style: const DanmakuStyle(fontSize: 14, baseSpeed: 60, fontWeight: 400, opacity: 0.8)),
-      );
+      overlay.enqueue(chat('x', style: const DanmakuStyle(fontSize: 14, baseSpeed: 60, fontWeight: 400, opacity: 0.8)));
 
       expect(overlay.items.single.opacity, closeTo(0.4, 0.0001));
     });
@@ -261,14 +261,23 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       overlay.enqueue(
-        chat('pinned', style: const DanmakuStyle(fontSize: 14, baseSpeed: 60, fontWeight: 400, placement: DanmakuPlacement.top, fixedDurationMs: 8000)),
+        chat(
+          'pinned',
+          style: const DanmakuStyle(
+            fontSize: 14,
+            baseSpeed: 60,
+            fontWeight: 400,
+            placement: DanmakuPlacement.top,
+            fixedDurationMs: 8000,
+          ),
+        ),
       );
 
       expect(overlay.items.single.lifetime, const Duration(milliseconds: 8000));
     });
 
     test('a scrolling message lives as long as it takes to cross the surface', () async {
-      final overlay = DanmakuOverlaySession(config: BarrageConfig(baseSpeed: 100));
+      final overlay = DanmakuOverlaySession(config: const BarrageConfig(baseSpeed: 100));
       addTearDown(overlay.dispose);
       overlay.bindVisibility(Stream<bool>.value(true));
       await Future<void>.delayed(Duration.zero);
@@ -282,8 +291,8 @@ void main() {
     });
 
     test('a slower base speed lengthens the lifetime', () async {
-      final fast = DanmakuOverlaySession(config: BarrageConfig(baseSpeed: 200));
-      final slow = DanmakuOverlaySession(config: BarrageConfig(baseSpeed: 50));
+      final fast = DanmakuOverlaySession(config: const BarrageConfig(baseSpeed: 200));
+      final slow = DanmakuOverlaySession(config: const BarrageConfig(baseSpeed: 50));
       addTearDown(fast.dispose);
       addTearDown(slow.dispose);
       fast.bindVisibility(Stream<bool>.value(true));
@@ -297,7 +306,7 @@ void main() {
     });
 
     test('without a surface width the engine dwell time stands in', () async {
-      final overlay = DanmakuOverlaySession(config: BarrageConfig(fixedDuration: Duration(seconds: 7)));
+      final overlay = DanmakuOverlaySession(config: const BarrageConfig(fixedDuration: Duration(seconds: 7)));
       addTearDown(overlay.dispose);
       overlay.bindVisibility(Stream<bool>.value(true));
       await Future<void>.delayed(Duration.zero);
@@ -325,7 +334,7 @@ void main() {
     });
 
     test('the display area follows the configured fraction', () {
-      final overlay = DanmakuOverlaySession(config: BarrageConfig(area: 0.5));
+      final overlay = DanmakuOverlaySession(config: const BarrageConfig(area: 0.5));
       addTearDown(overlay.dispose);
 
       expect(overlay.displayAreaFor(400), 200);
@@ -335,13 +344,11 @@ void main() {
   group('DanmakuFanOutSink', () {
     test('feeds both surfaces with one accepted message', () async {
       final primary = _RecordingSink();
-      final overlay = DanmakuOverlaySession(config: BarrageConfig(fontSize: 12));
+      final overlay = DanmakuOverlaySession(config: const BarrageConfig(fontSize: 12));
       addTearDown(overlay.dispose);
       overlay.bindVisibility(Stream<bool>.value(true));
       await Future<void>.delayed(Duration.zero);
-      final sink = DanmakuFanOutSink(primary: primary, overlay: overlay, surfaceWidth: () => 320);
-
-      sink.onDanmaku(chat('hello'));
+      DanmakuFanOutSink(primary: primary, overlay: overlay, surfaceWidth: () => 320).onDanmaku(chat('hello'));
 
       expect(primary.messages, <String>['hello']);
       expect(overlay.items.single.message.text, 'hello');
@@ -355,10 +362,9 @@ void main() {
 
     test('forwards everything the overlay does not own', () {
       final primary = _RecordingSink();
-      final sink = DanmakuFanOutSink(primary: primary);
-
-      sink.onNotice(DanmakuNotice.connected);
-      sink.onRoomChanged('room-1');
+      DanmakuFanOutSink(primary: primary)
+        ..onNotice(DanmakuNotice.connected)
+        ..onRoomChanged('room-1');
 
       expect(primary.notices, <String>['connected']);
     });
@@ -369,10 +375,9 @@ void main() {
       addTearDown(overlay.dispose);
       overlay.bindVisibility(Stream<bool>.value(true));
       await Future<void>.delayed(Duration.zero);
-      final sink = DanmakuFanOutSink(primary: primary, overlay: overlay);
-      sink.onDanmaku(chat('hello'));
-
-      sink.clearRendered();
+      DanmakuFanOutSink(primary: primary, overlay: overlay)
+        ..onDanmaku(chat('hello'))
+        ..clearRendered();
 
       expect(primary.clearCount, 1);
       expect(overlay.length, 0);
@@ -380,9 +385,7 @@ void main() {
 
     test('works without an overlay installed', () {
       final primary = _RecordingSink();
-      final sink = DanmakuFanOutSink(primary: primary);
-
-      sink.onDanmaku(chat('hello'));
+      DanmakuFanOutSink(primary: primary).onDanmaku(chat('hello'));
 
       expect(primary.messages, <String>['hello']);
     });

@@ -11,7 +11,7 @@
 - **旧 socket 写进新房间。** 换房间、改设置、播放器重载、小窗销毁可能落在同一个事件循环轮次里。`DanmakuController` 用核心的 `SerialExecutor` 把每一次连接/断开串行化，每次请求递增 epoch 作废排队中的旧操作，交给传输的监听器绑死 `(transport, roomKey, sessionToken)`——三个校验任一不过就丢弃回调。这和核心给播放用的代际围栏是同一个形状：身份 + 代际，而不是一个 `isConnected` 布尔。
 - **重放与积压。** `DanmakuMessageGate` 把两种重复分开处理：带平台 `messageId` 的走 10 分钟长窗（id 无歧义，同 id 就是重放），没有 id 的退回"类型 + 发送者 + 文本"指纹的 2.5 秒短窗（够挡重连重放，又不会吃掉真实刷屏的"666"）；比 `maxMessageAge` 更老的直接丢，后台攒下的积压不会当成现场聊天渲染。未来时钟偏差只容忍有限量，超出的当畸形包。
 - **房间在复制粘贴。** `DanmakuRepeatedFilter` 折叠不同账号发的同一句文本，`DanmakuSimilarityFilter` 折叠"666 / 6666 / 666！"这类近似重复，并把保留缓存与逐包比较预算拆成两个上限（缓存长不等于每包算得多）。`DanmakuFilterPolicy` 管的是观众自己拉黑的人和词，与去重是两件事，所以它能被几个房间共用。
-- **小画面不是第二个会话。** `DanmakuOverlaySession` 有自己的队列、上限和寿命（隐藏即清空，免得回来时回放旧弹幕），`bindVisibility` 接的是任何一条可见性流——`PipDriver.onPipChanged`、`FloatingDriver.onFloatingChanged` 或宿主自己的信号。本包因此不知道 PiP 与悬浮窗存在，那两个包也不需要弹幕依赖。
+- **小画面不是第二个会话。** `DanmakuOverlaySession` 有自己的队列、上限和寿命（隐藏即清空，免得回来时回放旧弹幕），`bindVisibility` 接的是任何一条可见性流——`PipDriver.onPipChanged` 或宿主自己的信号。本包因此不知道 PiP 与悬浮窗存在，那两个包也不需要弹幕依赖。
 
 和核心的接线是实的：串行化与流关闭用核心的 `SerialExecutor` / `DisposeUtils`，决策写进 `LogCategory.danmaku`，队列占用按实例报进 `media_core_memory` 的 `MemoryModule.danmaku`。
 
@@ -47,7 +47,7 @@ session.needReconnect(room);                      // 同一个健康会话不该
 DanmakuPlayerBinding.forHandle(controller: barrage, handle: handle).attach(); // 播/暂停/倍速/seek 与媒体同拍
 
 session.updateConfig(DanmakuConfig.defaults.copyWith(similarityThreshold: 92));
-session.updatePolicy(DanmakuFilterPolicy(blockedUsers: blocked));
+session.policy = DanmakuFilterPolicy(blockedUsers: blocked); // 只赋值一个字段，所以是可变字段而不是 updatePolicy 方法
 await session.recover(room, enabled: viewerSwitchOn); // 关了就 stop：恢复不会重开观众亲手关掉的 socket
 await session.dispose();
 ```
@@ -68,7 +68,7 @@ await session.dispose();
 
 - 主包与 `SerialExecutor`：[../media_core](../media_core)
 - 逐格弹幕的消费方（视频墙）：[../media_core_multiview](../media_core_multiview)
-- 小窗可见性流来自：[../media_core_pip](../media_core_pip) · [../media_core_floating](../media_core_floating)
+- 小窗可见性流来自：[../media_core_pip](../media_core_pip)
 - 内存记账：[../media_core_memory](../media_core_memory)
 - 模块文档：[doc/zh-Hans.md](doc/zh-Hans.md) · [doc/en.md](doc/en.md)
 - 仓库总览：[../../README.md](../../README.md)

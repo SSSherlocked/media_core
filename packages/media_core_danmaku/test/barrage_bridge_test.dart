@@ -1,9 +1,7 @@
 import 'dart:ui' show Color, FontStyle, FontWeight;
 
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:flame_barrage/flame_barrage.dart';
-
+import 'package:flutter_test/flutter_test.dart';
 import 'package:media_core_danmaku/media_core_danmaku.dart';
 
 /// Captures what the sink hands the engine, without a Flame game.
@@ -27,11 +25,10 @@ final class _FakeEngine implements BarrageEngineApi {
   final seekPositions = <Duration>[];
 
   @override
-  double playbackRate = 1.0;
+  double playbackRate = 1;
 
   @override
-  int retractWhere(bool Function(BarrageItem item) predicate) =>
-      pushed.where(predicate).length;
+  int retractWhere(bool Function(BarrageItem item) predicate) => pushed.where(predicate).length;
 
   @override
   void updateConfig(BarrageConfig config) {}
@@ -122,9 +119,7 @@ DanmakuMessage _chat({
 void main() {
   group('BarrageItemMapper', () {
     test('a plain chat line carries text, id and color only', () {
-      final item = BarrageItemMapper.toItem(
-        _chat(text: '你好', messageId: 'm1', userId: 'u1'),
-      );
+      final item = BarrageItemMapper.toItem(_chat(text: '你好', messageId: 'm1', userId: 'u1'));
 
       expect(item.content, '你好');
       expect(item.type, BarrageType.scroll);
@@ -187,25 +182,13 @@ void main() {
     });
 
     test('placements map onto the engine anchor types', () {
-      expect(
-        BarrageItemMapper.barrageTypeFor(DanmakuPlacement.scroll),
-        BarrageType.scroll,
-      );
-      expect(
-        BarrageItemMapper.barrageTypeFor(DanmakuPlacement.top),
-        BarrageType.topFixed,
-      );
-      expect(
-        BarrageItemMapper.barrageTypeFor(DanmakuPlacement.bottom),
-        BarrageType.bottomFixed,
-      );
+      expect(BarrageItemMapper.barrageTypeFor(DanmakuPlacement.scroll), BarrageType.scroll);
+      expect(BarrageItemMapper.barrageTypeFor(DanmakuPlacement.top), BarrageType.topFixed);
+      expect(BarrageItemMapper.barrageTypeFor(DanmakuPlacement.bottom), BarrageType.bottomFixed);
     });
 
     test('a timeline offset is passed through, and its absence is too', () {
-      final timed = BarrageItemMapper.toItem(
-        _chat(),
-        at: const Duration(seconds: 90),
-      );
+      final timed = BarrageItemMapper.toItem(_chat(), at: const Duration(seconds: 90));
 
       expect(timed.at, const Duration(seconds: 90));
       // A live message has no offset, and inventing one would schedule it
@@ -245,13 +228,7 @@ void main() {
     });
 
     test('priority is supplied by the host, not invented here', () {
-      final prioritized = FlameBarrageSink(
-        controller,
-        host: host,
-        priorityOf: (message) => message.isLocal ? 10 : 0,
-      );
-
-      prioritized.onDanmaku(_chat());
+      FlameBarrageSink(controller, host: host, priorityOf: (message) => message.isLocal ? 10 : 0).onDanmaku(_chat());
 
       expect(engine.pushed.single.priority, 0);
     });
@@ -292,11 +269,7 @@ void main() {
 
     test('a card handler receives the superchat instead of the host', () {
       final seen = <DanmakuSuperChat>[];
-      final withHandler = FlameBarrageSink(
-        controller,
-        host: host,
-        onSuperChatCard: seen.add,
-      );
+      final withHandler = FlameBarrageSink(controller, host: host, onSuperChatCard: seen.add);
       final card = DanmakuSuperChat(
         userName: 'whale',
         text: 'hi',
@@ -314,13 +287,11 @@ void main() {
     });
 
     test('audience and notice callbacks are forwarded, not swallowed', () {
-      const update = DanmakuAudienceUpdate(
-        kind: DanmakuAudienceKind.concurrentViewers,
-        value: 42,
-      );
+      const update = DanmakuAudienceUpdate(kind: DanmakuAudienceKind.concurrentViewers, value: 42);
 
-      sink.onAudienceUpdate(update);
-      sink.onNotice(DanmakuNotice.connected);
+      sink
+        ..onAudienceUpdate(update)
+        ..onNotice(DanmakuNotice.connected);
 
       expect(host.audience, [update]);
       expect(host.notices, [DanmakuNotice.connected]);
@@ -339,12 +310,12 @@ void main() {
   group('the timeline surface a VOD host drives', () {
     test('load, seek and rate all reach the engine through the controller', () {
       final engine = _FakeEngine();
-      final controller = BarrageController()..attach(engine);
-
-      controller.loadTimeline([
-        BarrageItem(content: 'a', at: const Duration(seconds: 1)),
-        BarrageItem(content: 'b', at: const Duration(seconds: 2)),
-      ]);
+      final controller = BarrageController()
+        ..attach(engine)
+        ..loadTimeline([
+          const BarrageItem(content: 'a', at: Duration(seconds: 1)),
+          const BarrageItem(content: 'b', at: Duration(seconds: 2)),
+        ]);
       expect(engine.timeline, hasLength(2));
 
       controller.seekTo(const Duration(seconds: 30));

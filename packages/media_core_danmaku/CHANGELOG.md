@@ -1,3 +1,7 @@
+## Unreleased
+
+- **Named parameters and full docs**: `DanmakuOverlaySession.setEnabled(enabled:)` and the rest of this package's boolean parameters became named, following the workspace's `very_good_analysis` configuration, and every public member now carries a doc comment. Nothing else about the overlay's behaviour changed.
+
 ## 0.1.0
 
 Initial release.

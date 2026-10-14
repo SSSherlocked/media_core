@@ -15,7 +15,7 @@ final class _FakeTransport implements DanmakuTransport {
   int startCount = 0;
   int stopCount = 0;
   int heartbeatCount = 0;
-  Object? startError;
+  Error? startError;
   Completer<void>? startGate;
   DanmakuTransportListener? listener;
   DanmakuTransportRequest? request;
@@ -91,7 +91,7 @@ void main() {
     setUp(() {
       sink = _RecordingSink();
       transport = _FakeTransport();
-      controller = DanmakuController(sink: sink, config: DanmakuConfig.defaults);
+      controller = DanmakuController(sink: sink);
     });
 
     tearDown(() => controller.dispose());
@@ -284,8 +284,7 @@ void main() {
     setUp(() {
       sink = _RecordingSink();
       transport = _FakeTransport();
-      controller = DanmakuController(sink: sink, config: DanmakuConfig.defaults);
-      controller.installTransport(transport);
+      controller = DanmakuController(sink: sink)..installTransport(transport);
     });
 
     tearDown(() => controller.dispose());
@@ -299,14 +298,14 @@ void main() {
     test('delivers accepted chat', () async {
       await ready();
 
-      transport.listener!.onDanmakuMessage(chat(text: 'hello'));
+      transport.listener!.onDanmakuMessage(chat());
 
       expect(sink.messages.single.text, 'hello');
     });
 
     test('suppresses blocked keywords before anything reaches the sink', () async {
       await ready();
-      controller.updatePolicy(DanmakuFilterPolicy(blockedKeywords: <String>['spoiler']));
+      controller.policy = DanmakuFilterPolicy(blockedKeywords: <String>['spoiler']);
 
       transport.listener!.onDanmakuMessage(chat(text: 'this is a SPOILER'));
       transport.listener!.onDanmakuMessage(chat(text: 'this is fine'));
@@ -316,7 +315,7 @@ void main() {
 
     test('suppresses blocked viewers case-insensitively', () async {
       await ready();
-      controller.updatePolicy(DanmakuFilterPolicy(blockedUsers: <String>['  Troll ']));
+      controller.policy = DanmakuFilterPolicy(blockedUsers: <String>['  Troll ']);
 
       transport.listener!.onDanmakuMessage(chat(user: 'troll'));
       transport.listener!.onDanmakuMessage(chat(user: 'friend'));
@@ -328,11 +327,11 @@ void main() {
       await ready();
 
       transport.listener!.onDanmakuMessage(
-        DanmakuMessage(
+        const DanmakuMessage(
           type: DanmakuMessageType.audience,
           userName: '',
           text: '',
-          audience: const DanmakuAudienceUpdate(kind: DanmakuAudienceKind.concurrentViewers, value: 4321),
+          audience: DanmakuAudienceUpdate(kind: DanmakuAudienceKind.concurrentViewers, value: 4321),
         ),
       );
       transport.listener!.onDanmakuMessage(

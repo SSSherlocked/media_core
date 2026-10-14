@@ -2,13 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:media_core_danmaku/media_core_danmaku.dart';
 
 DanmakuMessage chat({String text = 'hello', String id = '', String user = 'viewer', DateTime? sentAt}) {
-  return DanmakuMessage(
-    type: DanmakuMessageType.chat,
-    userName: user,
-    text: text,
-    messageId: id,
-    sentAt: sentAt,
-  );
+  return DanmakuMessage(type: DanmakuMessageType.chat, userName: user, text: text, messageId: id, sentAt: sentAt);
 }
 
 void main() {
@@ -44,9 +38,27 @@ void main() {
       final gate = DanmakuMessageGate();
       final now = DateTime(2026, 9, 26, 12);
 
-      expect(gate.accepts(chat(text: '666', user: 'alice'), now: now), isTrue);
-      expect(gate.accepts(chat(text: '666', user: 'bob'), now: now), isTrue);
-      expect(gate.accepts(chat(text: '666', user: 'alice'), now: now), isFalse);
+      expect(
+        gate.accepts(
+          chat(text: '666', user: 'alice'),
+          now: now,
+        ),
+        isTrue,
+      );
+      expect(
+        gate.accepts(
+          chat(text: '666', user: 'bob'),
+          now: now,
+        ),
+        isTrue,
+      );
+      expect(
+        gate.accepts(
+          chat(text: '666', user: 'alice'),
+          now: now,
+        ),
+        isFalse,
+      );
     });
 
     test('falls back to a short text window for platforms without ids', () {
@@ -63,16 +75,34 @@ void main() {
       final now = DateTime(2026, 9, 26, 12);
 
       expect(gate.accepts(chat(sentAt: now.subtract(const Duration(seconds: 46))), now: now), isFalse);
-      expect(gate.accepts(chat(text: 'fresh', sentAt: now.subtract(const Duration(seconds: 5))), now: now), isTrue);
+      expect(
+        gate.accepts(
+          chat(text: 'fresh', sentAt: now.subtract(const Duration(seconds: 5))),
+          now: now,
+        ),
+        isTrue,
+      );
     });
 
     test('drops a malformed future timestamp instead of caching it', () {
       final gate = DanmakuMessageGate();
       final now = DateTime(2026, 9, 26, 12);
 
-      expect(gate.accepts(chat(text: 'skewed', sentAt: now.add(const Duration(minutes: 20))), now: now), isFalse);
+      expect(
+        gate.accepts(
+          chat(text: 'skewed', sentAt: now.add(const Duration(minutes: 20))),
+          now: now,
+        ),
+        isFalse,
+      );
       // Ordinary clock skew is still accepted.
-      expect(gate.accepts(chat(text: 'skewed', sentAt: now.add(const Duration(seconds: 20))), now: now), isTrue);
+      expect(
+        gate.accepts(
+          chat(text: 'skewed', sentAt: now.add(const Duration(seconds: 20))),
+          now: now,
+        ),
+        isTrue,
+      );
     });
 
     test('bounds retained fingerprints', () {
@@ -80,7 +110,13 @@ void main() {
       final now = DateTime(2026, 9, 26, 12);
 
       for (var index = 0; index < 10; index++) {
-        expect(gate.accepts(chat(id: 'm$index', text: 'text $index'), now: now), isTrue);
+        expect(
+          gate.accepts(
+            chat(id: 'm$index', text: 'text $index'),
+            now: now,
+          ),
+          isTrue,
+        );
       }
 
       expect(gate.size, lessThanOrEqualTo(2));
@@ -124,7 +160,13 @@ void main() {
       // No id, no user, no text: every such packet shares one fingerprint.
       expect(gate.accepts(chat(text: ''), now: now), isTrue);
       expect(gate.accepts(chat(text: ''), now: now), isFalse);
-      expect(gate.accepts(chat(text: '', user: 'other'), now: now), isTrue);
+      expect(
+        gate.accepts(
+          chat(text: '', user: 'other'),
+          now: now,
+        ),
+        isTrue,
+      );
     });
   });
 }

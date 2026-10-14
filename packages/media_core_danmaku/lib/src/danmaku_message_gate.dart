@@ -19,6 +19,8 @@ import 'package:media_core_danmaku/src/danmaku_message.dart';
 /// Clock skew is tolerated up to [maxFutureSkew]; larger future timestamps are
 /// treated as malformed rather than being allowed to poison the id cache.
 final class DanmakuMessageGate {
+  /// Creates a gate with the given duplicate windows, age limit and memory
+  /// bound; each can be replaced later through [applyWindows].
   DanmakuMessageGate({
     Duration fallbackDuplicateWindow = const Duration(milliseconds: 2500),
     Duration stableIdWindow = const Duration(minutes: 10),

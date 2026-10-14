@@ -24,6 +24,8 @@ enum DanmakuFailureKind {
 
 /// One danmaku failure with its cause preserved.
 final class DanmakuFailure {
+  /// One failure report; [cause] keeps the original error for logs, never for
+  /// presentation.
   const DanmakuFailure({
     required this.kind,
     required this.message,
@@ -33,6 +35,7 @@ final class DanmakuFailure {
     this.cause,
   });
 
+  /// Which transition failed; drives recovery and presentation.
   final DanmakuFailureKind kind;
 
   /// Human-readable summary. Never localized: the host decides how to present

@@ -1,9 +1,6 @@
 import 'dart:async';
 
 import 'package:media_core/media_core.dart';
-
-import 'package:rxdart/rxdart.dart';
-
 import 'package:media_core_danmaku/src/danmaku_config.dart';
 import 'package:media_core_danmaku/src/danmaku_failure.dart';
 import 'package:media_core_danmaku/src/danmaku_filter_policy.dart';
@@ -14,6 +11,7 @@ import 'package:media_core_danmaku/src/danmaku_session_state.dart';
 import 'package:media_core_danmaku/src/danmaku_similarity_filter.dart';
 import 'package:media_core_danmaku/src/danmaku_sink.dart';
 import 'package:media_core_danmaku/src/danmaku_transport.dart';
+import 'package:rxdart/rxdart.dart';
 
 /// Owns exactly one room-bound danmaku session.
 ///
@@ -57,14 +55,16 @@ import 'package:media_core_danmaku/src/danmaku_transport.dart';
 /// the same shape as the framework's generation guard for playback: identity
 /// plus generation, never a bare "is connected" boolean.
 final class DanmakuController {
+  /// Creates a controller for one room, writing accepted messages to [sink]
+  /// and reading credentials through [authProvider] when a handshake needs
+  /// them.
   DanmakuController({
     DanmakuSink sink = const DanmakuNullSink(),
     DanmakuConfig config = DanmakuConfig.defaults,
-    DanmakuFilterPolicy policy = DanmakuFilterPolicy.none,
+    this.policy = DanmakuFilterPolicy.none,
     DanmakuAuth Function(DanmakuRoomRef room)? authProvider,
   }) : _sink = sink,
        _config = config,
-       _policy = policy,
        _authProvider = authProvider,
        _gate = DanmakuMessageGate(
          fallbackDuplicateWindow: config.fallbackDuplicateWindow,
@@ -84,7 +84,12 @@ final class DanmakuController {
   final DanmakuAuth Function(DanmakuRoomRef room)? _authProvider;
 
   DanmakuConfig _config;
-  DanmakuFilterPolicy _policy;
+
+  /// The viewer block policy applied to incoming chat.
+  ///
+  /// Not retained in any cache, so assigning a new one takes effect on the next
+  /// message without touching the session.
+  DanmakuFilterPolicy policy;
 
   final DanmakuMessageGate _gate;
   final DanmakuRepeatedFilter _repeatedFilter;
@@ -278,7 +283,7 @@ final class DanmakuController {
               listener: _SessionListener(this, transport, key, token),
             )
             .timeout(_config.startTimeout);
-      } catch (error, stackTrace) {
+      } on Object catch (error, stackTrace) {
         final timedOut = error is TimeoutException;
         _reportFailure(
           kind: timedOut ? DanmakuFailureKind.startTimeout : DanmakuFailureKind.startRejected,
@@ -295,13 +300,7 @@ final class DanmakuController {
           _connectingRoom = null;
           _sessionKey = null;
           _sink.onRoomChanged(null);
-          _emit(
-            state.copyWith(
-              phase: DanmakuSessionPhase.failed,
-              clearRoom: true,
-              generation: token,
-            ),
-          );
+          _emit(state.copyWith(phase: DanmakuSessionPhase.failed, clearRoom: true, generation: token));
         }
         await _stopTransport(transport);
         if (timedOut) _notice(DanmakuNotice.connectionTimeout);
@@ -362,14 +361,6 @@ final class DanmakuController {
     if (!config.similarityFilterEnabled) _similarityFilter.clear();
   }
 
-  /// Applies a new viewer block policy.
-  ///
-  /// The policy is not retained in any cache, so it takes effect on the next
-  /// message without touching the session.
-  void updatePolicy(DanmakuFilterPolicy policy) {
-    _policy = policy;
-  }
-
   /// Releases the controller: stops the session, then closes its streams.
   Future<void> dispose() async {
     if (_disposed) return;
@@ -395,9 +386,7 @@ final class DanmakuController {
   /// either the accepted one or the one currently connecting. An old socket
   /// fails at least one of them.
   bool _accepts(DanmakuTransport transport, String key, int token) {
-    return token == _sessionToken &&
-        identical(_transport, transport) &&
-        (_sessionKey == key || _connectingKey == key);
+    return token == _sessionToken && identical(_transport, transport) && (_sessionKey == key || _connectingKey == key);
   }
 
   void _handleReady(DanmakuTransport transport, String key, int token) {
@@ -431,7 +420,7 @@ final class DanmakuController {
         // policy rejects what the viewer never wants to see, and only then do
         // the two content filters look at the text.
         if (!_gate.accepts(message)) return;
-        if (!_policy.allows(message)) return;
+        if (!policy.allows(message)) return;
         if (!_repeatedFilter.accepts(
           message,
           enabled: _config.repeatedFilterEnabled,
@@ -487,12 +476,7 @@ final class DanmakuController {
     _sink.onRoomChanged(null);
     _emit(state.copyWith(phase: DanmakuSessionPhase.closed, clearRoom: true, generation: token));
     _reportTransportNotice(message);
-    _reportFailure(
-      kind: DanmakuFailureKind.transportClosed,
-      message: message,
-      roomKey: key,
-      transportId: transport.id,
-    );
+    _reportFailure(kind: DanmakuFailureKind.transportClosed, message: message, roomKey: key, transportId: transport.id);
   }
 
   // ---------------------------------------------------------------------------
@@ -535,7 +519,7 @@ final class DanmakuController {
   Future<void> _stopTransport(DanmakuTransport transport) async {
     try {
       await transport.stop().timeout(_config.stopTimeout);
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       MediaCoreLog.warning(
         LogCategory.danmaku,
         'Transport teardown did not confirm within ${_config.stopTimeout.inSeconds}s',
@@ -561,7 +545,7 @@ final class DanmakuController {
       }
       try {
         transport.heartbeat();
-      } catch (error, stackTrace) {
+      } on Object catch (error, stackTrace) {
         // A failed keep-alive is not a session failure: the platform will
         // either answer the next one or close the socket, and the close is
         // what the session acts on.
@@ -620,7 +604,9 @@ final class DanmakuController {
   void _reportTransportNotice(String message) {
     if (message.trim().isEmpty) return;
     final now = DateTime.now();
-    if (_lastNoticeKey == message && _lastNoticeAt != null && now.difference(_lastNoticeAt!) < const Duration(seconds: 3)) {
+    if (_lastNoticeKey == message &&
+        _lastNoticeAt != null &&
+        now.difference(_lastNoticeAt!) < const Duration(seconds: 3)) {
       return;
     }
     _lastNoticeKey = message;
@@ -669,12 +655,7 @@ final class DanmakuController {
     try {
       await _operations.execute(operation);
     } catch (error, stackTrace) {
-      MediaCoreLog.error(
-        LogCategory.danmaku,
-        'Danmaku session operation failed',
-        error: error,
-        stackTrace: stackTrace,
-      );
+      MediaCoreLog.error(LogCategory.danmaku, 'Danmaku session operation failed', error: error, stackTrace: stackTrace);
       rethrow;
     }
   }

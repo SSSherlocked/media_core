@@ -13,8 +13,24 @@ void main() {
       final filter = DanmakuRepeatedFilter();
       final now = DateTime(2026, 9, 26, 12);
 
-      expect(filter.accepts(chat(user: 'alice'), enabled: true, window: window, now: now), isTrue);
-      expect(filter.accepts(chat(user: 'bob'), enabled: true, window: window, now: now), isFalse);
+      expect(
+        filter.accepts(
+          chat(user: 'alice'),
+          enabled: true,
+          window: window,
+          now: now,
+        ),
+        isTrue,
+      );
+      expect(
+        filter.accepts(
+          chat(user: 'bob'),
+          enabled: true,
+          window: window,
+          now: now,
+        ),
+        isFalse,
+      );
     });
 
     test('accepts the text again once the window has passed', () {
@@ -29,16 +45,40 @@ void main() {
       final filter = DanmakuRepeatedFilter();
       final now = DateTime(2026, 9, 26, 12);
 
-      expect(filter.accepts(chat(text: 'GO  GO'), enabled: true, window: window, now: now), isTrue);
-      expect(filter.accepts(chat(text: 'go go'), enabled: true, window: window, now: now), isFalse);
+      expect(
+        filter.accepts(
+          chat(text: 'GO  GO'),
+          enabled: true,
+          window: window,
+          now: now,
+        ),
+        isTrue,
+      );
+      expect(
+        filter.accepts(
+          chat(text: 'go go'),
+          enabled: true,
+          window: window,
+          now: now,
+        ),
+        isFalse,
+      );
     });
 
     test('treats distinct text as distinct', () {
       final filter = DanmakuRepeatedFilter();
       final now = DateTime(2026, 9, 26, 12);
 
-      expect(filter.accepts(chat(text: '666'), enabled: true, window: window, now: now), isTrue);
-      expect(filter.accepts(chat(text: '777'), enabled: true, window: window, now: now), isTrue);
+      expect(filter.accepts(chat(), enabled: true, window: window, now: now), isTrue);
+      expect(
+        filter.accepts(
+          chat(text: '777'),
+          enabled: true,
+          window: window,
+          now: now,
+        ),
+        isTrue,
+      );
     });
 
     test('never suppresses the viewer’s own echo', () {
@@ -55,7 +95,7 @@ void main() {
     test('leaves non-chat messages alone', () {
       final filter = DanmakuRepeatedFilter();
       final now = DateTime(2026, 9, 26, 12);
-      final gift = DanmakuMessage(type: DanmakuMessageType.gift, userName: 'giver', text: 'roc');
+      const gift = DanmakuMessage(type: DanmakuMessageType.gift, userName: 'giver', text: 'roc');
 
       expect(filter.accepts(gift, enabled: true, window: window, now: now), isTrue);
       expect(filter.accepts(gift, enabled: true, window: window, now: now), isTrue);
@@ -80,7 +120,15 @@ void main() {
       final now = DateTime(2026, 9, 26, 12);
 
       for (var index = 0; index < 10; index++) {
-        expect(filter.accepts(chat(text: 'text $index'), enabled: true, window: window, now: now), isTrue);
+        expect(
+          filter.accepts(
+            chat(text: 'text $index'),
+            enabled: true,
+            window: window,
+            now: now,
+          ),
+          isTrue,
+        );
       }
 
       expect(filter.size, lessThanOrEqualTo(2));

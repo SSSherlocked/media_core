@@ -29,11 +29,7 @@ abstract final class BarrageItemMapper {
   /// a message belongs on screen the moment it arrives. `DanmakuMessage`
   /// carries no media offset — `sentAt` is a wall clock — so the caller that
   /// knows the timeline supplies it rather than this mapper guessing.
-  static BarrageItem toItem(
-    DanmakuMessage message, {
-    Duration? at,
-    int priority = 0,
-  }) {
+  static BarrageItem toItem(DanmakuMessage message, {Duration? at, int priority = 0}) {
     final style = message.style;
     final color = message.color;
 
@@ -69,9 +65,7 @@ abstract final class BarrageItemMapper {
       // wants a vector. It is applied vertically, which is what a text
       // shadow means on every platform this has been looked at.
       shadowOffset: style == null ? null : Offset(0, style.shadowOffset),
-      fixedDuration: style == null
-          ? null
-          : Duration(milliseconds: style.fixedDurationMs),
+      fixedDuration: style == null ? null : Duration(milliseconds: style.fixedDurationMs),
     );
   }
 

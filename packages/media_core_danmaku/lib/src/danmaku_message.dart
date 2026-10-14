@@ -1,3 +1,7 @@
+import 'package:flutter/foundation.dart' show immutable;
+
+import 'package:media_core_danmaku/src/danmaku_message_gate.dart' show DanmakuMessageGate;
+
 /// Message kinds a danmaku transport can deliver.
 ///
 /// [chat], [gift] and [superChat] are platform messages. [system] is composed
@@ -9,10 +13,34 @@
 /// transport would lose the metric. Audience numbers themselves are owned by
 /// the live layer, not by this module; the payload is carried here only so a
 /// caller can forward it without re-parsing the socket.
-enum DanmakuMessageType { chat, gift, superChat, audience, system }
+enum DanmakuMessageType {
+  /// Ordinary viewer chat.
+  chat,
+
+  /// A gift event; not routed by the session.
+  gift,
+
+  /// A paid message card. See [DanmakuSuperChat].
+  superChat,
+
+  /// A viewer metric multiplexed on the chat socket.
+  audience,
+
+  /// Locally composed text — connection notices and filter feedback.
+  system,
+}
 
 /// Where a message is anchored on screen.
-enum DanmakuPlacement { scroll, top, bottom }
+enum DanmakuPlacement {
+  /// Rolls horizontally across the surface.
+  scroll,
+
+  /// Pinned to the top of the surface.
+  top,
+
+  /// Pinned to the bottom of the surface.
+  bottom,
+}
 
 /// RGB color of a platform message.
 ///
@@ -20,15 +48,10 @@ enum DanmakuPlacement { scroll, top, bottom }
 /// integer, some a hex string whose leading zero is dropped. Both shapes are
 /// accepted by [DanmakuColor.fromInt] and [DanmakuColor.parse] so a transport
 /// never has to normalize before handing a packet over.
+@immutable
 final class DanmakuColor {
+  /// A color from its 0..255 red, green and blue channels.
   const DanmakuColor(this.r, this.g, this.b);
-
-  /// Default color for messages that carry none.
-  static const DanmakuColor white = DanmakuColor(255, 255, 255);
-
-  final int r;
-  final int g;
-  final int b;
 
   /// Decodes a packed `0xRRGGBB` integer.
   ///
@@ -58,6 +81,18 @@ final class DanmakuColor {
     return DanmakuColor((parsed >> 16) & 0xFF, (parsed >> 8) & 0xFF, parsed & 0xFF);
   }
 
+  /// Default color for messages that carry none.
+  static const DanmakuColor white = DanmakuColor(255, 255, 255);
+
+  /// Red channel, 0..255.
+  final int r;
+
+  /// Green channel, 0..255.
+  final int g;
+
+  /// Blue channel, 0..255.
+  final int b;
+
   /// Packs the color into `0xRRGGBB`.
   int toInt() => (r << 16) | (g << 8) | b;
 
@@ -82,6 +117,8 @@ final class DanmakuColor {
 /// cards) that must look different from the surrounding chat without the host
 /// maintaining a second renderer.
 final class DanmakuStyle {
+  /// A per-message presentation override; fields the message does not set fall
+  /// through to the room-wide configuration.
   const DanmakuStyle({
     required this.fontSize,
     required this.baseSpeed,
@@ -107,18 +144,44 @@ final class DanmakuStyle {
   /// Logical pixels per second for [DanmakuPlacement.scroll].
   final double baseSpeed;
 
+  /// Font weight as a numeric 100..900 value, mapped to a `FontWeight` by the
+  /// renderer.
   final int fontWeight;
+
+  /// Whether the glyph is drawn with an outline.
   final bool showStroke;
+
+  /// Outline thickness in logical pixels.
   final double strokeWidth;
+
+  /// Where the message is anchored on screen.
   final DanmakuPlacement placement;
+
+  /// Font family, or `null` to use the engine's default.
   final String? fontFamily;
+
+  /// Whether the glyph is slanted.
   final bool italic;
+
+  /// Opacity multiplier, `0.0` (invisible) to `1.0` (opaque).
   final double opacity;
+
+  /// Extra space between glyphs, in logical pixels.
   final double letterSpacing;
+
+  /// Outline color as a packed `0xAARRGGBB` value.
   final int strokeColor;
+
+  /// Whether the glyph is drawn with a drop shadow.
   final bool showShadow;
+
+  /// Shadow color as a packed `0xAARRGGBB` value.
   final int shadowColor;
+
+  /// Shadow blur radius in logical pixels.
   final double shadowBlur;
+
+  /// Shadow displacement applied vertically, in logical pixels.
   final double shadowOffset;
 
   /// On-screen time for fixed ([DanmakuPlacement.top]/[DanmakuPlacement.bottom])
@@ -128,17 +191,31 @@ final class DanmakuStyle {
 
 /// Viewer metric carried alongside chat by single-socket platforms.
 ///
-/// [kind] is explicit because the three numbers are not interchangeable:
+/// `kind` is explicit because the three numbers are not interchangeable:
 /// platform heat, concurrent viewers and cumulative viewers are different
 /// measurements, and relabeling one as another silently corrupts every
 /// ranking and chart built on top of it.
-enum DanmakuAudienceKind { popularity, concurrentViewers, cumulativeViewers }
+enum DanmakuAudienceKind {
+  /// A platform's own popularity/heat score, not a head count.
+  popularity,
+
+  /// Viewers watching at this moment.
+  concurrentViewers,
+
+  /// Viewers accumulated across the session.
+  cumulativeViewers,
+}
 
 /// Typed audience update. See [DanmakuMessageType.audience].
+@immutable
 final class DanmakuAudienceUpdate {
+  /// One metric reading, tagged with the [kind] of measurement it reports.
   const DanmakuAudienceUpdate({required this.kind, required this.value});
 
+  /// Which metric this value reports.
   final DanmakuAudienceKind kind;
+
+  /// The metric's value in its own units.
   final int value;
 
   @override
@@ -158,6 +235,8 @@ final class DanmakuAudienceUpdate {
 /// transport must fully decode its platform protocol before constructing it,
 /// and must not leave platform-specific fields for the renderer to interpret.
 final class DanmakuMessage {
+  /// A normalized message; the transport fully decodes its platform protocol
+  /// before constructing one, leaving nothing for the renderer to interpret.
   const DanmakuMessage({
     required this.type,
     required this.userName,
@@ -175,6 +254,7 @@ final class DanmakuMessage {
     this.superChat,
   });
 
+  /// What kind of message this is; routes it through the pipeline.
   final DanmakuMessageType type;
 
   /// Display name exactly as the platform sent it.
@@ -186,14 +266,19 @@ final class DanmakuMessage {
   /// Display text exactly as the platform sent it, before any filtering.
   final String text;
 
+  /// Text color decoded from the platform's encoding.
   final DanmakuColor color;
 
   /// Stable viewer identity from the platform, empty when it exposes none.
   final String userId;
 
-  /// Platform-specific level labels, carried for rendering only.
+  /// Platform-specific level label, carried for rendering only.
   final String userLevel;
+
+  /// Fan-club level label, carried for rendering only.
   final String fansLevel;
+
+  /// Fan-club name label, carried for rendering only.
   final String fansName;
 
   /// True for messages this client composed (echoes of the viewer's own send,
@@ -214,6 +299,7 @@ final class DanmakuMessage {
   /// is what [DanmakuMessageGate] falls back to for platforms without ids.
   final DateTime? sentAt;
 
+  /// Per-message presentation override, or `null` to follow the room config.
   final DanmakuStyle? style;
 
   /// Payload for [DanmakuMessageType.audience], `null` for every other type.
@@ -236,7 +322,10 @@ final class DanmakuMessage {
 /// Held apart from [DanmakuMessage] because a paid message is a card with a
 /// lifetime, not a line of chat: it has its own identity, price and expiry,
 /// and platforms re-send it on every poll until it expires.
+@immutable
 final class DanmakuSuperChat {
+  /// A paid message card; its [messageId], or the user/text/price triple when
+  /// the platform exposes no id, is its identity across re-polls.
   const DanmakuSuperChat({
     required this.userName,
     required this.text,
@@ -257,13 +346,28 @@ final class DanmakuSuperChat {
   /// user/text/price look like a replay.
   final String messageId;
 
+  /// Display name of the sender.
   final String userName;
+
+  /// Avatar url, empty when the platform exposes none.
   final String face;
+
+  /// The paid message's text.
   final String text;
+
+  /// Price paid, in the platform's smallest currency unit.
   final int price;
+
+  /// When the card began showing; some platforms rebuild it per poll.
   final DateTime startTime;
+
+  /// When the card expires.
   final DateTime endTime;
+
+  /// Card background as a hex string.
   final String backgroundColor;
+
+  /// Card gradient's lower stop as a hex string.
   final String backgroundBottomColor;
 
   /// Identity used to coalesce repeated snapshots of the same paid message.

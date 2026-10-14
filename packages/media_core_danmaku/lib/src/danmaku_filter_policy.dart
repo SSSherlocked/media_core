@@ -13,16 +13,18 @@ import 'package:media_core_danmaku/src/danmaku_message.dart';
 /// updating the lists constructs a new policy rather than mutating this one,
 /// which keeps an in-flight message comparing against one consistent rule set.
 final class DanmakuFilterPolicy {
+  /// Normalizes [blockedUsers] and [blockedKeywords] once — trim, lowercase,
+  /// drop empties — so matching is a plain lookup and substring scan.
   DanmakuFilterPolicy({Iterable<String> blockedUsers = const [], Iterable<String> blockedKeywords = const []})
     : blockedUsers = _normalizeUsers(blockedUsers),
       blockedKeywords = _normalizeKeywords(blockedKeywords);
 
-  /// Empty policy: nothing is suppressed.
-  static const DanmakuFilterPolicy none = DanmakuFilterPolicy.constant();
-
   /// Const constructor for [none]; the normalizing constructor handles the
   /// public shape.
   const DanmakuFilterPolicy.constant({this.blockedUsers = const <String>{}, this.blockedKeywords = const <String>[]});
+
+  /// Empty policy: nothing is suppressed.
+  static const DanmakuFilterPolicy none = DanmakuFilterPolicy.constant();
 
   /// Lowercased display names that are always suppressed.
   ///
@@ -69,20 +71,31 @@ final class DanmakuFilterPolicy {
   static Set<String> _normalizeUsers(Iterable<String> users) =>
       users.map((user) => user.trim().toLowerCase()).where((user) => user.isNotEmpty).toSet();
 
-  static List<String> _normalizeKeywords(Iterable<String> keywords) =>
-      keywords.map((keyword) => keyword.trim().toLowerCase()).where((keyword) => keyword.isNotEmpty).toList(growable: false);
+  static List<String> _normalizeKeywords(Iterable<String> keywords) => keywords
+      .map((keyword) => keyword.trim().toLowerCase())
+      .where((keyword) => keyword.isNotEmpty)
+      .toList(growable: false);
 }
 
 /// Why a message was suppressed by [DanmakuFilterPolicy].
-enum DanmakuFilterReason { blockedUser, blockedKeyword }
+enum DanmakuFilterReason {
+  /// The sender's display name is on the viewer's block list.
+  blockedUser,
+
+  /// The message text contains one of the viewer's blocked keywords.
+  blockedKeyword,
+}
 
 /// Verdict of [DanmakuFilterPolicy.evaluate].
 final class DanmakuFilterDecision {
+  /// The message passed the policy and should be shown.
   const DanmakuFilterDecision.allowed() : allowed = true, reason = null, keyword = null;
 
-  const DanmakuFilterDecision.rejected(DanmakuFilterReason this.reason, {this.keyword})
-    : allowed = false;
+  /// The message was suppressed for [reason], naming the matched [keyword] when
+  /// the reason is [DanmakuFilterReason.blockedKeyword].
+  const DanmakuFilterDecision.rejected(DanmakuFilterReason this.reason, {this.keyword}) : allowed = false;
 
+  /// Whether the message passed the policy.
   final bool allowed;
 
   /// `null` when [allowed] is true.
@@ -92,5 +105,7 @@ final class DanmakuFilterDecision {
   final String? keyword;
 
   @override
-  String toString() => allowed ? 'DanmakuFilterDecision.allowed' : 'DanmakuFilterDecision.rejected(${reason!.name}${keyword == null ? '' : ': $keyword'})';
+  String toString() => allowed
+      ? 'DanmakuFilterDecision.allowed'
+      : 'DanmakuFilterDecision.rejected(${reason!.name}${keyword == null ? '' : ': $keyword'})';
 }

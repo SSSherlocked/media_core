@@ -1,3 +1,5 @@
+import 'package:media_core_danmaku/media_core_danmaku.dart' show DanmakuRepeatedFilter, DanmakuSimilarityFilter;
+
 /// Tunables for one danmaku session.
 ///
 /// Every value here has a documented default that a caller can accept without
@@ -10,6 +12,7 @@
 /// already connected keeps the config it started with until the caller
 /// explicitly applies a new one.
 final class DanmakuConfig {
+  /// Builds a config from the tuned defaults, overriding only the fields given.
   const DanmakuConfig({
     this.startTimeout = const Duration(seconds: 20),
     this.stopTimeout = const Duration(seconds: 5),
@@ -93,6 +96,9 @@ final class DanmakuConfig {
   /// the configured history, the budget bounds the work.
   final int similarityMaxComparisons;
 
+  /// A copy with the given fields replaced; omitted fields keep their current
+  /// value, so a settings change yields a new instance rather than mutating a
+  /// shared one.
   DanmakuConfig copyWith({
     Duration? startTimeout,
     Duration? stopTimeout,

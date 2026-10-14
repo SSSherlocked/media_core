@@ -86,6 +86,7 @@ abstract interface class DanmakuSink {
 /// Useful as a default before a host registers its own, and in tests that only
 /// care about session state.
 final class DanmakuNullSink implements DanmakuSink {
+  /// A sink that discards every message, notice and metric.
   const DanmakuNullSink();
 
   @override

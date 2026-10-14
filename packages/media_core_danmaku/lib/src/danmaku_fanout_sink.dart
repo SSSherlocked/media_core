@@ -21,6 +21,9 @@ import 'package:media_core_danmaku/src/danmaku_sink.dart';
 /// so the primary sink keeps owning audience metrics, paid messages, notices
 /// and room identity.
 final class DanmakuFanOutSink implements DanmakuSink {
+  /// Fans accepted messages to [primary] and, when present, the small-surface
+  /// [overlay]; [surfaceWidth] is read per message so the overlay scales to its
+  /// own window.
   DanmakuFanOutSink({required this.primary, this.overlay, this.surfaceWidth});
 
   /// Sink that owns everything the overlay does not care about.
