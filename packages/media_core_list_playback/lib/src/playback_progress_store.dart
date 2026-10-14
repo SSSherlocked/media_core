@@ -31,6 +31,7 @@ abstract interface class PlaybackProgressStore {
 /// [PlaybackListConfig.maxRememberedItems], and reads count as use: a viewer
 /// who returns to an old item keeps it alive while one-off items age out.
 final class InMemoryPlaybackProgressStore implements PlaybackProgressStore {
+  /// Creates a store bounded by [config]'s `maxRememberedItems`.
   InMemoryPlaybackProgressStore({this.config = PlaybackListConfig.defaults});
 
   /// Configuration supplying the bound.

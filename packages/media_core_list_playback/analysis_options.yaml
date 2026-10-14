@@ -1,0 +1,4 @@
+# The workspace's canonical configuration lives at the repository root; this file
+# only points at it. A package may add rules here, and may not weaken the shared
+# set — an exception needs a record in docs/decisions/.
+include: ../../analysis_options.yaml

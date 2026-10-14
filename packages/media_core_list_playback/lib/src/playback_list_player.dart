@@ -23,6 +23,7 @@ abstract interface class PlaybackListPlayer {
 
 /// [PlaybackListPlayer] backed by a kernel [PlayerHandle].
 final class KernelPlaybackListPlayer implements PlaybackListPlayer {
+  /// Creates a list player that drives [handle].
   KernelPlaybackListPlayer(this.handle);
 
   /// Handle the list plays through.

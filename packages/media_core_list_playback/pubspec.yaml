@@ -10,15 +10,15 @@ environment:
   flutter: ">=3.35.0"
 
 dependencies:
+  # PlaybackListState value equality.
+  equatable: ^3.0.0
+
   flutter:
     sdk: flutter
   media_core:
     ^0.1.0
 
-  # PlaybackListState value equality.
-  equatable: ^3.0.0
-
 dev_dependencies:
+  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0

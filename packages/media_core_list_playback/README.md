@@ -7,6 +7,7 @@
 [media_core](../media_core) 内核负责"打开一个源、管理播放器生命周期"，不负责"一堆条目按顺序播、切换时记住进度"。本包把后者做成独立组件：
 
 - `PlaybackListController` —— 核心：拥有 item list、当前 index、打开 / 切换 / 保存进度。
+- **连点 / 快滑只落地最后一条**：`open` / `jumpTo` 在已有打开在飞时**改写目标**而不是排队，并在碰引擎之前、在回填「已打开」状态之前各确认一次自己是否仍然是当前条目。被掠过的行不会各付一次 decode，过期那次也不会把更新的行标成加载完成。
 - `PlaybackListPlayer` —— 窄接口（open / seek / position / duration），`KernelPlaybackListPlayer` 桥接 `PlayerHandle`。
 - `PlaybackProgressStore` —— 进度持久化接口；`InMemoryPlaybackProgressStore` 是 LRU bounded map，宿主可实现自己的 SharedPreferences / SQLite 版本。
 - `PlaybackListConfig` —— resume 开关、完成阈值（默认 20 s）、最大记忆条目数（默认 200）。

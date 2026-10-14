@@ -1,20 +1,43 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:media_core/media_core.dart' show PlaybackPoolOrchestrator, PlayerTransportState, PlayerSource, PoolPlayerHandle, PoolPlayerHost, SourceFormat, SourceId, SourceProtocol;
+import 'package:media_core/media_core.dart'
+    show
+        PlaybackPoolOrchestrator,
+        PlayerSource,
+        PlayerTransportState,
+        PoolPlayerHandle,
+        PoolPlayerHost,
+        SourceFormat,
+        SourceId,
+        SourceProtocol;
 import 'package:media_core_list_playback/media_core_list_playback.dart';
 
 final class _FakePlayer implements PlaybackListPlayer {
   final List<String> opened = <String>[];
   final List<Duration> seeks = <Duration>[];
+  @override
   Duration position = Duration.zero;
+  @override
   Duration duration = const Duration(minutes: 10);
   Object? openError;
 
+  /// Set to hold every open until the test releases it: an engine that is
+  /// still loading is the situation a burst of jumps has to survive.
+  Completer<void>? openGate;
+
   @override
   Future<void> open(PlayerSource source) async {
+    final gate = openGate;
+    if (gate != null && !gate.isCompleted) {
+      await gate.future;
+    }
     opened.add(source.id.value);
     final error = openError;
+    // The test seam holds an arbitrary injected failure (a StateError in
+    // practice) in an Object? field, so the static type cannot prove it is
+    // throwable.
+    // ignore: only_throw_errors
     if (error != null) throw error;
     position = Duration.zero;
   }
@@ -33,8 +56,10 @@ PlayerSource _source(String id) => PlayerSource(
   format: SourceFormat.mpegTs,
 );
 
-List<PlaybackListItem> _items(int count) =>
-    List<PlaybackListItem>.generate(count, (index) => PlaybackListItem(id: 'item$index', source: _source('item$index')));
+List<PlaybackListItem> _items(int count) => List<PlaybackListItem>.generate(
+  count,
+  (index) => PlaybackListItem(id: 'item$index', source: _source('item$index')),
+);
 
 void main() {
   _poolTests();
@@ -48,12 +73,7 @@ void main() {
     PlaybackProgressStore? store,
     PlaybackListConfig config = PlaybackListConfig.defaults,
   }) {
-    return PlaybackListController(
-      player: player,
-      items: _items(count),
-      store: store,
-      config: config,
-    );
+    return PlaybackListController(player: player, items: _items(count), store: store, config: config);
   }
 
   group('PlaybackListController navigation', () {
@@ -133,6 +153,59 @@ void main() {
       expect(controller.state.opening, isFalse);
       expect(controller.state.index, 1);
     });
+
+    test('a burst of jumps does not open every row it crossed', () async {
+      final controller = buildController(count: 8);
+      addTearDown(controller.dispose);
+      await controller.open();
+      player.opened.clear();
+
+      // The viewer taps next three times while the first row is still loading.
+      player.openGate = Completer<void>();
+      final requests = <Future<void>>[controller.jumpTo(1), controller.jumpTo(2), controller.jumpTo(3)];
+      await Future<void>.delayed(Duration.zero);
+      player.openGate!.complete();
+      player.openGate = null;
+      await Future.wait(requests);
+
+      expect(controller.state.index, 3);
+      expect(
+        player.opened,
+        isNot(contains('item2')),
+        reason: 'row 2 was crossed while row 1 was still loading: it must never be opened',
+      );
+      expect(player.opened.last, 'item3');
+    });
+
+    test('a superseded open cannot report the newer row as settled', () async {
+      final controller = buildController(count: 8);
+      addTearDown(controller.dispose);
+      await controller.open();
+
+      final states = <PlaybackListState>[];
+      final subscription = controller.onStateChanged.listen(states.add);
+      addTearDown(subscription.cancel);
+
+      player.openGate = Completer<void>();
+      // Not awaited: awaiting row 1 here waits for the gate this test only opens
+      // below, which is the request being superseded, not the thing under test.
+      final first = controller.jumpTo(1);
+      await Future<void>.delayed(Duration.zero);
+      final later = controller.jumpTo(4);
+      await Future<void>.delayed(Duration.zero);
+      player.openGate!.complete();
+      player.openGate = null;
+      await Future.wait(<Future<void>>[first, later]);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(
+        states.where((state) => state.item?.id == 'item1' && !state.opening),
+        isEmpty,
+        reason: 'row 1 finished loading after the viewer had moved on; its "settled" state belongs to nobody',
+      );
+      expect(states.last.item?.id, 'item4');
+      expect(states.last.opening, isFalse);
+    });
   });
 
   group('PlaybackListController progress', () {
@@ -204,7 +277,10 @@ void main() {
     test('resume can be turned off entirely', () async {
       final store = InMemoryPlaybackProgressStore();
       await store.save('item1', const Duration(minutes: 2));
-      final controller = buildController(store: store, config: PlaybackListConfig.defaults.copyWith(resumeEnabled: false));
+      final controller = buildController(
+        store: store,
+        config: PlaybackListConfig.defaults.copyWith(resumeEnabled: false),
+      );
       addTearDown(controller.dispose);
 
       await controller.open(index: 1);
@@ -251,9 +327,7 @@ void main() {
 
   group('InMemoryPlaybackProgressStore', () {
     test('evicts the least recently touched item beyond the bound', () async {
-      final store = InMemoryPlaybackProgressStore(
-        config: PlaybackListConfig.defaults.copyWith(maxRememberedItems: 2),
-      );
+      final store = InMemoryPlaybackProgressStore(config: PlaybackListConfig.defaults.copyWith(maxRememberedItems: 2));
 
       await store.save('a', const Duration(seconds: 1));
       await store.save('b', const Duration(seconds: 2));
@@ -279,10 +353,7 @@ void main() {
       addTearDown(controller.dispose);
       await controller.open(index: 1);
 
-      controller.updateItems(<PlaybackListItem>[
-        PlaybackListItem(id: 'extra', source: _source('extra')),
-        ..._items(3),
-      ]);
+      controller.updateItems(<PlaybackListItem>[PlaybackListItem(id: 'extra', source: _source('extra')), ..._items(3)]);
 
       expect(controller.state.item?.id, 'item1');
       expect(controller.state.index, 2);
@@ -343,7 +414,7 @@ final class _PoolHandle implements PoolPlayerHandle {
   Future<void> setVolume(double value) async {}
 
   @override
-  Future<void> setMute(bool muted) async {}
+  Future<void> setMute({required bool muted}) async {}
 
   @override
   Stream<PlayerTransportState> get playbackStream => const Stream<PlayerTransportState>.empty();
@@ -407,12 +478,11 @@ void _poolTests() {
     });
 
     PlaybackListController build() {
-      controller = PlaybackListController(
+      return controller = PlaybackListController(
         items: _items(4),
         pool: pool,
         poolPlayerFactory: _PooledListPlayer.new,
       );
-      return controller;
     }
 
     test('the pool opens the active item and warms its neighbours', () async {
@@ -476,10 +546,7 @@ void _poolTests() {
     });
 
     test('needs a factory to drive pooled handles', () {
-      expect(
-        () => PlaybackListController(items: _items(1), pool: pool),
-        throwsA(isA<AssertionError>()),
-      );
+      expect(() => PlaybackListController(items: _items(1), pool: pool), throwsA(isA<AssertionError>()));
     });
   });
 }

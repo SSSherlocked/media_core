@@ -1,7 +1,12 @@
-import 'package:media_core/media_core.dart' show PlayerPoolConfig;
+import 'package:media_core/media_core.dart' show PlaybackPoolOrchestrator, PlayerPoolConfig;
 
 /// Tunables for list playback.
 final class PlaybackListConfig {
+  /// Creates a list-playback tunable set.
+  ///
+  /// [resumeEnabled] controls whether an item picks up where it was left,
+  /// [completionThreshold] is how close to the end still counts as finished, and
+  /// [maxRememberedItems] bounds how many positions the store keeps.
   const PlaybackListConfig({
     this.resumeEnabled = true,
     this.completionThreshold = const Duration(seconds: 20),
@@ -22,10 +27,6 @@ final class PlaybackListConfig {
   /// Hosts pass this to their [PlaybackPoolOrchestrator]; nothing here creates
   /// one, because only the host knows where players come from.
   static const PlayerPoolConfig recommendedPoolConfig = PlayerPoolConfig(
-    reuseIdlePlayers: true,
-    preloadCount: 1,
-    playVisibilityThreshold: 0.6,
-    pauseVisibilityThreshold: 0.4,
     idleTimeout: Duration(seconds: 30),
     keepWarm: true,
     warmSize: 3,
@@ -53,11 +54,11 @@ final class PlaybackListConfig {
   /// evicts the least recently touched entries.
   final int maxRememberedItems;
 
-  PlaybackListConfig copyWith({
-    bool? resumeEnabled,
-    Duration? completionThreshold,
-    int? maxRememberedItems,
-  }) {
+  /// Returns a copy with the given fields replaced.
+  ///
+  /// Null arguments keep the current value, so a caller only names what it
+  /// wants to change.
+  PlaybackListConfig copyWith({bool? resumeEnabled, Duration? completionThreshold, int? maxRememberedItems}) {
     return PlaybackListConfig(
       resumeEnabled: resumeEnabled ?? this.resumeEnabled,
       completionThreshold: completionThreshold ?? this.completionThreshold,

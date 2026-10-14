@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show immutable;
 import 'package:media_core/media_core.dart' show PlayerSource;
 
 /// One entry of a playback list.
@@ -7,7 +8,10 @@ import 'package:media_core/media_core.dart' show PlayerSource;
 /// ids (a re-watch entry, a different room number for the same feed), and the
 /// two must not share a resume position. Conversely a source whose URL is
 /// rotated by the site keeps one id, so its progress survives the rotation.
+@immutable
 final class PlaybackListItem {
+  /// Creates a list entry identified by [id], playing [source], optionally
+  /// labelled [title].
   const PlaybackListItem({required this.id, required this.source, this.title});
 
   /// Stable identity used for progress memory.

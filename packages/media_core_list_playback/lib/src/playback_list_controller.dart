@@ -6,10 +6,10 @@ import 'package:media_core/media_core.dart'
         LogCategory,
         LogModule,
         MediaCoreLog,
+        MediaCoreMemory,
         MemoryAccount,
         MemoryEstimates,
         MemoryModule,
-        MediaCoreMemory,
         PlaybackPoolOrchestrator,
         PoolPlayerHandle,
         memoryContributorKey;
@@ -35,6 +35,9 @@ final MemoryAccount _memory = MediaCoreMemory.of(MemoryModule.playback);
 
 /// Immutable snapshot of a playback list.
 final class PlaybackListState extends Equatable {
+  /// Creates a snapshot describing the open [index] of [count], the current
+  /// [item], any [resumedFrom] position, whether a source is [opening], and the
+  /// last [error].
   const PlaybackListState({
     this.index = 0,
     this.count = 0,
@@ -65,6 +68,7 @@ final class PlaybackListState extends Equatable {
   /// Last failure, if any.
   final Object? error;
 
+  /// Whether the list holds no items.
   bool get isEmpty => count == 0;
 
   /// Whether swiping up would move to another item.
@@ -73,6 +77,10 @@ final class PlaybackListState extends Equatable {
   /// Whether swiping down would move to another item.
   bool get hasPrevious => index > 0;
 
+  /// Returns a copy with the given fields replaced.
+  ///
+  /// Null arguments keep the current value; [clearResumedFrom] and [clearError]
+  /// force those fields back to `null` so a copy can drop them.
   PlaybackListState copyWith({
     int? index,
     int? count,
@@ -128,12 +136,11 @@ final class PlaybackListState extends Equatable {
 /// almost certainly finished it, and restoring the last five seconds reads as a
 /// broken player rather than a feature.
 final class PlaybackListController {
-
-  /// This instance's key in the shared account: a module can have several
-  /// live instances, and a report sums their contributions rather than
-  /// keeping whichever reported last.
-  late final String _memoryKey = memoryContributorKey(this);
-
+  /// Creates a controller over [items].
+  ///
+  /// It plays through either a dedicated [player] or a [pool] plus
+  /// [poolPlayerFactory] (the assert enforces one of the two). Progress is kept
+  /// in [store], defaulting to an in-memory store bounded by [config].
   PlaybackListController({
     PlaybackListPlayer? player,
     List<PlaybackListItem> items = const <PlaybackListItem>[],
@@ -150,6 +157,11 @@ final class PlaybackListController {
        _store = store ?? InMemoryPlaybackProgressStore(config: config) {
     _poolItemsSync = _syncPoolItems();
   }
+
+  /// This instance's key in the shared account: a module can have several
+  /// live instances, and a report sums their contributions rather than
+  /// keeping whichever reported last.
+  late final String _memoryKey = memoryContributorKey(this);
 
   /// Pool that warms neighbouring items, or `null` when the list drives a
   /// single player itself.
@@ -194,6 +206,17 @@ final class PlaybackListController {
   int? _lastOpenedIndex;
   PlaybackListState _state = const PlaybackListState();
   bool _disposed = false;
+
+  /// The item the running open chain must land on, or null when nothing newer
+  /// is waiting.
+  int? _openTarget;
+
+  /// Set while an open chain is running.
+  ///
+  /// A viewer who taps next three times, or drags across a dozen rows, must not
+  /// pay a dozen opens: a request that arrives mid-flight retargets the chain
+  /// instead of queueing behind it.
+  Completer<void>? _openChain;
 
   final StreamController<PlaybackListState> _stateController = StreamController<PlaybackListState>.broadcast();
 
@@ -260,6 +283,42 @@ final class PlaybackListController {
     }
 
     _index = index;
+
+    // A chain is already running: retarget it and wait on the same settling
+    // rather than starting a second open of its own.
+    final running = _openChain;
+    if (running != null) {
+      _openTarget = index;
+      return await running.future;
+    }
+
+    _openTarget = index;
+    final settled = Completer<void>();
+    _openChain = settled;
+    try {
+      while (!_disposed) {
+        final target = _openTarget;
+        if (target == null) {
+          break;
+        }
+        _openTarget = null;
+        await _openAt(target);
+      }
+    } finally {
+      _openChain = null;
+      if (!settled.isCompleted) {
+        settled.complete();
+      }
+    }
+  }
+
+  /// Brings [index] onto the player: the single place that opens, resumes and
+  /// reports. [open] decides which index is worth opening at all.
+  Future<void> _openAt(int index) async {
+    if (_disposed) {
+      return;
+    }
+
     final item = _items[index];
     _log.debug(
       'opening a list item',
@@ -278,6 +337,11 @@ final class PlaybackListController {
 
     final previousIndex = _lastOpenedIndex;
     try {
+      // The viewer may have moved on while this call was queued behind the
+      // pool hand-off: opening a row nobody is looking at costs a decode.
+      if (_disposed || _index != index) {
+        return;
+      }
       await _openItem(item, index);
       if (previousIndex != null && previousIndex != index) {
         // The outgoing item is no longer visible; the pool keeps it warm or
@@ -287,13 +351,21 @@ final class PlaybackListController {
       _lastOpenedIndex = index;
 
       final resumedFrom = await _resume(item);
+      if (_disposed || _index != index) {
+        // A newer request owns the state now; clearing `opening` here would
+        // flash the row the viewer just moved onto as if it had finished.
+        return;
+      }
       _emit(_state.copyWith(opening: false, resumedFrom: resumedFrom));
-    } catch (error) {
+    } on Object catch (error) {
       _log.error(
         'could not open the list item',
         error: error,
         fields: <String, Object?>{'index': index, 'itemId': item.id},
       );
+      if (_disposed || _index != index) {
+        return;
+      }
       _emit(_state.copyWith(opening: false, error: error));
     }
   }
@@ -354,6 +426,14 @@ final class PlaybackListController {
     }
     await savePosition().catchError((Object _) {});
     _disposed = true;
+
+    // Nobody will settle the chain now: release the callers awaiting it.
+    _openTarget = null;
+    final chain = _openChain;
+    if (chain != null && !chain.isCompleted) {
+      chain.complete();
+    }
+
     _memory.withdraw(_memoryKey);
     await _stateController.close();
   }
@@ -457,7 +537,8 @@ final class PlaybackListController {
 
   /// Reports the retained items and remembered positions.
   void _reportMemory() {
-    _memory.report(_memoryKey, 
+    _memory.report(
+      _memoryKey,
       items: _items.length,
       bytes: _items.length * MemoryEstimates.playbackItem,
       note: '${_items.length} item(s), position $_index',
