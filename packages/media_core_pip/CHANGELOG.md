@@ -1,3 +1,7 @@
+## Unreleased
+
+- **Conformed to media_core's new API and documented**: `PlayerKernel.presentationDriver = driver` replaces the attach method, the PiP controller's own `updateAvailability(available:)`/`updateEnabled(enabled:)` take named booleans, and every public member gained a doc comment saying what the handoff to the platform's picture-in-picture does.
+
 ## 0.1.0
 
 Initial release.

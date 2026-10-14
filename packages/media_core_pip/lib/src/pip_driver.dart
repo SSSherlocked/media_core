@@ -1,11 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/painting.dart' show Offset, Rect, Size;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/painting.dart' show Offset, Rect, Size;
 import 'package:media_core/media_core.dart';
-
 import 'package:media_core_pip/src/desktop_pip_window.dart';
-import 'package:media_core_pip/src/floating_system_pip.dart';
+import 'package:media_core_pip/src/native_pip_system_pip.dart';
 import 'package:media_core_pip/src/pip_config.dart';
 import 'package:media_core_pip/src/pip_window.dart';
 import 'package:media_core_pip/src/system_pip.dart';
@@ -75,8 +74,11 @@ enum PipPlatform {
 ///   `normal` cannot undo it; the state follows the system's own status stream;
 /// - Android accepts only aspect ratios inside 1/2.39..2.39, so an extreme
 ///   video falls back to the platform default rather than failing the request;
-/// - the plugin is Android-only, so iOS reports unavailable instead of
-///   pretending.
+/// - the shipped backend (`native_picture_in_picture`) renders the picture in
+///   its **own** native player (ExoPlayer / AVKit, Android 26+ / iOS 14+), so
+///   entering on mobile is a handoff: [pipMediaResolver] must name a URL the
+///   platform can open, and [onHandoffReturn] gives the host its playback
+///   back when the window closes.
 ///
 /// A request the platform cannot serve throws [UnsupportedError] rather than
 /// silently doing nothing: the presentation state machine records a failed
@@ -89,6 +91,8 @@ final class PipDriver implements KernelPresentationDriver {
     PipWindow? desktopWindow,
     SystemPip? systemPip,
     PresentationLifecycleHooks? lifecycleHooks,
+    this.pipMediaResolver,
+    this.onHandoffReturn,
   }) : platform = platform ?? PipPlatform.resolve(),
        _desktopWindow = desktopWindow,
        _systemPip = systemPip,
@@ -98,14 +102,12 @@ final class PipDriver implements KernelPresentationDriver {
   /// the first app-driven request named a player.
   static final _systemPlayerId = PlayerId('pip-system');
 
-  /// Tunables. Replaceable for hosts that build their settings after the
-  /// driver; see [updateConfig].
+  /// Tunables, assigned directly.
+  ///
+  /// Exists for hosts that build their settings after the driver was created:
+  /// a transition reads the whole object, so replace it with a complete
+  /// [PipConfig] (see [PipConfig.copyWith]) rather than editing pieces of it.
   PipConfig config;
-
-  /// Replaces the tunables.
-  void updateConfig(PipConfig value) {
-    config = value;
-  }
 
   /// Platform family this driver serves.
   final PipPlatform platform;
@@ -116,6 +118,22 @@ final class PipDriver implements KernelPresentationDriver {
   /// Lifecycle hooks fired around enter/exit transitions. Replaceable for
   /// hosts that build their hooks after the driver; see [updateLifecycleHooks].
   PresentationLifecycleHooks lifecycleHooks;
+
+  /// Supplies the media a handoff PiP player should take over.
+  ///
+  /// The shipped mobile backend (`native_picture_in_picture`) plays the picture
+  /// in its own native player, so entering PiP is a handoff: this resolver is
+  /// asked, at the moment of entry, for the URL the *native* player can open
+  /// by itself and the position to resume from. Returning null - a signed
+  /// header source, a loopback proxy, anything the platform player cannot
+  /// reach - makes the entry throw [UnsupportedError] rather than show an
+  /// empty system window. Desktop paths never call it.
+  final Future<SystemPipMedia?> Function(PlayerId playerId)? pipMediaResolver;
+
+  /// Called when a handoff PiP window is gone and the system player is torn
+  /// down: the host resumes its own engine here (pause it via
+  /// [PresentationLifecycleHooks.beforeEnter] at the other edge).
+  final Future<void> Function(PlayerId playerId)? onHandoffReturn;
 
   PlayerId? _lastPlayerId;
 
@@ -129,7 +147,6 @@ final class PipDriver implements KernelPresentationDriver {
   bool _isPip = false;
   int _videoWidth = 0;
   int _videoHeight = 0;
-  Rect? _videoRect;
 
   /// Whether this driver has been initialized.
   bool get initialized => _initialized;
@@ -145,6 +162,13 @@ final class PipDriver implements KernelPresentationDriver {
 
   /// Video height fed through [onVideoSize], for the small window's shape.
   int get videoHeight => _videoHeight;
+
+  /// The video widget's rectangle on screen, assigned by the host as it lays
+  /// out; used as the mobile source hint.
+  ///
+  /// Null or stale costs animation polish, never correctness — the platform
+  /// decides the window's size itself (see [SystemPipSourceRect.fromRect]).
+  Rect? videoRect;
 
   /// Whether picture-in-picture can be entered at all on this host.
   ///
@@ -181,13 +205,10 @@ final class PipDriver implements KernelPresentationDriver {
       return;
     }
 
-    final pip = _systemPip ??= FloatingSystemPip();
+    final pip = _systemPip ??= NativePipSystemPip();
     try {
-      _statusSubscription = pip.statusStream.listen(
-        _handleSystemStatus,
-        onError: (_) {},
-      );
-    } catch (_) {
+      _statusSubscription = pip.statusStream.listen(_handleSystemStatus, onError: (_) {});
+    } on Object catch (_) {
       // A platform without the plugin throws when the stream is created rather
       // than reporting unavailability; the driver stays usable either way.
     }
@@ -213,11 +234,6 @@ final class PipDriver implements KernelPresentationDriver {
     }
   }
 
-  /// Feeds the video widget's rectangle, used as the mobile source hint.
-  void onVideoRect(Rect? rect) {
-    _videoRect = rect;
-  }
-
   @override
   Future<void> apply(PlayerId playerId, PresentationRequest request) async {
     if (_disposed) {
@@ -235,10 +251,7 @@ final class PipDriver implements KernelPresentationDriver {
       case PresentationMode.floating:
         _log.warning(
           'pip driver asked for a mode it does not serve',
-          fields: <String, Object?>{
-            'mode': request.mode.name,
-            'playerId': playerId.value,
-          },
+          fields: <String, Object?>{'mode': request.mode.name, 'playerId': playerId.value},
         );
         throw UnsupportedError(
           'PipDriver serves picture-in-picture only; mode "${request.mode.name}" '
@@ -310,15 +323,10 @@ final class PipDriver implements KernelPresentationDriver {
       case PipPlatform.desktop:
         await _enterDesktopPip();
       case PipPlatform.mobile:
-        await _enterMobilePip();
+        await _enterMobilePip(playerId);
       case PipPlatform.unsupported:
-        _log.error(
-          'pip is not supported on this platform',
-          fields: <String, Object?>{'platform': platform.name},
-        );
-        throw UnsupportedError(
-          'Picture-in-picture is not supported on this platform.',
-        );
+        _log.error('pip is not supported on this platform', fields: <String, Object?>{'platform': platform.name});
+        throw UnsupportedError('Picture-in-picture is not supported on this platform.');
     }
   }
 
@@ -384,14 +392,8 @@ final class PipDriver implements KernelPresentationDriver {
       // Bottom-right corner of the previous bounds, clawed back from the
       // screen edge so the window does not sit flush against it.
       position: Offset(
-        (anchor.right - size.width - config.cornerSpacing).clamp(
-          0,
-          double.infinity,
-        ),
-        (anchor.bottom - size.height - config.cornerSpacing).clamp(
-          0,
-          double.infinity,
-        ),
+        (anchor.right - size.width - config.cornerSpacing).clamp(0, double.infinity),
+        (anchor.bottom - size.height - config.cornerSpacing).clamp(0, double.infinity),
       ),
       aspectRatio: config.lockAspectRatio ? _aspectRatio() : null,
       alwaysOnTop: true,
@@ -403,10 +405,7 @@ final class PipDriver implements KernelPresentationDriver {
     );
 
     if (_setPip(true)) {
-      await _fire(
-        PresentationLifecyclePhase.afterEnter,
-        _lastPlayerId ?? _systemPlayerId,
-      );
+      await _fire(PresentationLifecyclePhase.afterEnter, _lastPlayerId ?? _systemPlayerId);
     }
 
     // The viewer's floor for the compact window. Applied last, and non-fatal:
@@ -418,7 +417,7 @@ final class PipDriver implements KernelPresentationDriver {
     // normal minimum, so this never leaks into the restored window.
     try {
       await window.setMinimumSize(Size(config.minWidth, config.minHeight));
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       _log.warning(
         'compact minimum size was not applied',
         fields: <String, Object?>{
@@ -430,25 +429,19 @@ final class PipDriver implements KernelPresentationDriver {
     }
   }
 
-  Future<void> _enterMobilePip() async {
+  Future<void> _enterMobilePip(PlayerId playerId) async {
     final pip = _systemPip;
     if (pip == null) {
       _log.error('no system pip implementation installed');
-      throw UnsupportedError(
-        'No system picture-in-picture implementation is installed.',
-      );
+      throw UnsupportedError('No system picture-in-picture implementation is installed.');
     }
     if (!await pip.isAvailable) {
       _log.warning('system pip is not available on this device');
-      throw UnsupportedError(
-        'System picture-in-picture is not available on this device.',
-      );
+      throw UnsupportedError('System picture-in-picture is not available on this device.');
     }
     if (_videoWidth <= 0 || _videoHeight <= 0) {
       _log.error('system pip needs a video size, none reported yet');
-      throw StateError(
-        'Picture-in-picture needs a video size. Call onVideoSize() first.',
-      );
+      throw StateError('Picture-in-picture needs a video size. Call onVideoSize() first.');
     }
 
     _log.debug(
@@ -462,19 +455,37 @@ final class PipDriver implements KernelPresentationDriver {
       },
     );
 
+    // A handoff backend renders from its own player, not from this app's
+    // surface: ask the host what the native player can play, and refuse the
+    // transition rather than open a window with nothing in it.
+    SystemPipMedia? media;
+    final resolver = pipMediaResolver;
+    if (resolver != null) {
+      media = await resolver(playerId);
+      if (media == null) {
+        _log.warning(
+          'the source cannot be handed to the system player',
+          fields: <String, Object?>{'playerId': playerId.value},
+        );
+        throw UnsupportedError(
+          'Picture-in-picture on this platform replays the source in a native '
+          'player, and the host could not name a URL it can open. Serve PiP '
+          'only for openly playable sources, or install a shrink-style '
+          'SystemPip implementation.',
+        );
+      }
+    }
+
     final status = await pip.enable(
       width: _videoWidth,
       height: _videoHeight,
-      sourceRect: config.requestSourceRectHint
-          ? SystemPipSourceRect.fromRect(_videoRect)
-          : null,
+      sourceRect: config.requestSourceRectHint ? SystemPipSourceRect.fromRect(videoRect) : null,
+      media: media,
     );
 
     if (status == SystemPipStatus.unavailable) {
       _log.error('the platform refused to enter pip');
-      throw UnsupportedError(
-        'The platform refused to enter picture-in-picture.',
-      );
+      throw UnsupportedError('The platform refused to enter picture-in-picture.');
     }
 
     await _handleSystemStatus(status);
@@ -485,25 +496,36 @@ final class PipDriver implements KernelPresentationDriver {
   // ---------------------------------------------------------------------------
 
   Future<void> _handleSystemStatus(SystemPipStatus status) async {
-    final active =
-        status == SystemPipStatus.enabled ||
-        status == SystemPipStatus.automatic;
+    final active = status == SystemPipStatus.enabled || status == SystemPipStatus.automatic;
     // The platform also ends picture-in-picture on its own (the viewer returned
     // to the app or closed the window); recording the raw status is what shows
     // a state that changed without the app asking for it.
-    _log.debug(
-      'system pip status',
-      fields: <String, Object?>{'status': status.name, 'active': active},
-    );
+    _log.debug('system pip status', fields: <String, Object?>{'status': status.name, 'active': active});
     // A system-initiated change has no "before" point, so only the settled
     // after-hook fires for it.
     if (_setPip(active)) {
       await _fire(
-        active
-            ? PresentationLifecyclePhase.afterEnter
-            : PresentationLifecyclePhase.afterExit,
+        active ? PresentationLifecyclePhase.afterEnter : PresentationLifecyclePhase.afterExit,
         _lastPlayerId ?? _systemPlayerId,
       );
+      // A handoff backend keeps a second player alive while the window is up;
+      // once the system says it is gone, the host's engine is the picture's
+      // home again and must be handed back (resume, position sync).
+      if (!active && platform == PipPlatform.mobile) {
+        final returnHandoff = onHandoffReturn;
+        if (returnHandoff != null) {
+          try {
+            await returnHandoff(_lastPlayerId ?? _systemPlayerId);
+          } on Object catch (error, stackTrace) {
+            _log.warning(
+              'pip handoff return failed',
+              error: error,
+              stackTrace: stackTrace,
+              fields: <String, Object?>{'playerId': (_lastPlayerId ?? _systemPlayerId).value},
+            );
+          }
+        }
+      }
     }
   }
 
@@ -530,12 +552,9 @@ final class PipDriver implements KernelPresentationDriver {
 
   /// Runs one lifecycle hook and reports failures without letting them reach
   /// the transition caller: hooks observe the transition, they never veto it.
-  Future<void> _fire(
-    PresentationLifecyclePhase phase,
-    PlayerId playerId,
-  ) async {
+  Future<void> _fire(PresentationLifecyclePhase phase, PlayerId playerId) async {
     final hooks = lifecycleHooks;
-    final PresentationLifecycleHook? hook = switch (phase) {
+    final hook = switch (phase) {
       PresentationLifecyclePhase.beforeEnter => hooks.beforeEnter,
       PresentationLifecyclePhase.afterEnter => hooks.afterEnter,
       PresentationLifecyclePhase.beforeExit => hooks.beforeExit,
@@ -545,23 +564,13 @@ final class PipDriver implements KernelPresentationDriver {
       return;
     }
     try {
-      await hook(
-        PresentationLifecycleEvent(
-          phase: phase,
-          playerId: playerId,
-          mode: PresentationMode.pip,
-        ),
-      );
-    } catch (error, stackTrace) {
+      await hook(PresentationLifecycleEvent(phase: phase, playerId: playerId, mode: PresentationMode.pip));
+    } on Object catch (error, stackTrace) {
       _log.warning(
         'presentation lifecycle hook failed',
         error: error,
         stackTrace: stackTrace,
-        fields: <String, Object?>{
-          'phase': phase.name,
-          'playerId': playerId.value,
-          'mode': PresentationMode.pip.name,
-        },
+        fields: <String, Object?>{'phase': phase.name, 'playerId': playerId.value, 'mode': PresentationMode.pip.name},
       );
     }
   }

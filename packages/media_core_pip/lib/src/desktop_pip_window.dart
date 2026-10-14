@@ -1,7 +1,6 @@
 import 'dart:io' show Platform;
-
 import 'package:flutter/foundation.dart' show kIsWeb;
-
+import 'package:media_core_pip/src/pip_driver.dart' show PipDriver;
 import 'package:media_core_pip/src/pip_window.dart';
 import 'package:media_core_pip/src/win32_pip_window.dart';
 import 'package:media_core_pip/src/window_manager_pip_window.dart';
@@ -22,11 +21,7 @@ import 'package:media_core_pip/src/window_manager_pip_window.dart';
 ///
 /// The platform flags are injectable so the selection is testable on every
 /// host.
-PipWindow defaultDesktopPipWindow({
-  bool? isWindows,
-  bool? isMacOS,
-  bool? isLinux,
-}) {
+PipWindow defaultDesktopPipWindow({bool? isWindows, bool? isMacOS, bool? isLinux}) {
   final windows = isWindows ?? (!kIsWeb && Platform.isWindows);
   final macos = isMacOS ?? (!kIsWeb && Platform.isMacOS);
   final linux = isLinux ?? (!kIsWeb && Platform.isLinux);
@@ -37,7 +32,5 @@ PipWindow defaultDesktopPipWindow({
   if (macos || linux) {
     return const WindowManagerPipWindow();
   }
-  throw UnsupportedError(
-    'Desktop picture-in-picture needs Windows, macOS or Linux.',
-  );
+  throw UnsupportedError('Desktop picture-in-picture needs Windows, macOS or Linux.');
 }

@@ -6,6 +6,11 @@ import 'package:media_core/media_core.dart' show VideoOrientation;
 /// intent expressed twice: how big the small window is, how close to the
 /// screen edge it sits, and whether leaving it restores what was there before.
 final class PipConfig {
+  /// Sets the small window's shape, corner gap and restore behaviour.
+  ///
+  /// Every argument has a default, so a host that only cares about one knob
+  /// still gets a workable window: the defaults are the sizes this feature
+  /// ships with, not placeholders.
   const PipConfig({
     this.width = 320,
     this.height = 180,
@@ -56,8 +61,7 @@ final class PipConfig {
   /// On by default: a small window that shows the video's actual shape wastes
   /// no area on letterbox bars. Turn it off to let the viewer pick any shape —
   /// the picture is then fitted into the window and gains bars on whichever
-  /// side the shape does not match. The in-app equivalent of a free-shaped
-  /// surface is `media_core_floating`, which is a widget rather than a window.
+  /// side the shape does not match.
   final bool lockAspectRatio;
 
   /// Orientation assumed when the video size is unknown.
@@ -69,6 +73,11 @@ final class PipConfig {
   /// Mobile only, and purely cosmetic: it drives the entrance animation.
   final bool requestSourceRectHint;
 
+  /// Returns a copy with the named knobs replaced, leaving the rest as-is.
+  ///
+  /// The config is immutable and the driver holds it by value, so a host
+  /// changing one setting builds from this rather than mutating the object a
+  /// running transition may be reading.
   PipConfig copyWith({
     double? width,
     double? height,
@@ -93,8 +102,7 @@ final class PipConfig {
       restoreWindowOnExit: restoreWindowOnExit ?? this.restoreWindowOnExit,
       lockAspectRatio: lockAspectRatio ?? this.lockAspectRatio,
       fallbackOrientation: fallbackOrientation ?? this.fallbackOrientation,
-      requestSourceRectHint:
-          requestSourceRectHint ?? this.requestSourceRectHint,
+      requestSourceRectHint: requestSourceRectHint ?? this.requestSourceRectHint,
     );
   }
 }

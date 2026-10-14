@@ -46,7 +46,10 @@ final class _FakeInnerWindow implements PipWindow {
   }) async {
     final failure = failOnApply;
     if (failure != null) {
-      throw failure;
+      // Rethrown as-is: the seam holds an `Object?` so a test can script any
+      // failure a backend might raise, and the `isA<...>` assertion still
+      // matches the injected object's own type.
+      Error.throwWithStackTrace(failure, StackTrace.current);
     }
     applyCount++;
     bounds = Rect.fromLTWH(position.dx, position.dy, size.width, size.height);
@@ -67,7 +70,7 @@ final class _FakeInnerWindow implements PipWindow {
   }
 
   @override
-  Future<void> setAlwaysOnTop(bool value) async {
+  Future<void> setAlwaysOnTop({required bool value}) async {
     alwaysOnTop = value;
   }
 
@@ -97,42 +100,17 @@ final class _FakeInnerWindow implements PipWindow {
 void main() {
   group('defaultDesktopPipWindow', () {
     test('picks the Win32 backend on Windows', () {
-      expect(
-        defaultDesktopPipWindow(
-          isWindows: true,
-          isMacOS: false,
-          isLinux: false,
-        ),
-        isA<Win32PipWindow>(),
-      );
+      expect(defaultDesktopPipWindow(isWindows: true, isMacOS: false, isLinux: false), isA<Win32PipWindow>());
     });
 
     test('picks the window_manager backend on macOS and Linux', () {
-      expect(
-        defaultDesktopPipWindow(
-          isWindows: false,
-          isMacOS: true,
-          isLinux: false,
-        ),
-        isA<WindowManagerPipWindow>(),
-      );
-      expect(
-        defaultDesktopPipWindow(
-          isWindows: false,
-          isMacOS: false,
-          isLinux: true,
-        ),
-        isA<WindowManagerPipWindow>(),
-      );
+      expect(defaultDesktopPipWindow(isWindows: false, isMacOS: true, isLinux: false), isA<WindowManagerPipWindow>());
+      expect(defaultDesktopPipWindow(isWindows: false, isMacOS: false, isLinux: true), isA<WindowManagerPipWindow>());
     });
 
     test('refuses platforms without a desktop small window', () {
       expect(
-        () => defaultDesktopPipWindow(
-          isWindows: false,
-          isMacOS: false,
-          isLinux: false,
-        ),
+        () => defaultDesktopPipWindow(isWindows: false, isMacOS: false, isLinux: false),
         throwsA(isA<UnsupportedError>()),
       );
     });
@@ -146,9 +124,7 @@ void main() {
     DisplayAwarePipWindow build() {
       return DisplayAwarePipWindow(
         windowBuilder: () => inner,
-        workAreasReader: () async => [
-          PipWorkArea(id: 'd1', area: const Rect.fromLTWH(0, 0, 1920, 1080)),
-        ],
+        workAreasReader: () async => [const PipWorkArea(id: 'd1', area: Rect.fromLTWH(0, 0, 1920, 1080))],
         readSavedBounds: () => saved,
         writeSavedBounds: (size, position, displayId) =>
             written = (size: size, position: position, displayId: displayId),
@@ -162,36 +138,33 @@ void main() {
       written = null;
     });
 
-    test(
-      'enter releases the minimum size and applies the compact placement',
-      () async {
-        final display = build();
+    test('enter releases the minimum size and applies the compact placement', () async {
+      final display = build();
 
-        await display.applySmallWindow(
-          size: const Size(360, 202.5),
-          position: const Offset(1540, 857.5),
-          aspectRatio: 16 / 9,
-          alwaysOnTop: false,
-          resizable: true,
-          skipTaskbar: false,
-          title: 'Test',
-        );
+      await display.applySmallWindow(
+        size: const Size(360, 202.5),
+        position: const Offset(1540, 857.5),
+        aspectRatio: 16 / 9,
+        alwaysOnTop: false,
+        resizable: true,
+        skipTaskbar: false,
+        title: 'Test',
+      );
 
-        expect(display.isCompact, isTrue);
-        expect(inner.minimumSizeReleases, 1);
-        expect(inner.lastMinimumSize, Size.zero);
-        expect(inner.applyCount, 1);
-        // Landscape 16:9 caps the long side at 360 and lands bottom-right of
-        // the work area with the default margin.
-        expect(inner.lastSize, const Size(360, 202.5));
-        expect(inner.lastPosition, const Offset(1540, 857.5));
-        expect(inner.lastAlwaysOnTop, isFalse);
-        expect(inner.lastResizable, isTrue);
-        expect(inner.lastSkipTaskbar, isFalse);
-        expect(written?.size, const Size(360, 202.5));
-        expect(written?.displayId, 'd1');
-      },
-    );
+      expect(display.isCompact, isTrue);
+      expect(inner.minimumSizeReleases, 1);
+      expect(inner.lastMinimumSize, Size.zero);
+      expect(inner.applyCount, 1);
+      // Landscape 16:9 caps the long side at 360 and lands bottom-right of
+      // the work area with the default margin.
+      expect(inner.lastSize, const Size(360, 202.5));
+      expect(inner.lastPosition, const Offset(1540, 857.5));
+      expect(inner.lastAlwaysOnTop, isFalse);
+      expect(inner.lastResizable, isTrue);
+      expect(inner.lastSkipTaskbar, isFalse);
+      expect(written?.size, const Size(360, 202.5));
+      expect(written?.displayId, 'd1');
+    });
 
     test('the requested skip-taskbar flag reaches the backend', () async {
       final display = build();
@@ -210,10 +183,7 @@ void main() {
     });
 
     test('a matching saved placement wins over the default corner', () async {
-      saved = PipSavedBounds(
-        displayId: 'd1',
-        bounds: const Rect.fromLTWH(120, 300, 320, 180),
-      );
+      saved = const PipSavedBounds(displayId: 'd1', bounds: Rect.fromLTWH(120, 300, 320, 180));
       final display = build();
 
       await display.applySmallWindow(
@@ -230,38 +200,29 @@ void main() {
       expect(inner.lastPosition, const Offset(120, 300));
     });
 
-    test(
-      'the remembered size follows the current video aspect — no black bars',
-      () async {
-        // A size remembered on a landscape stream…
-        saved = PipSavedBounds(
-          displayId: 'd1',
-          bounds: const Rect.fromLTWH(120, 300, 360, 202),
-        );
-        final display = build();
+    test('the remembered size follows the current video aspect — no black bars', () async {
+      // A size remembered on a landscape stream…
+      saved = const PipSavedBounds(displayId: 'd1', bounds: Rect.fromLTWH(120, 300, 360, 202));
+      final display = build();
 
-        // …must not letterbox a portrait stream: the remembered height drives,
-        // the width re-derives from the current video's aspect.
-        await display.applySmallWindow(
-          size: const Size(213.75, 380),
-          position: Offset.zero,
-          aspectRatio: 9 / 16,
-          alwaysOnTop: false,
-          resizable: true,
-          skipTaskbar: false,
-          title: 'Test',
-        );
+      // …must not letterbox a portrait stream: the remembered height drives,
+      // the width re-derives from the current video's aspect.
+      await display.applySmallWindow(
+        size: const Size(213.75, 380),
+        position: Offset.zero,
+        aspectRatio: 9 / 16,
+        alwaysOnTop: false,
+        resizable: true,
+        skipTaskbar: false,
+        title: 'Test',
+      );
 
-        // The scale carries as the remembered long side (360); the short side
-        // re-derives aspect-exactly instead of distorting the shape.
-        expect(inner.lastSize?.width, closeTo(202.5, 0.5));
-        expect(inner.lastSize?.height, closeTo(360, 0.5));
-        expect(
-          inner.lastSize!.width / inner.lastSize!.height,
-          closeTo(9 / 16, 0.01),
-        );
-      },
-    );
+      // The scale carries as the remembered long side (360); the short side
+      // re-derives aspect-exactly instead of distorting the shape.
+      expect(inner.lastSize?.width, closeTo(202.5, 0.5));
+      expect(inner.lastSize?.height, closeTo(360, 0.5));
+      expect(inner.lastSize!.width / inner.lastSize!.height, closeTo(9 / 16, 0.01));
+    });
 
     test('an unlocked shape travels through instead of a substituted ratio', () async {
       final display = build();
@@ -285,10 +246,7 @@ void main() {
 
     test('an unlocked shape replays the remembered bounds as they are', () async {
       // A window the viewer squashed while the shape was unlocked…
-      saved = PipSavedBounds(
-        displayId: 'd1',
-        bounds: const Rect.fromLTWH(120, 300, 360, 120),
-      );
+      saved = const PipSavedBounds(displayId: 'd1', bounds: Rect.fromLTWH(120, 300, 360, 120));
       final display = build();
 
       await display.applySmallWindow(
@@ -306,42 +264,31 @@ void main() {
       expect(inner.lastSize, const Size(360, 120));
     });
 
-    test(
-      'a landscape stream re-derives the height from a remembered portrait size',
-      () async {
-        saved = PipSavedBounds(
-          displayId: 'd1',
-          bounds: const Rect.fromLTWH(100, 100, 213.75, 380),
-        );
-        final display = build();
+    test('a landscape stream re-derives the height from a remembered portrait size', () async {
+      saved = const PipSavedBounds(displayId: 'd1', bounds: Rect.fromLTWH(100, 100, 213.75, 380));
+      final display = build();
 
-        await display.applySmallWindow(
-          size: const Size(360, 202.5),
-          position: Offset.zero,
-          aspectRatio: 16 / 9,
-          alwaysOnTop: false,
-          resizable: true,
-          skipTaskbar: false,
-          title: 'Test',
-        );
+      await display.applySmallWindow(
+        size: const Size(360, 202.5),
+        position: Offset.zero,
+        aspectRatio: 16 / 9,
+        alwaysOnTop: false,
+        resizable: true,
+        skipTaskbar: false,
+        title: 'Test',
+      );
 
-        // The scale carries as the remembered long side (380); the height
-        // re-derives aspect-exactly.
-        expect(inner.lastSize?.width, closeTo(380, 0.5));
-        expect(inner.lastSize?.height, closeTo(380 * 9 / 16, 0.5));
-        expect(
-          inner.lastSize!.width / inner.lastSize!.height,
-          closeTo(16 / 9, 0.01),
-        );
-      },
-    );
+      // The scale carries as the remembered long side (380); the height
+      // re-derives aspect-exactly.
+      expect(inner.lastSize?.width, closeTo(380, 0.5));
+      expect(inner.lastSize?.height, closeTo(380 * 9 / 16, 0.5));
+      expect(inner.lastSize!.width / inner.lastSize!.height, closeTo(16 / 9, 0.01));
+    });
 
     test('the always-on-top policy pin overrides the request', () async {
       final display = DisplayAwarePipWindow(
         windowBuilder: () => inner,
-        workAreasReader: () async => [
-          PipWorkArea(id: 'd1', area: const Rect.fromLTWH(0, 0, 1920, 1080)),
-        ],
+        workAreasReader: () async => [const PipWorkArea(id: 'd1', area: Rect.fromLTWH(0, 0, 1920, 1080))],
         alwaysOnTop: () => true,
       );
 
@@ -358,71 +305,56 @@ void main() {
       expect(inner.lastAlwaysOnTop, isTrue);
     });
 
-    test(
-      'exit restores the normal snapshot and re-applies the minimum size',
-      () async {
-        final display = build();
-        await display.applySmallWindow(
+    test('exit restores the normal snapshot and re-applies the minimum size', () async {
+      final display = build();
+      await display.applySmallWindow(
+        size: const Size(360, 202.5),
+        position: const Offset(1540, 857.5),
+        aspectRatio: 16 / 9,
+        alwaysOnTop: false,
+        resizable: true,
+        skipTaskbar: false,
+        title: 'Test',
+      );
+
+      await display.restore(
+        PipWindowSnapshot(bounds: inner.bounds, alwaysOnTop: false, resizable: true, skipTaskbar: false, title: 'Test'),
+      );
+
+      expect(display.isCompact, isFalse);
+      expect(inner.minimumSizeRestores, 1);
+      expect(inner.lastMinimumSize, const Size(960, 540));
+      expect(inner.restoreCount, 1);
+      // The normal snapshot was captured before the shrink: original bounds
+      // and the user's own always-on-top state.
+      expect(inner.lastRestored?.bounds, const Rect.fromLTWH(0, 0, 1280, 720));
+      expect(inner.bounds, const Rect.fromLTWH(0, 0, 1280, 720));
+    });
+
+    test('a failing backend is rolled back to normal and the error propagates', () async {
+      final display = build();
+      inner.failOnApply = StateError('backend refused');
+
+      await expectLater(
+        display.applySmallWindow(
           size: const Size(360, 202.5),
-          position: const Offset(1540, 857.5),
+          position: Offset.zero,
           aspectRatio: 16 / 9,
           alwaysOnTop: false,
           resizable: true,
           skipTaskbar: false,
           title: 'Test',
-        );
+        ),
+        throwsA(isA<StateError>()),
+      );
 
-        await display.restore(
-          PipWindowSnapshot(
-            bounds: inner.bounds,
-            alwaysOnTop: false,
-            resizable: true,
-            skipTaskbar: false,
-            title: 'Test',
-          ),
-        );
-
-        expect(display.isCompact, isFalse);
-        expect(inner.minimumSizeRestores, 1);
-        expect(inner.lastMinimumSize, const Size(960, 540));
-        expect(inner.restoreCount, 1);
-        // The normal snapshot was captured before the shrink: original bounds
-        // and the user's own always-on-top state.
-        expect(
-          inner.lastRestored?.bounds,
-          const Rect.fromLTWH(0, 0, 1280, 720),
-        );
-        expect(inner.bounds, const Rect.fromLTWH(0, 0, 1280, 720));
-      },
-    );
-
-    test(
-      'a failing backend is rolled back to normal and the error propagates',
-      () async {
-        final display = build();
-        inner.failOnApply = StateError('backend refused');
-
-        await expectLater(
-          display.applySmallWindow(
-            size: const Size(360, 202.5),
-            position: Offset.zero,
-            aspectRatio: 16 / 9,
-            alwaysOnTop: false,
-            resizable: true,
-            skipTaskbar: false,
-            title: 'Test',
-          ),
-          throwsA(isA<StateError>()),
-        );
-
-        expect(display.isCompact, isFalse);
-        // The rollback put the minimum size back and replayed the normal
-        // snapshot even though the backend failed mid-enter.
-        expect(inner.minimumSizeRestores, 1);
-        expect(inner.restoreCount, 1);
-        expect(inner.bounds, const Rect.fromLTWH(0, 0, 1280, 720));
-      },
-    );
+      expect(display.isCompact, isFalse);
+      // The rollback put the minimum size back and replayed the normal
+      // snapshot even though the backend failed mid-enter.
+      expect(inner.minimumSizeRestores, 1);
+      expect(inner.restoreCount, 1);
+      expect(inner.bounds, const Rect.fromLTWH(0, 0, 1280, 720));
+    });
 
     test('startDragging only reaches the backend while compact', () async {
       final display = build();
@@ -455,7 +387,7 @@ void main() {
         title: 'Test',
       );
 
-      await display.setAlwaysOnTop(true);
+      await display.setAlwaysOnTop(value: true);
 
       expect(inner.alwaysOnTop, isTrue);
     });

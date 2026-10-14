@@ -6,6 +6,7 @@ import 'package:flutter/painting.dart' show Offset, Rect, Size;
 /// restored: leaving a user's window resizable-but-always-on-top because the
 /// feature only remembered the size is worse than not remembering anything.
 final class PipWindowSnapshot {
+  /// Captures the window state a later [PipWindow.restore] replays.
   const PipWindowSnapshot({
     required this.bounds,
     required this.alwaysOnTop,
@@ -15,19 +16,28 @@ final class PipWindowSnapshot {
     this.titleBarStyle,
   });
 
+  /// Window size and position on screen.
   final Rect bounds;
+
+  /// Whether the window was kept above the other apps' windows.
   final bool alwaysOnTop;
+
+  /// Whether the viewer could resize the window by dragging an edge.
   final bool resizable;
+
+  /// Whether the window was hidden from the taskbar and Alt-Tab.
   final bool skipTaskbar;
 
-  /// Title bar style captured before entering PiP, so [restore] can put
-  /// the window back exactly as it was. Null when the host does not track it.
+  /// Title bar style captured before entering PiP, so [PipWindow.restore] can
+  /// put the window back exactly as it was. Null when the host does not track
+  /// it.
   final Object? titleBarStyle;
+
+  /// Window caption, so the restored window reads as the same window.
   final String title;
 
   @override
-  String toString() =>
-      'PipWindowSnapshot(${bounds.width}x${bounds.height} at ${bounds.topLeft})';
+  String toString() => 'PipWindowSnapshot(${bounds.width}x${bounds.height} at ${bounds.topLeft})';
 }
 
 /// Desktop window operations the PiP feature needs.
@@ -62,7 +72,7 @@ abstract interface class PipWindow {
   /// The compact window's z-order policy belongs to the feature, and hosts
   /// expose it as a user setting; a backend that cannot change the z-order
   /// while compact may ignore the call.
-  Future<void> setAlwaysOnTop(bool value);
+  Future<void> setAlwaysOnTop({required bool value});
 
   /// Releases or re-applies the host's normal minimum size.
   ///

@@ -1,9 +1,6 @@
 name: media_core_pip
 description: Picture-in-picture for media_core - a desktop always-on-top small window and the Android system PiP window.
 version: 0.1.0
-# Blocked from publishing: the Android PiP backend `floating` is a patched
-# git fork whose pub.dev name is taken.
-publish_to: none
 repository: https://github.com/liuchuancong/media_core
 issue_tracker: https://github.com/liuchuancong/media_core/issues
 resolution: workspace
@@ -17,28 +14,17 @@ dependencies:
     sdk: flutter
   media_core:
     ^0.1.0
+  media_core_win32:
+    ^0.1.0
+
+  # Android/iOS system picture-in-picture (ExoPlayer / AVKit based handoff
+  # player; see NativePipSystemPip for what handoff means for sources).
+  native_picture_in_picture: ^1.0.1
 
   # Desktop small window (Windows, macOS, Linux)
   window_manager: ^0.5.2
 
-  # Android system picture-in-picture. Patched fork of pub.dev `floating`
-  # (AGP 9 built-in Kotlin build + FloatingSystemPip polling fixes); see
-  # packages/floating/PATCHES.md and https://github.com/liuchuancong/floating.
-  # A dependency can only have one source and the `floating` name is taken on
-  # pub.dev, so git is the only source here; the workspace snapshot under
-  # packages/floating shadows it for local resolution. The ref is a commit, not
-  # a branch, so consumers get a reproducible tree - after changing
-  # packages/floating, re-push (scripts/publish.sh --floating-only) and update
-  # this sha.
-  floating:
-    git:
-      url: https://github.com/liuchuancong/floating.git
-      ref: 9a4492893ca5eee8ffac0593d1cd93b1187b6b53
-
-  media_core_win32:
-    ^0.1.0
-
 dev_dependencies:
+  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0

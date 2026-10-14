@@ -1,7 +1,7 @@
 import 'package:flutter/painting.dart' show Offset, Rect, Size;
-import 'package:window_manager/window_manager.dart';
-
 import 'package:media_core_pip/src/pip_window.dart';
+import 'package:media_core_pip/src/win32_pip_window.dart' show Win32PipWindow;
+import 'package:window_manager/window_manager.dart';
 
 /// [PipWindow] for the window_manager backends: macOS and Linux.
 ///
@@ -20,6 +20,8 @@ import 'package:media_core_pip/src/pip_window.dart';
 /// - restore: bring the normal chrome back before resizing, so the restored
 ///   window never flashes as a frameless rectangle.
 final class WindowManagerPipWindow implements PipWindow {
+  /// Stateless: every operation goes straight to the plugin's singleton, so one
+  /// instance is as good as any other and the backend can be a const.
   const WindowManagerPipWindow();
 
   @override
@@ -27,12 +29,7 @@ final class WindowManagerPipWindow implements PipWindow {
     final position = await windowManager.getPosition();
     final bounds = await windowManager.getBounds();
     return PipWindowSnapshot(
-      bounds: Rect.fromLTWH(
-        position.dx,
-        position.dy,
-        bounds.width,
-        bounds.height,
-      ),
+      bounds: Rect.fromLTWH(position.dx, position.dy, bounds.width, bounds.height),
       alwaysOnTop: await windowManager.isAlwaysOnTop(),
       resizable: await windowManager.isResizable(),
       skipTaskbar: await windowManager.isSkipTaskbar(),
@@ -77,8 +74,7 @@ final class WindowManagerPipWindow implements PipWindow {
   }
 
   @override
-  Future<void> setAlwaysOnTop(bool value) =>
-      windowManager.setAlwaysOnTop(value);
+  Future<void> setAlwaysOnTop({required bool value}) => windowManager.setAlwaysOnTop(value);
 
   @override
   Future<void> setMinimumSize(Size size) => windowManager.setMinimumSize(size);

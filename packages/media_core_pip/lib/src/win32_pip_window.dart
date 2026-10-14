@@ -1,10 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/painting.dart' show Offset, Rect, Size;
+import 'package:media_core_pip/src/pip_window.dart';
 import 'package:media_core_win32/media_core_win32.dart';
 import 'package:window_manager/window_manager.dart';
-
-import 'package:media_core_pip/src/pip_window.dart';
 
 /// [PipWindow] implemented with direct user32 calls — no plugin, no channel.
 ///
@@ -111,7 +110,7 @@ final class Win32PipWindow implements PipWindow {
     // snapshot captured *while compact* (the rollback helper does exactly
     // that) must never win, or restore replays the compact window back.
     final native = snapshot.titleBarStyle is Win32WindowSnapshot
-        ? snapshot.titleBarStyle as Win32WindowSnapshot
+        ? snapshot.titleBarStyle! as Win32WindowSnapshot
         : null;
 
     _stopSnapMonitor();
@@ -134,11 +133,7 @@ final class Win32PipWindow implements PipWindow {
     // restore because the compact window never changed it.
     Win32WindowFfi.setSkipTaskbar(hwnd, skip: snapshot.skipTaskbar);
     Win32WindowFfi.setResizable(hwnd, resizable: snapshot.resizable);
-    Win32WindowFfi.applyBounds(
-      hwnd,
-      snapshot.bounds,
-      topmost: snapshot.alwaysOnTop,
-    );
+    Win32WindowFfi.applyBounds(hwnd, snapshot.bounds, topmost: snapshot.alwaysOnTop);
   }
 
   /// Starts watching the compact window's bounds. While the viewer drags an
@@ -148,10 +143,7 @@ final class Win32PipWindow implements PipWindow {
   /// stream keeps the height. Without this every free resize ends in black
   /// bars around the contained video.
   void _startSnapMonitor() {
-    _snapTimer ??= Timer.periodic(
-      const Duration(milliseconds: 150),
-      (_) => _snapTick(),
-    );
+    _snapTimer ??= Timer.periodic(const Duration(milliseconds: 150), (_) => _snapTick());
   }
 
   void _stopSnapMonitor() {
@@ -165,8 +157,7 @@ final class Win32PipWindow implements PipWindow {
     final bounds = Win32WindowFfi.bounds(hwnd);
     if (bounds == null || bounds.width <= 0 || bounds.height <= 0) return;
     final settled =
-        (bounds.width - _lastSeenBounds.width).abs() < 2 &&
-        (bounds.height - _lastSeenBounds.height).abs() < 2;
+        (bounds.width - _lastSeenBounds.width).abs() < 2 && (bounds.height - _lastSeenBounds.height).abs() < 2;
     _lastSeenBounds = bounds.size;
     if (!settled) {
       _stableTicks = 0;
@@ -197,9 +188,9 @@ final class Win32PipWindow implements PipWindow {
         targetHeight = targetWidth / aspectRatio;
       }
     }
-    if ((targetWidth - bounds.width).abs() < 3 &&
-        (targetHeight - bounds.height).abs() < 3)
+    if ((targetWidth - bounds.width).abs() < 3 && (targetHeight - bounds.height).abs() < 3) {
       return;
+    }
     Win32WindowFfi.applyBounds(
       hwnd,
       Rect.fromLTWH(bounds.left, bounds.top, targetWidth, targetHeight),
@@ -225,7 +216,7 @@ final class Win32PipWindow implements PipWindow {
   }
 
   @override
-  Future<void> setAlwaysOnTop(bool value) async {
+  Future<void> setAlwaysOnTop({required bool value}) async {
     // Bounds stay untouched: only the z-order moves.
     Win32WindowFfi.setTopmost(_windowHandle, topmost: value);
   }

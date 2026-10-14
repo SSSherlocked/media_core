@@ -42,13 +42,8 @@ final class _FakeDesktopWindow implements PipWindow {
   Rect bounds = const Rect.fromLTWH(0, 0, 1280, 720);
 
   @override
-  Future<PipWindowSnapshot> capture() async => PipWindowSnapshot(
-    bounds: bounds,
-    alwaysOnTop: false,
-    resizable: true,
-    skipTaskbar: false,
-    title: 'test',
-  );
+  Future<PipWindowSnapshot> capture() async =>
+      PipWindowSnapshot(bounds: bounds, alwaysOnTop: false, resizable: true, skipTaskbar: false, title: 'test');
 
   @override
   Future<void> applySmallWindow({
@@ -65,7 +60,7 @@ final class _FakeDesktopWindow implements PipWindow {
   Future<void> restore(PipWindowSnapshot snapshot) async {}
 
   @override
-  Future<void> setAlwaysOnTop(bool value) async {}
+  Future<void> setAlwaysOnTop({required bool value}) async {}
 
   @override
   Future<void> setMinimumSize(Size size) async {}
@@ -88,15 +83,11 @@ void main() {
   setUp(() {
     player = _FakePlayer(_id('player-a'));
     registry = _FakeRegistry(<String, _FakePlayer>{'player-a': player});
-    driver = PipDriver(
-      platform: PipPlatform.desktop,
-      desktopWindow: _FakeDesktopWindow(),
-    );
+    driver = PipDriver(platform: PipPlatform.desktop, desktopWindow: _FakeDesktopWindow());
     controller = PipSessionController(
       driver: driver,
       registry: registry,
-      surfaceBuilder: (context, playerId) =>
-          Text(playerId.value, textDirection: TextDirection.ltr),
+      surfaceBuilder: (context, playerId) => Text(playerId.value, textDirection: TextDirection.ltr),
     );
   });
 
@@ -118,33 +109,20 @@ void main() {
     test('refuses to carry a player the page already disposed', () async {
       player.disposed = true;
 
-      await expectLater(
-        controller.enter(_id('player-a')),
-        throwsA(isA<StateError>()),
-      );
-      expect(
-        controller.isActive,
-        isFalse,
-        reason: 'a window with no video must not open',
-      );
+      await expectLater(controller.enter(_id('player-a')), throwsA(isA<StateError>()));
+      expect(controller.isActive, isFalse, reason: 'a window with no video must not open');
     });
 
     test('refuses a player that was never registered', () async {
-      await expectLater(
-        controller.enter(_id('missing')),
-        throwsA(isA<StateError>()),
-      );
+      await expectLater(controller.enter(_id('missing')), throwsA(isA<StateError>()));
     });
 
-    test(
-      'passes the video size to the driver so the window is shaped right',
-      () async {
-        await controller.enter(_id('player-a'));
+    test('passes the video size to the driver so the window is shaped right', () async {
+      await controller.enter(_id('player-a'));
 
-        expect(driver.videoWidth, 1920);
-        expect(driver.videoHeight, 1080);
-      },
-    );
+      expect(driver.videoWidth, 1920);
+      expect(driver.videoHeight, 1080);
+    });
 
     test('leaves the small window without touching the player', () async {
       await controller.enter(_id('player-a'));
@@ -152,16 +130,8 @@ void main() {
       await controller.exit();
 
       expect(controller.isActive, isFalse);
-      expect(
-        player.disposed,
-        isFalse,
-        reason: 'the kernel owns the player, not the window',
-      );
-      expect(
-        controller.hasCarriedPlayer,
-        isTrue,
-        reason: 'the host can re-attach it to a page',
-      );
+      expect(player.disposed, isFalse, reason: 'the kernel owns the player, not the window');
+      expect(controller.hasCarriedPlayer, isTrue, reason: 'the host can re-attach it to a page');
     });
 
     test('toggle enters and leaves', () async {
@@ -186,20 +156,14 @@ void main() {
 
   group('PipController auto-enter policy', () {
     test('enters when the page goes away while playing', () async {
-      final entered = await controller.onPageExit(
-        playerId: _id('player-a'),
-        playing: true,
-      );
+      final entered = await controller.onPageExit(playerId: _id('player-a'), playing: true);
 
       expect(entered, isTrue);
       expect(controller.isActive, isTrue);
     });
 
     test('stays put when the video is paused', () async {
-      final entered = await controller.onPageExit(
-        playerId: _id('player-a'),
-        playing: false,
-      );
+      final entered = await controller.onPageExit(playerId: _id('player-a'), playing: false);
 
       expect(entered, isFalse);
       expect(controller.isActive, isFalse);
@@ -213,10 +177,7 @@ void main() {
       );
       addTearDown(ignoring.dispose);
 
-      final entered = await ignoring.onPageExit(
-        playerId: _id('player-a'),
-        playing: false,
-      );
+      final entered = await ignoring.onPageExit(playerId: _id('player-a'), playing: false);
 
       expect(entered, isTrue);
     });
@@ -229,10 +190,7 @@ void main() {
       );
       addTearDown(disabled.dispose);
 
-      expect(
-        await disabled.onPageExit(playerId: _id('player-a'), playing: true),
-        isFalse,
-      );
+      expect(await disabled.onPageExit(playerId: _id('player-a'), playing: true), isFalse);
       expect(disabled.isActive, isFalse);
     });
 
@@ -244,13 +202,7 @@ void main() {
       );
       addTearDown(noBackground.dispose);
 
-      expect(
-        await noBackground.onAppBackgrounded(
-          playerId: _id('player-a'),
-          playing: true,
-        ),
-        isFalse,
-      );
+      expect(await noBackground.onAppBackgrounded(playerId: _id('player-a'), playing: true), isFalse);
 
       final withBackground = PipSessionController(
         driver: driver,
@@ -259,33 +211,21 @@ void main() {
       );
       addTearDown(withBackground.dispose);
 
-      expect(
-        await withBackground.onAppBackgrounded(
-          playerId: _id('player-a'),
-          playing: true,
-        ),
-        isTrue,
-      );
+      expect(await withBackground.onAppBackgrounded(playerId: _id('player-a'), playing: true), isTrue);
       expect(withBackground.isActive, isTrue);
     });
 
-    test(
-      'returning to the foreground does not close a window the viewer opened',
-      () async {
-        await controller.enter(_id('player-a'));
+    test('returning to the foreground does not close a window the viewer opened', () async {
+      await controller.enter(_id('player-a'));
 
-        await controller.onAppResumed();
+      await controller.onAppResumed();
 
-        expect(controller.isActive, isTrue);
-      },
-    );
+      expect(controller.isActive, isTrue);
+    });
 
     test('a repeated trigger for the same player does not re-enter', () async {
       await controller.onPageExit(playerId: _id('player-a'), playing: true);
-      final again = await controller.onPageExit(
-        playerId: _id('player-a'),
-        playing: true,
-      );
+      final again = await controller.onPageExit(playerId: _id('player-a'), playing: true);
 
       expect(again, isTrue);
       expect(controller.isActive, isTrue);
@@ -293,17 +233,14 @@ void main() {
   });
 
   group('PipController surface', () {
-    testWidgets('builds the host surface for the carried player', (
-      tester,
-    ) async {
+    testWidgets('builds the host surface for the carried player', (tester) async {
       late Widget surface;
       await tester.pumpWidget(
         Directionality(
           textDirection: TextDirection.ltr,
           child: Builder(
             builder: (context) {
-              surface = controller.buildSurface(context, _id('player-a'));
-              return surface;
+              return surface = controller.buildSurface(context, _id('player-a'));
             },
           ),
         ),
@@ -313,28 +250,19 @@ void main() {
       expect(surface, isNotNull);
     });
 
-    test(
-      'refuses to build a surface for a player without a handle and no builder',
-      () async {
-        final bare = PipSessionController(driver: driver, registry: registry);
-        addTearDown(bare.dispose);
+    test('refuses to build a surface for a player without a handle and no builder', () async {
+      final bare = PipSessionController(driver: driver, registry: registry);
+      addTearDown(bare.dispose);
 
-        expect(
-          () => bare.buildSurface(_FakeBuildContext(), _id('player-a')),
-          throwsA(isA<StateError>()),
-        );
-      },
-    );
+      expect(() => bare.buildSurface(_FakeBuildContext(), _id('player-a')), throwsA(isA<StateError>()));
+    });
   });
 
   group('PipController lifecycle', () {
     test('a disposed controller refuses further transitions', () async {
       await controller.dispose();
 
-      await expectLater(
-        controller.enter(_id('player-a')),
-        throwsA(isA<StateError>()),
-      );
+      await expectLater(controller.enter(_id('player-a')), throwsA(isA<StateError>()));
     });
   });
 }

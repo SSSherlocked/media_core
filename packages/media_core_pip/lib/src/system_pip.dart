@@ -37,12 +37,8 @@ enum SystemPipTrigger {
 /// Only a hint: a wrong rectangle costs animation polish, never correctness,
 /// which is why every implementation must tolerate `null`.
 final class SystemPipSourceRect {
-  const SystemPipSourceRect({
-    required this.left,
-    required this.top,
-    required this.width,
-    required this.height,
-  });
+  /// Carries the video region in whole device-independent units.
+  const SystemPipSourceRect({required this.left, required this.top, required this.width, required this.height});
 
   /// Builds a hint from a layout rectangle, dropping it when it carries no area.
   ///
@@ -60,13 +56,45 @@ final class SystemPipSourceRect {
     );
   }
 
+  /// Left edge of the video region, in logical pixels.
   final int left;
+
+  /// Top edge of the video region, in logical pixels.
   final int top;
+
+  /// Width of the video region, in logical pixels.
   final int width;
+
+  /// Height of the video region, in logical pixels.
   final int height;
 
   @override
   String toString() => 'SystemPipSourceRect($left,$top ${width}x$height)';
+}
+
+/// The media a handoff picture-in-picture player takes over.
+///
+/// [SystemPip] implementations that *shrink the app* (the platform's own
+/// `enterPictureInPictureMode` on the Activity's surface) need nothing beyond
+/// the video size; implementations that play the picture in a **second native
+/// player** — ExoPlayer / AVKit — need the source and the position to resume
+/// from, because the app's own engine is not what the small window renders
+/// anymore.
+final class SystemPipMedia {
+  /// Names the source and, for a finite stream, where to resume it.
+  const SystemPipMedia({required this.url, this.position});
+
+  /// A URL the *native* player can open by itself: plain HTTP(S), or a
+  /// `file://` path. Custom schemes, signed headers and loopback proxies are
+  /// the app engine's private vocabulary - a handoff implementation must
+  /// refuse such a source rather than show an empty system window.
+  final String url;
+
+  /// Where the app's engine was when the handoff was asked for.
+  ///
+  /// Null for live sources: the native player starts at the live edge instead
+  /// of seeking, which is the only honest mapping.
+  final Duration? position;
 }
 
 /// Platform picture-in-picture API.
@@ -114,6 +142,13 @@ abstract interface class SystemPip {
   /// two must treat the other as [SystemPipTrigger.immediate] rather than
   /// refuse the request.
   ///
+  /// [media] is what a **handoff** implementation - one that renders the
+  /// picture in its own native player instead of shrinking this app's surface
+  /// - replays in the small window. An implementation that does not need it
+  /// ignores it; one that does need it must refuse the request (throw
+  /// [UnsupportedError] or return [SystemPipStatus.unavailable]) when
+  /// [media] is null rather than open an empty window.
+  ///
   /// Returns the state the platform reports after the request. A device that
   /// cannot present picture-in-picture returns [SystemPipStatus.unavailable]
   /// or throws; callers must handle both.
@@ -122,6 +157,7 @@ abstract interface class SystemPip {
     required int height,
     SystemPipSourceRect? sourceRect,
     SystemPipTrigger trigger,
+    SystemPipMedia? media,
   });
 
   /// Releases subscriptions and platform resources.
