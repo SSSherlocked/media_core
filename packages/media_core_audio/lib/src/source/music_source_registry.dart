@@ -1,9 +1,9 @@
 import 'dart:io';
-
+import 'package:media_core_audio/src/source/local_music_source.dart' show LocalMusicSource;
+import 'package:media_core_audio/src/source/music_source.dart';
 import 'package:media_core_audio/src/track/music_quality.dart';
 import 'package:media_core_audio/src/track/music_track.dart';
 import 'package:media_core_audio/src/track/track_source.dart';
-import 'package:media_core_audio/src/source/music_source.dart';
 
 /// Raised when a track names a source that is not registered (or is disabled).
 final class MusicSourceNotFoundException implements Exception {
@@ -29,9 +29,7 @@ final class MusicSourceNotFoundException implements Exception {
 final class MusicSourceRegistry {
   /// Creates a registry.
   MusicSourceRegistry([Iterable<MusicSource> sources = const <MusicSource>[]]) {
-    for (final source in sources) {
-      register(source);
-    }
+    sources.forEach(register);
   }
 
   final Map<String, MusicSource> _sources = <String, MusicSource>{};
@@ -58,7 +56,7 @@ final class MusicSourceRegistry {
   }
 
   /// Marks a source enabled or disabled.
-  void setEnabled(String id, bool enabled) {
+  void setEnabled(String id, {required bool enabled}) {
     if (enabled) {
       _disabled.remove(id);
     } else {
@@ -96,18 +94,14 @@ final class MusicSourceRegistry {
     if (track.isLocal) {
       final file = File(track.localPath ?? track.id);
 
-      if (!await file.exists()) {
+      if (!file.existsSync()) {
         throw FileSystemException('Local track not found', file.path);
       }
 
-      return TrackSource(
-        uri: file.uri,
-        isLocal: true,
-        fileSize: await file.length(),
-      );
+      return TrackSource(uri: file.uri, isLocal: true, fileSize: await file.length());
     }
 
-    return require(track.sourceId).resolveTrackSource(track, quality: quality);
+    return await require(track.sourceId).resolveTrackSource(track, quality: quality);
   }
 
   /// Fetches the lyric for [track] through its own platform.

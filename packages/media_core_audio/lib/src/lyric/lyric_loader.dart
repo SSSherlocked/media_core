@@ -1,10 +1,10 @@
 import 'dart:async';
 
+import 'package:media_core_audio/src/lyric/lrc_parser.dart';
+import 'package:media_core_audio/src/lyric/lyric_document.dart';
 import 'package:media_core_audio/src/source/music_source.dart';
 import 'package:media_core_audio/src/source/music_source_registry.dart';
 import 'package:media_core_audio/src/track/music_track.dart';
-import 'package:media_core_audio/src/lyric/lrc_parser.dart';
-import 'package:media_core_audio/src/lyric/lyric_document.dart';
 
 /// Supplies raw lyric material for a track.
 ///
@@ -79,23 +79,26 @@ final class LyricLoader {
     _inFlight[key] = completer;
 
     unawaited(
-      _fetch(track).then((document) {
-        _inFlight.remove(key);
+      _fetch(track).then(
+        (document) {
+          _inFlight.remove(key);
 
-        if (!document.isEmpty) {
-          _store(key, document);
-        }
+          if (!document.isEmpty) {
+            _store(key, document);
+          }
 
-        if (!completer.isCompleted) {
-          completer.complete(document);
-        }
-      }, onError: (Object error, StackTrace stackTrace) {
-        _inFlight.remove(key);
+          if (!completer.isCompleted) {
+            completer.complete(document);
+          }
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          _inFlight.remove(key);
 
-        if (!completer.isCompleted) {
-          completer.completeError(error, stackTrace);
-        }
-      }),
+          if (!completer.isCompleted) {
+            completer.completeError(error, stackTrace);
+          }
+        },
+      ),
     );
 
     return completer.future;
@@ -113,7 +116,7 @@ final class LyricLoader {
 
     try {
       await load(track);
-    } catch (_) {
+    } on Object catch (_) {
       // Prefetch never surfaces an error; the on-demand load will.
     }
   }

@@ -1,5 +1,6 @@
-import 'package:media_core_audio/src/track/music_track.dart';
+import 'package:media_core_audio/src/player/audio_playback_controller.dart' show AudioPlaybackController;
 import 'package:media_core_audio/src/queue/play_mode.dart';
+import 'package:media_core_audio/src/track/music_track.dart';
 
 /// The play list: ordered tracks, a cursor, and the shuffled order when
 /// [PlayMode.random] is active.
@@ -114,9 +115,7 @@ final class PlayQueue {
   int appendAll(Iterable<MusicTrack> tracks) {
     final first = _tracks.length;
 
-    for (final track in tracks) {
-      append(track);
-    }
+    tracks.forEach(append);
 
     return first;
   }
@@ -318,8 +317,9 @@ final class PlayQueue {
     final indices = List<int>.generate(_tracks.length, (index) => index)..shuffle();
 
     if (_index >= 0 && indices.isNotEmpty) {
-      indices.remove(_index);
-      indices.insert(0, _index);
+      indices
+        ..remove(_index)
+        ..insert(0, _index);
     }
 
     if (excludeFirst != null && indices.length > 1 && indices.first == excludeFirst) {

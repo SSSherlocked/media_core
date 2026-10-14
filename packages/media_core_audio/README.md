@@ -43,6 +43,9 @@ if (await overlay.show()) {
 final audio = MediaCoreAudio();
 await audio.initialize();
 kernel.attachAudio(audio);
+
+// 退到后台默认暂停（由 PlayerKernel 观察并 deactivate 所有在播的 handle）。
+// 旁白/播客要继续播：AudioPlaybackController(kernel, playerConfig: PlayerConfig(pauseWhenBackgrounded: false))。
 final background = MusicBackgroundBinding(player, audio)..attach();
 
 // 运行时权限

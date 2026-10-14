@@ -13,8 +13,7 @@ final class MusicDownloadConfig {
     this.readTimeout = const Duration(seconds: 20),
     this.threadQueueSize = 4096,
     this.maxLogLines = 80,
-    this.protocolWhitelist =
-        'httpproxy,udp,rtp,rtsp,rtmp,rtmps,srt,tcp,tls,data,file,http,https,crypto,pipe',
+    this.protocolWhitelist = 'httpproxy,udp,rtp,rtsp,rtmp,rtmps,srt,tcp,tls,data,file,http,https,crypto,pipe',
   });
 
   /// Network read timeout (`-rw_timeout`, in microseconds on the wire).
@@ -146,11 +145,7 @@ final class MusicDownloader {
 
     await initialize();
 
-    final running = task.copyWith(
-      status: MusicDownloadStatus.running,
-      startedAt: DateTime.now(),
-      clearError: true,
-    );
+    final running = task.copyWith(status: MusicDownloadStatus.running, startedAt: DateTime.now(), clearError: true);
 
     onUpdate?.call(running);
 
@@ -204,9 +199,7 @@ final class MusicDownloader {
         _cancelled.remove(task.id);
 
         if (!completer.isCompleted) {
-          completer.complete(
-            running.copyWith(status: MusicDownloadStatus.cancelled, finishedAt: finishedAt),
-          );
+          completer.complete(running.copyWith(status: MusicDownloadStatus.cancelled, finishedAt: finishedAt));
         }
 
         return;
@@ -232,15 +225,13 @@ final class MusicDownloader {
       );
 
       if (!completer.isCompleted) {
-        completer.complete(
-          running.copyWith(status: MusicDownloadStatus.failed, error: reason, finishedAt: finishedAt),
-        );
+        completer.complete(running.copyWith(status: MusicDownloadStatus.failed, error: reason, finishedAt: finishedAt));
       }
     });
 
     try {
       await session.executeAsync();
-    } catch (error) {
+    } on Object catch (error) {
       _sessions.remove(task.id);
       _logs.remove(task.id);
 
@@ -249,7 +240,7 @@ final class MusicDownloader {
       }
     }
 
-    return completer.future;
+    return await completer.future;
   }
 
   /// Cancels a running download.
@@ -284,7 +275,7 @@ final class MusicDownloader {
     for (final session in _sessions.values) {
       try {
         FFmpegKit.cancel(session);
-      } catch (_) {
+      } on Object catch (_) {
         // Best effort: a session that is already gone needs no cancel.
       }
     }

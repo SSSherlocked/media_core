@@ -10,6 +10,22 @@ environment:
   flutter: ">=3.35.0"
 
 dependencies:
+  audio_service: ^0.18.19
+
+  # Linux implementation of audio_service (MPRIS / D-Bus)
+  audio_service_mpris: ^0.2.1
+
+  # Windows implementation of audio_service
+  audio_service_win: ^0.0.3
+
+  # Audio focus / interruption / becoming-noisy events
+  audio_session: ^0.2.3
+
+  # Music downloads (HLS/adaptive sources, tag writing, codec choice).
+  # Pinned to the version the app resolves, so a single native ffmpeg build
+  # serves both packages.
+  ffmpeg_kit_extended_flutter: ^0.6.2
+
   flutter:
     sdk: flutter
   media_core:
@@ -22,26 +38,10 @@ dependencies:
   media_core_mediasession:
     ^0.1.0
 
-  audio_service: ^0.18.19
-
-  # Windows implementation of audio_service
-  audio_service_win: ^0.0.3
-
-  # Linux implementation of audio_service (MPRIS / D-Bus)
-  audio_service_mpris: ^0.2.1
-
-  # Audio focus / interruption / becoming-noisy events
-  audio_session: ^0.2.3
-
-  # Music downloads (HLS/adaptive sources, tag writing, codec choice).
-  # Pinned to the version the app resolves, so a single native ffmpeg build
-  # serves both packages.
-  ffmpeg_kit_extended_flutter: 0.6.2
-
 dev_dependencies:
+  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
 
 # Native desktop-lyric overlay (Windows layered window / Android overlay
 # window). Declaring the platforms is what makes Flutter register the plugin

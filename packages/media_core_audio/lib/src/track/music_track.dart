@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show immutable;
+import 'package:media_core_audio/media_core_audio.dart' show MusicSource, TrackSource;
 import 'package:media_core_audio/src/track/music_quality.dart';
 
 /// One playable piece of music, independent of where it came from.
@@ -10,6 +12,7 @@ import 'package:media_core_audio/src/track/music_quality.dart';
 /// The model deliberately carries no playback URL: a URL is short-lived and
 /// belongs to [TrackSource], resolved per playback attempt. Keeping them apart
 /// is what lets a queue survive a signed URL expiring.
+@immutable
 final class MusicTrack {
   /// Creates a track.
   const MusicTrack({

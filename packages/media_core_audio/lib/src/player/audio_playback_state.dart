@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show immutable;
 import 'package:media_core_audio/src/queue/play_mode.dart';
 import 'package:media_core_audio/src/track/music_quality.dart';
 import 'package:media_core_audio/src/track/music_track.dart';
@@ -7,6 +8,7 @@ import 'package:media_core_audio/src/track/music_track.dart';
 /// A snapshot rather than a live object: the controller publishes a new one
 /// whenever anything changes, so a consumer never has to ask the player, the
 /// queue and the source resolver separately and stitch an answer together.
+@immutable
 final class AudioPlaybackState {
   /// Creates a state snapshot.
   const AudioPlaybackState({

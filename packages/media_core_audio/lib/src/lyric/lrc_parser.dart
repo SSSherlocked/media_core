@@ -88,7 +88,6 @@ final class LrcParser {
     return LyricDocument(
       lines: List<LyricLine>.unmodifiable(lines),
       metadata: Map<String, String>.unmodifiable(metadata),
-      isSynchronized: true,
     );
   }
 

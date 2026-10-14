@@ -10,9 +10,6 @@ final class LyricDocument {
   /// Creates a document from already-sorted [lines].
   const LyricDocument({required this.lines, this.metadata = const <String, String>{}, this.isSynchronized = true});
 
-  /// A document with nothing to show.
-  static const LyricDocument empty = LyricDocument(lines: <LyricLine>[]);
-
   /// Creates a document from plain text with no timing.
   ///
   /// Unsynchronized lyrics (plain `.txt`, a lyric endpoint without timestamps)
@@ -26,6 +23,9 @@ final class LyricDocument {
 
     return LyricDocument(lines: lines, isSynchronized: false);
   }
+
+  /// A document with nothing to show.
+  static const LyricDocument empty = LyricDocument(lines: <LyricLine>[]);
 
   /// Lines, ordered by start time.
   final List<LyricLine> lines;

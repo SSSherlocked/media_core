@@ -1,3 +1,4 @@
+import 'package:media_core_audio/src/player/audio_playback_controller.dart' show AudioPlaybackController;
 import 'package:media_core_audio/src/track/music_quality.dart';
 
 /// Tuning for [AudioPlaybackController].

@@ -33,8 +33,8 @@ final class AudioPermissionService {
 
   /// Whether every one of the module's live permissions is granted.
   ///
-  /// [notifications] and [mediaLibrary] are only requested when the host uses
-  /// the feature, so they are not part of this check.
+  /// `AudioPermission.notifications` and `AudioPermission.mediaLibrary` are only
+  /// requested when the host uses the feature, so they are not part of this check.
   Future<bool> get isReady => isGranted(AudioPermission.desktopLyricOverlay);
 
   /// Whether [permission] is currently granted.
@@ -107,9 +107,8 @@ final class MethodChannelAudioPermissionTransport implements AudioPermissionTran
   @override
   Future<bool> isGranted(AudioPermission permission) async {
     try {
-      final granted = await _channel.invokeMethod<bool>('isGranted', <String, Object?>{
-        'permission': permission.name,
-      }) ?? false;
+      final granted =
+          await _channel.invokeMethod<bool>('isGranted', <String, Object?>{'permission': permission.name}) ?? false;
 
       _cache[permission] = granted;
 
@@ -125,9 +124,8 @@ final class MethodChannelAudioPermissionTransport implements AudioPermissionTran
   @override
   Future<bool> request(AudioPermission permission) async {
     try {
-      final granted = await _channel.invokeMethod<bool>('request', <String, Object?>{
-        'permission': permission.name,
-      }) ?? false;
+      final granted =
+          await _channel.invokeMethod<bool>('request', <String, Object?>{'permission': permission.name}) ?? false;
 
       _cache[permission] = granted;
 

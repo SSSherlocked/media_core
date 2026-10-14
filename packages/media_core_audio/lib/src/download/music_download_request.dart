@@ -140,10 +140,7 @@ final class MusicDownloadRequest {
   /// `ts`, `m4s`, `flv`) is a byte stream whose codec cannot be inferred from
   /// the URL, and writing those bytes into `.m4a` produces a file that does
   /// not play: those are transcoded instead.
-  static ({MusicDownloadFormat format, String extension}) planFor(
-    TrackSource source, {
-    MusicDownloadFormat? format,
-  }) {
+  static ({MusicDownloadFormat format, String extension}) planFor(TrackSource source, {MusicDownloadFormat? format}) {
     final sourceExtension = _extensionOf(source.uri);
     final copyable = sourceExtension != null && copyableExtensions.contains(sourceExtension);
 
@@ -177,10 +174,7 @@ final class MusicDownloadRequest {
 
   /// Removes characters a file name cannot contain or that confuse tooling.
   static String sanitizeFileName(String value) {
-    final cleaned = value
-        .replaceAll(RegExp(r'[\\/:*?"<>|\u0000-\u001f]'), '_')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
+    final cleaned = value.replaceAll(RegExp(r'[\\/:*?"<>|\u0000-\u001f]'), '_').replaceAll(RegExp(r'\s+'), ' ').trim();
 
     // Trailing dots and spaces are rejected by Windows.
     final trimmed = cleaned.replaceAll(RegExp(r'[. ]+$'), '');

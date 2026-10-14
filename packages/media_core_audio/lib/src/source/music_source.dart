@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show immutable;
 import 'package:media_core_audio/src/track/music_quality.dart';
 import 'package:media_core_audio/src/track/music_track.dart';
 import 'package:media_core_audio/src/track/track_source.dart';
@@ -110,6 +111,7 @@ final class MusicLyricPayload {
 }
 
 /// A named list a source can serve (playlist, leaderboard, radio).
+@immutable
 final class MusicCatalog {
   /// Creates a catalog descriptor.
   const MusicCatalog({required this.id, required this.name, this.description, this.coverUri});

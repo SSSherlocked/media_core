@@ -1,15 +1,15 @@
 import 'dart:async';
 
+import 'package:media_core_audio/src/desktop_lyric/desktop_lyric_state.dart';
+import 'package:media_core_audio/src/desktop_lyric/desktop_lyric_transport.dart';
 import 'package:media_core_audio/src/lyric/lyric_document.dart';
 import 'package:media_core_audio/src/lyric/lyric_line.dart';
 import 'package:media_core_audio/src/lyric/lyric_timeline.dart';
 import 'package:media_core_audio/src/permission/audio_permission.dart';
 import 'package:media_core_audio/src/permission/audio_permission_service.dart';
-import 'package:media_core_audio/src/track/music_track.dart';
 import 'package:media_core_audio/src/player/audio_playback_controller.dart';
 import 'package:media_core_audio/src/player/audio_playback_state.dart';
-import 'package:media_core_audio/src/desktop_lyric/desktop_lyric_state.dart';
-import 'package:media_core_audio/src/desktop_lyric/desktop_lyric_transport.dart';
+import 'package:media_core_audio/src/track/music_track.dart';
 
 /// Drives a desktop lyric overlay from an [AudioPlaybackController].
 ///
@@ -31,7 +31,7 @@ import 'package:media_core_audio/src/desktop_lyric/desktop_lyric_transport.dart'
 /// ```dart
 /// final desktopLyric = DesktopLyricController(controller);
 /// await desktopLyric.show();          // asks the host to draw the window
-/// desktopLyric.setLocked(true);       // click-through
+/// desktopLyric.setLocked(locked: true); // click-through
 /// ```
 final class DesktopLyricController {
   /// Creates a controller.
@@ -160,14 +160,14 @@ final class DesktopLyricController {
       return false;
     }
 
-    return show();
+    return await show();
   }
 
   /// Locks/unlocks the overlay.
   ///
   /// A locked overlay is click-through: it cannot be grabbed or clicked, which
   /// is what makes it usable over a full-screen video or game.
-  Future<void> setLocked(bool locked) async {
+  Future<void> setLocked({required bool locked}) async {
     if (_disposed || _locked == locked) {
       return;
     }
@@ -265,7 +265,7 @@ final class DesktopLyricController {
       _document = document;
       _timeline.setDocument(document);
       _push(force: true);
-    } catch (_) {
+    } on Object catch (_) {
       // A lyric that cannot be loaded leaves the overlay showing its
       // placeholder; the music keeps playing.
     }
@@ -282,9 +282,9 @@ final class DesktopLyricController {
       case DesktopLyricAction.close:
         unawaited(hide());
       case DesktopLyricAction.lock:
-        unawaited(setLocked(true));
+        unawaited(setLocked(locked: true));
       case DesktopLyricAction.unlock:
-        unawaited(setLocked(false));
+        unawaited(setLocked(locked: false));
     }
   }
 

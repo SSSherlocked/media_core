@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:media_core_audio/src/track/music_track.dart';
-import 'package:media_core_audio/src/track/track_source.dart';
 import 'package:media_core_audio/src/download/music_download_request.dart';
 import 'package:media_core_audio/src/download/music_download_task.dart';
 import 'package:media_core_audio/src/download/music_downloader.dart';
+import 'package:media_core_audio/src/track/music_track.dart';
+import 'package:media_core_audio/src/track/track_source.dart';
 
 /// A download queue with bounded concurrency and retries.
 ///
@@ -70,7 +70,11 @@ final class MusicDownloadQueue {
   /// [resolve] is optional and only used for retries: pass a callback that
   /// re-resolves the track's URL when the host knows the URL is signed and
   /// short-lived.
-  MusicDownloadTask enqueue(MusicDownloadRequest request, {String? id, Future<MusicDownloadRequest> Function()? resolve}) {
+  MusicDownloadTask enqueue(
+    MusicDownloadRequest request, {
+    String? id,
+    Future<MusicDownloadRequest> Function()? resolve,
+  }) {
     final taskId = id ?? 'dl_${DateTime.now().microsecondsSinceEpoch}_${_sequence++}';
     final task = MusicDownloadTask(id: taskId, request: request);
 
@@ -183,19 +187,13 @@ final class MusicDownloadQueue {
       if (resolver != null) {
         try {
           request = await resolver();
-        } catch (_) {
+        } on Object catch (_) {
           // Resolution failed: keep the previous request and let the next
           // attempt report the download error.
         }
       }
 
-      task = MusicDownloadTask(
-        id: taskId,
-        request: request,
-        status: MusicDownloadStatus.queued,
-        attempt: nextAttempt,
-        error: finished.error,
-      );
+      task = MusicDownloadTask(id: taskId, request: request, attempt: nextAttempt, error: finished.error);
 
       _emit(task);
     }
@@ -223,7 +221,7 @@ final class MusicDownloadQueue {
 
       unawaited(
         _run(next).whenComplete(() {
-          _running.remove(next);
+          unawaited(_running.remove(next));
           completer.complete();
 
           if (!_disposed) {

@@ -1,4 +1,3 @@
-import 'package:audio_session/audio_session.dart' as asession;
 import 'package:media_core_mediasession/media_core_mediasession.dart';
 
 /// Audio capability driver for the media_core kernel.
@@ -20,9 +19,5 @@ import 'package:media_core_mediasession/media_core_mediasession.dart';
 /// [MediaSessionConfig.video] for a player that has no queue.
 final class MediaCoreAudio extends MediaSessionDriver {
   /// Creates the driver.
-  MediaCoreAudio({
-    MediaSessionConfig config = const MediaSessionConfig(),
-    asession.AudioSessionConfiguration? sessionConfiguration,
-    super.artUriResolver,
-  }) : super(config: config, sessionConfiguration: sessionConfiguration);
+  MediaCoreAudio({super.config, super.sessionConfiguration, super.artUriResolver});
 }

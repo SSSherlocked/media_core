@@ -1,18 +1,16 @@
 import 'dart:async';
 
 import 'package:media_core/media_core.dart';
-
 import 'package:media_core_audio/src/lyric/lyric_document.dart';
 import 'package:media_core_audio/src/lyric/lyric_loader.dart';
+import 'package:media_core_audio/src/player/audio_playback_config.dart';
+import 'package:media_core_audio/src/player/audio_playback_state.dart';
 import 'package:media_core_audio/src/queue/play_mode.dart';
 import 'package:media_core_audio/src/queue/play_queue.dart';
 import 'package:media_core_audio/src/source/music_source_registry.dart';
-import 'package:media_core_audio/src/player/audio_playback_config.dart';
 import 'package:media_core_audio/src/track/music_quality.dart';
 import 'package:media_core_audio/src/track/music_track.dart';
 import 'package:media_core_audio/src/track/track_source.dart';
-import 'package:media_core_audio/src/player/audio_playback_state.dart';
-
 
 /// decides how that looks.
 final class AudioPlaybackController {
@@ -23,8 +21,10 @@ final class AudioPlaybackController {
     MusicSourceRegistry? registry,
     LyricLoader? lyrics,
     AudioPlaybackConfig config = const AudioPlaybackConfig(),
+    PlayerConfig? playerConfig,
   }) : config = config,
        _quality = config.initialQuality,
+       _playerConfig = playerConfig,
        _kernel = kernel,
        _registry = registry ?? MusicSourceRegistry(),
        queue = queue ?? PlayQueue(),
@@ -41,6 +41,15 @@ final class AudioPlaybackController {
 
   final PlayerKernel _kernel;
   final MusicSourceRegistry _registry;
+
+  /// How the player this controller opens should treat the app going to the
+  /// background, or null to take the kernel's answer.
+  ///
+  /// This is the music module's side of one mechanism: the kernel observes the
+  /// app and deactivates what is playing, and a narration or podcast player says
+  /// here that it is the exception. A host that would rather not think per player
+  /// passes `KernelOptions(pauseWhenBackgrounded: false)` instead.
+  final PlayerConfig? _playerConfig;
 
   final StreamController<AudioPlaybackState> _states = StreamController<AudioPlaybackState>.broadcast();
 
@@ -173,7 +182,7 @@ final class AudioPlaybackController {
 
     try {
       await _openTrack(handle, track, quality: _quality, operation: operation);
-    } catch (error) {
+    } on Object catch (error) {
       await _fail(track, error, operation: operation);
     }
   }
@@ -261,8 +270,8 @@ final class AudioPlaybackController {
   }
 
   /// Mutes or unmutes output.
-  Future<void> setMute(bool muted) async {
-    await _handle?.setMute(muted);
+  Future<void> setMute({required bool muted}) async {
+    await _handle?.setMute(muted: muted);
     _publish(muted: muted);
   }
 
@@ -383,7 +392,7 @@ final class AudioPlaybackController {
     }
 
     try {
-      final handle = await _kernel.create();
+      final handle = _playerConfig == null ? await _kernel.create() : await _kernel.create(config: _playerConfig);
 
       if (_disposed) {
         await _kernel.release(handle.id);
@@ -394,7 +403,7 @@ final class AudioPlaybackController {
       _bind(handle);
 
       return handle;
-    } catch (error) {
+    } on Object catch (error) {
       _publish(loading: false, error: 'PlayerIdentity creation failed: $error');
 
       return null;
@@ -404,10 +413,10 @@ final class AudioPlaybackController {
   void _bind(PlayerHandle handle) {
     _handle = handle;
 
-    _adapterSub?.cancel();
+    unawaited(_adapterSub?.cancel());
     _adapterSub = handle.adapterEvents.listen(_onAdapterEvent, onError: (Object _) {});
 
-    _playbackSub?.cancel();
+    unawaited(_playbackSub?.cancel());
     _playbackSub = handle.playbackStream.listen(_onPlaybackState, onError: (Object _) {});
   }
 
@@ -478,7 +487,7 @@ final class AudioPlaybackController {
       case PlayerAdapterPaused():
         _publish(playing: false);
 
-      case PlayerAdapterBuffering(buffering: final buffering):
+      case PlayerAdapterBuffering(:final buffering):
         _publish(buffering: buffering, loading: buffering && !_state.playing);
 
       case PlayerAdapterCompleted():
@@ -487,7 +496,7 @@ final class AudioPlaybackController {
       case PlayerAdapterStopped():
         _publish(playing: false);
 
-      case PlayerAdapterErrorEvent(message: final message):
+      case PlayerAdapterErrorEvent(:final message):
         unawaited(_onAdapterError(message));
 
       case PlayerAdapterPositionChanged():
@@ -625,7 +634,7 @@ final class AudioPlaybackController {
     if (_resolved[key] == null || _resolved[key]!.isExpired()) {
       try {
         _resolved[key] = await _registry.resolveTrackSource(nextTrack, quality: _quality);
-      } catch (_) {
+      } on Object catch (_) {
         // Prefetch is best-effort; the real attempt reports the failure.
       }
     }
@@ -716,7 +725,7 @@ final class AudioPlaybackController {
     if (handle != null) {
       try {
         await _kernel.release(handle.id);
-      } catch (_) {
+      } on Object catch (_) {
         // Releasing an engine that is already gone is not an error here.
       }
     }

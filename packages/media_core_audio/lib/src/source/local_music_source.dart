@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:media_core_audio/src/track/music_quality.dart';
 import 'package:media_core_audio/src/source/music_source.dart';
+import 'package:media_core_audio/src/track/music_quality.dart';
 import 'package:media_core_audio/src/track/music_track.dart';
 import 'package:media_core_audio/src/track/track_source.dart';
 
@@ -64,8 +64,11 @@ final class LocalMusicSource extends MusicSource {
 
     final matched = needle.isEmpty
         ? all
-        : all.where((track) => track.title.toLowerCase().contains(needle) ||
-              track.artist.toLowerCase().contains(needle)).toList(growable: false);
+        : all
+              .where(
+                (track) => track.title.toLowerCase().contains(needle) || track.artist.toLowerCase().contains(needle),
+              )
+              .toList(growable: false);
 
     final start = ((page - 1) * pageSize).clamp(0, matched.length);
     final end = (start + pageSize).clamp(0, matched.length);

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show immutable;
+
 /// Audio quality tier of a music source.
 ///
 /// Mirrors the tiers lx-music exposes (128k / 320k / flac / flac24bit /
@@ -6,6 +8,7 @@
 /// it is deliberately a string rather than an enum — sources differ in what
 /// they can serve, and an app-specific tier must not require editing the
 /// framework.
+@immutable
 final class MusicQuality {
   /// Creates a quality tier.
   const MusicQuality({required this.id, required this.label, this.bitrateKbps, this.formatHint, this.sort = 0});
@@ -29,24 +32,31 @@ final class MusicQuality {
   static const MusicQuality auto = MusicQuality(id: 'auto', label: '自动', sort: -1);
 
   /// 128 kbps.
-  static const MusicQuality k128 = MusicQuality(id: '128k', label: '128K', bitrateKbps: 128, formatHint: 'mp3', sort: 0);
+  static const MusicQuality k128 = MusicQuality(id: '128k', label: '128K', bitrateKbps: 128, formatHint: 'mp3');
 
   /// 192 kbps.
-  static const MusicQuality k192 = MusicQuality(id: '192k', label: '192K', bitrateKbps: 192, formatHint: 'mp3', sort: 1);
+  static const MusicQuality k192 = MusicQuality(
+    id: '192k',
+    label: '192K',
+    bitrateKbps: 192,
+    formatHint: 'mp3',
+    sort: 1,
+  );
 
   /// 320 kbps.
-  static const MusicQuality k320 = MusicQuality(id: '320k', label: '320K', bitrateKbps: 320, formatHint: 'mp3', sort: 2);
+  static const MusicQuality k320 = MusicQuality(
+    id: '320k',
+    label: '320K',
+    bitrateKbps: 320,
+    formatHint: 'mp3',
+    sort: 2,
+  );
 
   /// CD-quality lossless.
   static const MusicQuality flac = MusicQuality(id: 'flac', label: 'FLAC', formatHint: 'flac', sort: 3);
 
   /// 24-bit lossless.
-  static const MusicQuality flac24bit = MusicQuality(
-    id: 'flac24bit',
-    label: 'FLAC 24bit',
-    formatHint: 'flac',
-    sort: 4,
-  );
+  static const MusicQuality flac24bit = MusicQuality(id: 'flac24bit', label: 'FLAC 24bit', formatHint: 'flac', sort: 4);
 
   /// High-resolution lossless.
   static const MusicQuality hires = MusicQuality(id: 'hires', label: 'Hi-Res', formatHint: 'flac', sort: 5);

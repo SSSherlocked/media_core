@@ -1,16 +1,17 @@
 import 'dart:async';
 
+import 'package:media_core/media_core.dart' show PlayerHandle;
+import 'package:media_core_audio/src/media_core_audio.dart';
 import 'package:media_core_audio/src/player/audio_playback_controller.dart';
 import 'package:media_core_audio/src/player/audio_playback_state.dart';
 import 'package:media_core_audio/src/track/music_track.dart';
-import 'package:media_core_audio/src/media_core_audio.dart';
 import 'package:media_core_mediasession/media_core_mediasession.dart';
 
 /// Connects an [AudioPlaybackController] to the platform's background playback
 /// surfaces.
 ///
-/// Background playback is three separate things, and this binding does all of
-/// them:
+/// Background playback is four separate things, and this binding does the three
+/// that belong to a music player:
 ///
 /// 1. **The player keeps running off-screen.** Nothing to do here — the engine
 ///    is the same one used in the foreground.
@@ -21,10 +22,16 @@ import 'package:media_core_mediasession/media_core_mediasession.dart';
 /// 3. **Transport commands come back.** Play/pause/seek/next/previous from the
 ///    notification, the lock screen, a headset button or a media key all reach
 ///    the controller through this binding.
+/// 4. **Whether playback is allowed off-screen at all** is *not* decided here —
+///    it is `PlayerConfig.pauseWhenBackgrounded` (per player) and
+///    `KernelOptions.pauseWhenBackgrounded` (per kernel, on by default). What
+///    this binding does about it is the part a policy cannot do alone: the
+///    surface publishes what the player really is doing, and a detach releases
+///    the surface instead of leaving a media session claiming playback.
 ///
 /// Audio focus and interruptions stay the capability driver's job
-/// ([MediaCoreAudio] itself) — this binding only installs the queue transports
-/// and mirrors state.
+/// ([MediaCoreAudio] itself) — this binding only installs the queue transports,
+/// mirrors state, and asks for the background pause.
 ///
 /// ```dart
 /// final audio = await MediaSessionBootstrap.enable();
@@ -48,6 +55,12 @@ final class MusicBackgroundBinding {
 
   StreamSubscription<AudioPlaybackState>? _stateSub;
 
+  /// The handle this binding put on the surface.
+  ///
+  /// The driver is app-wide (a video player can be published too), so only the
+  /// surface this binding took may be released by it.
+  PlayerHandle? _published;
+
   bool _attached = false;
   bool _disposed = false;
 
@@ -68,7 +81,7 @@ final class MusicBackgroundBinding {
     // Assigned one by one, not as a cascade: `..x = () => y() ..z = w` parses
     // the following section as part of the lambda body, silently turning the
     // cascade into a cascade on the lambda's return value.
-    audio.skipToNextHandler = () => player.next();
+    audio.skipToNextHandler = player.next;
     audio.skipToPreviousHandler = player.previous;
     audio.skipToQueueItemHandler = player.playAt;
     audio.setSpeedHandler = player.setRate;
@@ -79,7 +92,13 @@ final class MusicBackgroundBinding {
     _onState(player.state);
   }
 
-  /// Removes the transports and stops mirroring.
+  /// Removes the transports, releases the surface this binding published, and
+  /// stops mirroring.
+  ///
+  /// Releasing the surface is the half that matters. The last state published
+  /// said "playing", and on Android a media session that still claims playback
+  /// keeps its foreground service alive: leaving the binding installed would
+  /// look exactly like a background playback that cannot be turned off.
   void detach() {
     if (!_attached) {
       return;
@@ -92,8 +111,16 @@ final class MusicBackgroundBinding {
     audio.skipToQueueItemHandler = null;
     audio.setSpeedHandler = null;
 
-    _stateSub?.cancel();
+    unawaited(_stateSub?.cancel());
     _stateSub = null;
+
+    final published = _published;
+    _published = null;
+
+    if (published != null && identical(audio.active, published)) {
+      // publishIdle + clearMediaItem, and the driver stops following the player.
+      audio.setActive(null);
+    }
   }
 
   /// Releases the binding.
@@ -118,6 +145,7 @@ final class MusicBackgroundBinding {
     // construction.
     if (handle != null && !handle.disposed && !identical(audio.active, handle)) {
       audio.setActive(handle);
+      _published = handle;
     }
 
     final handler = audio.handler;
@@ -129,8 +157,9 @@ final class MusicBackgroundBinding {
     final track = state.track;
 
     if (track == null) {
-      handler.publishIdle();
-      handler.clearMediaItem();
+      handler
+        ..publishIdle()
+        ..clearMediaItem();
 
       return;
     }
@@ -148,12 +177,7 @@ final class MusicBackgroundBinding {
     // are installed, so installing/removing skip support never needs a second
     // list kept in sync here.
     handler.publishState(
-      MediaSessionState(
-        playing: state.playing,
-        position: state.position,
-        duration: state.duration,
-        speed: state.rate,
-      ),
+      MediaSessionState(playing: state.playing, position: state.position, duration: state.duration, speed: state.rate),
     );
   }
 

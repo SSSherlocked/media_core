@@ -1,4 +1,5 @@
 import 'package:media_core/media_core.dart';
+import 'package:media_core_audio/media_core_audio.dart' show AudioPlaybackController, MusicSource;
 
 import 'package:media_core_audio/src/track/music_quality.dart';
 
@@ -63,7 +64,7 @@ final class TrackSource {
   Duration? remainingLifetime({DateTime? now}) {
     final deadline = expiresAt;
 
-    return deadline == null ? null : deadline.difference(now ?? DateTime.now());
+    return deadline?.difference(now ?? DateTime.now());
   }
 
   /// Adapts this resolution into the kernel's source type.
