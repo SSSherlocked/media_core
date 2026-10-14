@@ -1,6 +1,6 @@
 /// Device profile categorization for playback presentation.
 ///
-/// Used by [PresentationManager] to determine how to render media
+/// Used by the presentation manager to determine how to render media
 /// on different screen types (e.g., force vertical on phones, responsive on tablets).
 enum DeviceProfile {
   /// Standard smartphone. Typically forces vertical orientation for most content.

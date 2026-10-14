@@ -16,10 +16,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  media_core:
-    path: ../media_core
-  media_core_logging:
-    path: ../media_core_logging
 
   # Published package. Note that pure_live vendors a stripped copy (android/ios
   # plugin platforms only) to keep libmdk off desktop; that copy is not used
@@ -27,5 +23,14 @@ dependencies:
   # dependency themselves.
   fvp: ^0.38.1
 
+  media_core:
+    path: ../media_core
+
+  media_core_logging:
+    path: ../media_core_logging
+
 dev_dependencies:
   flutter_lints: ^6.0.0
+
+  flutter_test:
+    sdk: flutter

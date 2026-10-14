@@ -11,21 +11,25 @@ environment:
   flutter: ">=3.35.0"
 
 dependencies:
+  # FFmpeg runtime (argument-list API, session control, statistics)
+  ffmpeg_kit_extended_flutter: 0.6.2
+
   flutter:
     sdk: flutter
+
+  media_core:
+    path: ../media_core
 
   # Background execution: a recording outlives the app being in the foreground,
   # and the platform has to be told that (foreground service + wake lock on
   # Android, sleep assertions elsewhere).
   media_core_native:
     path: ../media_core_native
-  media_core:
-    path: ../media_core
 
-  # FFmpeg runtime (argument-list API, session control, statistics)
-  ffmpeg_kit_extended_flutter: 0.6.2
+  path: ^1.9.1
 
 dev_dependencies:
+  flutter_lints: ^6.0.0
+
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0

@@ -11,25 +11,28 @@ environment:
   flutter: ">=3.35.0"
 
 dependencies:
-  flutter:
-    sdk: flutter
-  media_core:
-    path: ../media_core
-  media_core_memory:
-    path: ../media_core_memory
+  # Immutable session snapshot
+  equatable: ^3.0.0
 
   flame_barrage: ^0.0.9
 
-  # Session state and failure streams
-  rxdart: ^0.28.0
-
-  # Immutable session snapshot
-  equatable: ^3.0.0
+  flutter:
+    sdk: flutter
 
   # Similarity scoring for the fuzzy duplicate filter
   fuzzywuzzy: ^1.1.6
 
+  media_core:
+    path: ../media_core
+
+  media_core_memory:
+    path: ../media_core_memory
+
+  # Session state and failure streams
+  rxdart: ^0.28.0
+
 dev_dependencies:
+  flutter_lints: ^6.0.0
+
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0

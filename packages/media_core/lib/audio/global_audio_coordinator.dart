@@ -81,7 +81,7 @@ final class GlobalAudioCoordinator {
 
   /// Disposes the coordinator and cleans up.
   void dispose() {
-    _ownerSubject.close();
+    unawaited(_ownerSubject.close());
     _coordinators.clear();
   }
 }

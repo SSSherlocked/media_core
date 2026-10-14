@@ -27,6 +27,10 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^2.0.0
+
   flutter:
     sdk: flutter
 
@@ -34,37 +38,48 @@ dependencies:
   media_core:
     path: ../packages/media_core
 
-  # The backend this example plays through (it brings media_kit /
-  # media_kit_video in from the pinned upstream revision).
-  media_core_media_kit:
-    path: ../packages/media_core_media_kit
+  # Feature modules, one import per demo page below.
+  media_core_audio:
+    path: ../packages/media_core_audio
+  media_core_danmaku:
+    path: ../packages/media_core_danmaku
+  media_core_download:
+    path: ../packages/media_core_download
+  media_core_feed:
+    path: ../packages/media_core_feed
+  media_core_list_playback:
+    path: ../packages/media_core_list_playback
+  media_core_live:
+    path: ../packages/media_core_live
 
   # Logging: the framework logs through this package, and the example turns
   # it on so the demo pages can show what the framework decides.
   media_core_logging:
     path: ../packages/media_core_logging
 
+  # The backend this example plays through (it brings media_kit /
+  # media_kit_video in from the pinned upstream revision).
+  media_core_media_kit:
+    path: ../packages/media_core_media_kit
+
+  # System media surfaces (notification / lock screen / SMTC / MPRIS) for the
+  # video player.
+  media_core_mediasession:
+    path: ../packages/media_core_mediasession
+
   # Memory accounting: the memory demo page and the cache demo both read it.
   media_core_memory:
     path: ../packages/media_core_memory
 
-  # Feature modules, one import per demo page below.
-  media_core_live:
-    path: ../packages/media_core_live
-  media_core_feed:
-    path: ../packages/media_core_feed
-  media_core_audio:
-    path: ../packages/media_core_audio
-  media_core_presentation:
-    path: ../packages/media_core_presentation
-  media_core_danmaku:
-    path: ../packages/media_core_danmaku
   media_core_multiview:
     path: ../packages/media_core_multiview
-  media_core_list_playback:
-    path: ../packages/media_core_list_playback
-  media_core_download:
-    path: ../packages/media_core_download
+
+  # The platform capability probe the probe demo prints.
+  media_core_native:
+    path: ../packages/media_core_native
+
+  media_core_presentation:
+    path: ../packages/media_core_presentation
   media_core_recording_ffmpeg:
     path: ../packages/media_core_recording_ffmpeg
 
@@ -73,29 +88,16 @@ dependencies:
   media_core_ui:
     path: ../packages/media_core_ui
 
-  # The platform capability probe the probe demo prints.
-  media_core_native:
-    path: ../packages/media_core_native
-
-  # System media surfaces (notification / lock screen / SMTC / MPRIS) for the
-  # video player.
-  media_core_mediasession:
-    path: ../packages/media_core_mediasession
-
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^2.0.0
-
 dev_dependencies:
-  flutter_test:
-    sdk: flutter
-
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+  flutter_test:
+    sdk: flutter
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

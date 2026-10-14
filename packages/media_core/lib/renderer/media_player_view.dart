@@ -4,9 +4,9 @@ import 'package:flutter/widgets.dart';
 
 import 'package:media_core/adapter/player_video.dart';
 import 'package:media_core/kernel/player_handle.dart';
+import 'package:media_core/renderer/video_zoom_controller.dart';
 import 'package:media_core/screenshot/screenshot_surface.dart';
 import 'package:media_core/source/player_source.dart';
-import 'package:media_core/renderer/video_zoom_controller.dart';
 
 /// Application-facing video widget for a [PlayerHandle].
 ///
@@ -24,7 +24,7 @@ import 'package:media_core/renderer/video_zoom_controller.dart';
 ///   contract, so the surface is fitted by the same engine widget that
 ///   renders it,
 /// - offers its video layer as a screenshot surface, so
-///   [PlayerHandle.captureScreenshot] works on engines that have no
+///   [PlayerHandle]'s `captureScreenshot()` works on engines that have no
 ///   frame-capture API of their own,
 /// - magnifies the video on request, through [zoom] and [enablePinchZoom].
 ///
@@ -35,7 +35,7 @@ import 'package:media_core/renderer/video_zoom_controller.dart';
 ///
 /// The view does not impose a second layout system on the adapter's widget.
 /// Earlier revisions wrapped the surface in an [AspectRatio] plus a
-/// fitted [PlayerSurface], but an adapter's video widget already fits
+/// fitted player surface, but an adapter's video widget already fits
 /// itself (and a live stream arriving through the wrapped path could end
 /// up composited black while audio played). The adapter's widget now
 /// expands into the constraints the host gives this view — a host that
@@ -58,6 +58,7 @@ import 'package:media_core/renderer/video_zoom_controller.dart';
 /// so a drag always moves the picture with the finger, and inside the clip
 /// so magnifying crops the edges instead of painting over the host's UI.
 final class MediaPlayerView extends StatefulWidget {
+  /// Creates a view that renders [handle]'s video into the widget tree.
   const MediaPlayerView({
     required this.handle,
     super.key,
@@ -187,7 +188,7 @@ final class _MediaPlayerViewState extends State<MediaPlayerView> {
 
   /// Scale at the start of the running pinch, so the reported cumulative scale
   /// is applied as a ratio instead of being multiplied in every frame.
-  double _gestureStartScale = 1.0;
+  double _gestureStartScale = 1;
 
   /// Where the last double tap landed, in view coordinates.
   Offset _doubleTapPosition = Offset.zero;
@@ -324,13 +325,13 @@ final class _MediaPlayerViewState extends State<MediaPlayerView> {
   void _unbind() {
     _releaseSurface();
 
-    _backendSubscription?.cancel();
+    unawaited(_backendSubscription?.cancel() ?? Future<void>.value());
     _backendSubscription = null;
 
-    _geometrySubscription?.cancel();
+    unawaited(_geometrySubscription?.cancel() ?? Future<void>.value());
     _geometrySubscription = null;
 
-    _sourceSubscription?.cancel();
+    unawaited(_sourceSubscription?.cancel() ?? Future<void>.value());
     _sourceSubscription = null;
 
     // `attach`/`detach` exist for surfaces with an explicit lifecycle
@@ -387,7 +388,7 @@ final class _MediaPlayerViewState extends State<MediaPlayerView> {
   @override
   Widget build(BuildContext context) {
     final handle = widget.handle;
-    final PlayerVideo? video = switch (handle.adapter) {
+    final video = switch (handle.adapter) {
       final PlayerVideo output when output.available => output,
       _ => null,
     };
@@ -400,14 +401,14 @@ final class _MediaPlayerViewState extends State<MediaPlayerView> {
 
     // Without a video widget there is nothing to render: an audio-only
     // player, or one whose surface is not ready yet, paints its background.
-    final Widget picture = _pictureFor(video);
+    final picture = _pictureFor(video);
 
-    Widget content = picture;
+    var content = picture;
 
     if (widget.mirror) {
       content = Transform(
         alignment: Alignment.center,
-        transform: Matrix4.identity()..scaleByDouble(-1.0, 1.0, 1.0, 1.0),
+        transform: Matrix4.identity()..scaleByDouble(-1, 1, 1, 1),
         child: content,
       );
     }

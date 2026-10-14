@@ -48,11 +48,11 @@ dependency_overrides:
   # Windows extraction failure recorded in the project notes before assuming
   # the upstream hook is simply broken.
   code_assets: ^2.1.0
+  flame_barrage: ^0.0.9
   hooks: ^2.2.0
   # media_kit_video pins wakelock_plus 1.3.3 while better_player_plus needs
   # ^1.7.0; without this the two backends cannot be resolved in one workspace.
   wakelock_plus: ^1.7.0
-  flame_barrage: ^0.0.9
 
 melos:
   scripts:

@@ -20,10 +20,12 @@ part of 'media_kit_player_adapter.dart';
 /// argument per entry needs no separator parsing at all, and it also survives
 /// an install directory whose path contains a comma.
 List<List<String>> mpvListOptionCommands(String key, List<Object?> entries) {
-  final commands = <List<String>>[<String>['change-list', key, 'clr', '']];
+  final commands = <List<String>>[
+    <String>['change-list', key, 'clr', ''],
+  ];
 
   for (final entry in entries) {
-    commands.add(<String>['change-list', key, 'append', entry == null ? '' : '$entry']);
+    commands.add(<String>['change-list', key, 'append', if (entry == null) '' else '$entry']);
   }
 
   return commands;
@@ -58,15 +60,10 @@ extension _MediaKitEngineConfig on MediaKitPlayerAdapter {
     if (native == null) return false;
 
     try {
-      // ignore: avoid_dynamic_calls
       await (native as dynamic).setProperty(name, value);
       return true;
-    } catch (error) {
-      MediaCoreLog.warning(
-        LogCategory.player,
-        'mpv rejected property "$name": $error',
-        error: error,
-      );
+    } on Object catch (error) {
+      MediaCoreLog.warning(LogCategory.player, 'mpv rejected property "$name": $error', error: error);
       return false;
     }
   }
@@ -78,7 +75,7 @@ extension _MediaKitEngineConfig on MediaKitPlayerAdapter {
   /// the live apply — cannot drift into different dialects. A [List] value
   /// is a list option and travels as a command; everything else is the
   /// scalar property write.
-  Future<bool> _applyNativeOption(EngineOption option) async {
+  Future<bool> _applyNativeOption(EngineOption option) {
     final value = option.value;
 
     if (value is List) {
@@ -112,7 +109,7 @@ extension _MediaKitEngineConfig on MediaKitPlayerAdapter {
       MediaCoreLog.info(
         LogCategory.renderer,
         'mpv list option "$key" mounted ${await _readNativeProperty('$key-count') ?? '<unknown>'} of '
-            '${entries.length} entries',
+        '${entries.length} entries',
         fields: <String, Object?>{'entries': entries.length},
       );
     }
@@ -127,17 +124,13 @@ extension _MediaKitEngineConfig on MediaKitPlayerAdapter {
     if (native == null) return null;
 
     try {
-      // ignore: avoid_dynamic_calls
       final value = await (native as dynamic).getProperty(name) as String?;
       return value;
-    } catch (error) {
+    } on Object catch (error) {
       // Not every list option carries a `-count`, and this write is already
       // decided by the commands above — the read-back only makes the answer
       // visible in the log.
-      MediaCoreLog.debug(
-        LogCategory.renderer,
-        'mpv property "$name" was not readable: $error',
-      );
+      MediaCoreLog.debug(LogCategory.renderer, 'mpv property "$name" was not readable: $error');
       return null;
     }
   }
@@ -153,15 +146,10 @@ extension _MediaKitEngineConfig on MediaKitPlayerAdapter {
     if (native == null) return false;
 
     try {
-      // ignore: avoid_dynamic_calls
       await (native as dynamic).command(command);
       return true;
-    } catch (error) {
-      MediaCoreLog.warning(
-        LogCategory.player,
-        'mpv rejected command "${command.join(' ')}": $error',
-        error: error,
-      );
+    } on Object catch (error) {
+      MediaCoreLog.warning(LogCategory.player, 'mpv rejected command "${command.join(' ')}": $error', error: error);
       return false;
     }
   }
