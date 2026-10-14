@@ -1,11 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
-import 'package:media_core_memory/media_core_memory.dart';
-
 import 'package:example/language.dart';
 import 'package:example/ui/demo_log.dart';
 import 'package:example/ui/demo_page_scaffold.dart';
+import 'package:flutter/material.dart';
+import 'package:media_core_memory/media_core_memory.dart';
 
 /// A live view of the memory hub.
 ///
@@ -16,7 +15,7 @@ import 'package:example/ui/demo_page_scaffold.dart';
 /// report blames.
 class MemoryDemoPage extends StatefulWidget {
   /// Creates the page.
-  const MemoryDemoPage({super.key});
+  const new({super.key});
 
   @override
   State<MemoryDemoPage> createState() => _MemoryDemoPageState();
@@ -54,13 +53,15 @@ final class _MemoryDemoPageState extends State<MemoryDemoPage> {
     _reportSub = MediaCoreMemory.onReport.listen(_onReport);
     _report = MediaCoreMemory.report();
 
-    _log.add('budget: ${MemoryEstimates.formatBytes(MediaCoreMemory.budget.maxBytes)}');
-    _log.add('logging is on at debug level — pressure transitions appear here and in the console');
+    _log
+      ..add('budget: ${MemoryEstimates.formatBytes(MediaCoreMemory.budget.maxBytes)}')
+      ..add('logging is on at debug level — pressure transitions appear here and in the console');
   }
 
   @override
   void dispose() {
-    _reportSub?.cancel();
+    // dispose() is synchronous: the report subscription close is detached here.
+    unawaited(_reportSub?.cancel());
     _detachDeviceProvider();
     MediaCoreMemory.clear();
     MediaCoreMemory.remove(MemoryModule.kernel);
@@ -86,8 +87,10 @@ final class _MemoryDemoPageState extends State<MemoryDemoPage> {
     MediaCoreMemory.budget = MemoryBudget(maxBytes: maxBytes);
 
     if (previous != MediaCoreMemory.pressure) {
-      _log.add('budget → ${megabytes.toStringAsFixed(0)}MB, pressure ${previous.label} → '
-          '${MediaCoreMemory.pressure.label}');
+      _log.add(
+        'budget → ${megabytes.toStringAsFixed(0)}MB, pressure ${previous.label} → '
+        '${MediaCoreMemory.pressure.label}',
+      );
     }
   }
 
@@ -96,8 +99,7 @@ final class _MemoryDemoPageState extends State<MemoryDemoPage> {
     for (final entry in _scenario.entries) {
       final units = entry.value;
       final bytes = switch (entry.key) {
-        MemoryModule.kernel || MemoryModule.pool || MemoryModule.preload =>
-          units * MemoryEstimates.videoStream720p,
+        MemoryModule.kernel || MemoryModule.pool || MemoryModule.preload => units * MemoryEstimates.videoStream720p,
         MemoryModule.danmaku => units * MemoryEstimates.danmakuMessage,
         _ => units * MemoryEstimates.cacheEntry,
       };
@@ -117,9 +119,11 @@ final class _MemoryDemoPageState extends State<MemoryDemoPage> {
       _log.add('${entry.key.name}: ${MemoryEstimates.formatBytes(bytes)} in $units item(s)');
     }
 
-    _log.add('report: ${MediaCoreMemory.pressure.label} '
-        '(${MemoryEstimates.formatBytes(MediaCoreMemory.totalBytes)} of '
-        '${MemoryEstimates.formatBytes(MediaCoreMemory.budget.maxBytes)})');
+    _log.add(
+      'report: ${MediaCoreMemory.pressure.label} '
+      '(${MemoryEstimates.formatBytes(MediaCoreMemory.totalBytes)} of '
+      '${MemoryEstimates.formatBytes(MediaCoreMemory.budget.maxBytes)})',
+    );
     MediaCoreMemory.report();
   }
 
@@ -166,9 +170,7 @@ final class _MemoryDemoPageState extends State<MemoryDemoPage> {
 
     return DemoPageScaffold(
       title: isZh ? '内存监控 / Memory' : 'Memory',
-      subtitle: isZh
-          ? '每个模块上报自己持有的东西；总量对照预算折算成压力等级。申报值来自模块，设备值来自平台 provider，两者是不同的两个数。'
-          : 'Each module reports what it holds; the total is turned into a pressure level by the budget. Declared figures come from modules, measured ones from a platform provider — two different numbers.',
+      subtitle: isZh ? '每个模块上报自己持有的东西；总量对照预算折算成压力等级。申报值来自模块，设备值来自平台 provider，两者是不同的两个数。' : 'Each module reports what it holds; the total is turned into a pressure level by the budget. Declared figures come from modules, measured ones from a platform provider — two different numbers.',
       log: _log,
       logHeight: 130,
       actions: <Widget>[
@@ -177,17 +179,11 @@ final class _MemoryDemoPageState extends State<MemoryDemoPage> {
           icon: const Icon(Icons.memory),
           label: Text(isZh ? '上报一批占用' : 'Report holdings'),
         ),
-        OutlinedButton(
-          onPressed: _releaseAll,
-          child: Text(isZh ? '全部释放' : 'Release all'),
-        ),
+        OutlinedButton(onPressed: _releaseAll, child: Text(isZh ? '全部释放' : 'Release all')),
         OutlinedButton(
           onPressed: () {
-            MediaCoreMemory.of(MemoryModule.download).set(
-              items: 1,
-              bytes: 96 * 1024 * 1024,
-              note: 'one large download, measured bytes',
-            );
+            MediaCoreMemory.of(MemoryModule.download)
+                .set(items: 1, bytes: 96 * 1024 * 1024, note: 'one large download, measured bytes');
             MediaCoreMemory.report();
             _log.add('download: 96.0MB (a measured figure, not an estimate)');
           },
@@ -229,10 +225,7 @@ final class _MemoryDemoPageState extends State<MemoryDemoPage> {
                   : 'The real reader belongs to the host: the framework does not pick the dependency for the app',
             ),
           ),
-          if (report != null) ...<Widget>[
-            const SizedBox(height: 4),
-            _Breakdown(report: report, isZh: isZh),
-          ],
+          if (report != null) ...<Widget>[const SizedBox(height: 4), _Breakdown(report: report, isZh: isZh)],
         ],
       ),
     );
@@ -241,7 +234,7 @@ final class _MemoryDemoPageState extends State<MemoryDemoPage> {
 
 /// The headline: how close the tracked total is to the budget.
 class _PressureBanner extends StatelessWidget {
-  const _PressureBanner({required this.pressure, required this.report, required this.isZh});
+  const new({required this.pressure, required this.report, required this.isZh});
 
   final MemoryPressure pressure;
   final MemoryReport? report;
@@ -257,9 +250,12 @@ class _PressureBanner extends StatelessWidget {
     };
 
     final actions = <String>[
-      if (pressure.shouldStopPreload) isZh ? '停止预载' : 'stop preloading',
-      if (pressure.shouldReleaseResources) isZh ? '立即释放' : 'release now',
-      if (pressure == MemoryPressure.elevated) isZh ? '停止增长' : 'stop growing',
+      if (pressure.shouldStopPreload)
+        if (isZh) '停止预载' else 'stop preloading',
+      if (pressure.shouldReleaseResources)
+        if (isZh) '立即释放' else 'release now',
+      if (pressure == MemoryPressure.elevated)
+        if (isZh) '停止增长' else 'stop growing',
     ];
 
     return Card(
@@ -282,18 +278,15 @@ class _PressureBanner extends StatelessWidget {
                   report == null
                       ? ''
                       : '${MemoryEstimates.formatBytes(report!.totalBytes)} / '
-                          '${MemoryEstimates.formatBytes(report!.budget.maxBytes)} '
-                          '(${(report!.budgetUsage * 100).toStringAsFixed(0)}%)',
+                            '${MemoryEstimates.formatBytes(report!.budget.maxBytes)} '
+                            '(${(report!.budgetUsage * 100).toStringAsFixed(0)}%)',
                 ),
               ],
             ),
             if (actions.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  '→ ${actions.join(', ')}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                child: Text('→ ${actions.join(', ')}', style: Theme.of(context).textTheme.bodySmall),
               ),
           ],
         ),
@@ -304,7 +297,7 @@ class _PressureBanner extends StatelessWidget {
 
 /// One line per module, largest first — the same breakdown `describe()` prints.
 class _Breakdown extends StatelessWidget {
-  const _Breakdown({required this.report, required this.isZh});
+  const new({required this.report, required this.isZh});
 
   final MemoryReport report;
   final bool isZh;
@@ -323,10 +316,7 @@ class _Breakdown extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         if (holders.isEmpty)
-          Text(
-            isZh ? '（账本为空：没有任何模块上报）' : '(nothing reported yet)',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+          Text(isZh ? '（账本为空：没有任何模块上报）' : '(nothing reported yet)', style: Theme.of(context).textTheme.bodySmall),
         for (final account in holders)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 2),
@@ -368,16 +358,13 @@ class _Breakdown extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 10),
-        Text(
-          isZh ? '设备实测（进程视角）' : 'Measured device (whole process)',
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
+        Text(isZh ? '设备实测（进程视角）' : 'Measured device (whole process)', style: Theme.of(context).textTheme.titleSmall),
         Text(
           device == null
               ? (isZh ? '未安装 provider：只有申报值可用' : 'No provider installed: only declared figures are available')
               : 'used ${MemoryEstimates.formatBytes(device.usedBytes)}, '
-                  'available ${MemoryEstimates.formatBytes(device.availableBytes)}, '
-                  'external ${MemoryEstimates.formatBytes(device.externalBytes)}',
+                    'available ${MemoryEstimates.formatBytes(device.availableBytes)}, '
+                    'external ${MemoryEstimates.formatBytes(device.externalBytes)}',
           style: Theme.of(context).textTheme.bodySmall,
         ),
       ],

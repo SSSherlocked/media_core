@@ -1,12 +1,11 @@
+import 'package:example/demos/registry.dart';
+import 'package:example/language.dart';
+import 'package:example/ui/module_catalog_page.dart';
 import 'package:flutter/material.dart';
 import 'package:media_core/media_core.dart';
 import 'package:media_core_logging/media_core_logging.dart';
 import 'package:media_core_media_kit/media_core_media_kit.dart';
 import 'package:media_core_mediasession/media_core_mediasession.dart';
-
-import 'package:example/demos/registry.dart';
-import 'package:example/language.dart';
-import 'package:example/ui/module_catalog_page.dart';
 
 /// media_core example: a runnable tour of the framework.
 ///
@@ -43,8 +42,12 @@ Future<void> main() async {
   try {
     await MediaSessionBootstrap.enable();
     MediaCoreLog.info(LogCategory.player, 'media session surfaces enabled');
-  } catch (error) {
-    MediaCoreLog.warning(LogCategory.player, 'media session surfaces unavailable', fields: <String, Object?>{'error': '$error'});
+  } on Object catch (error) {
+    MediaCoreLog.warning(
+      LogCategory.player,
+      'media session surfaces unavailable',
+      fields: <String, Object?>{'error': '$error'},
+    );
   }
 
   runApp(const MediaCoreExampleApp());
@@ -53,7 +56,7 @@ Future<void> main() async {
 /// The example application.
 class MediaCoreExampleApp extends StatefulWidget {
   /// Creates the example application.
-  const MediaCoreExampleApp({super.key});
+  const new({super.key});
 
   @override
   State<MediaCoreExampleApp> createState() => _MediaCoreExampleAppState();

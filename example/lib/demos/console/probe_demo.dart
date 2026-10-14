@@ -1,7 +1,6 @@
+import 'package:example/demos/module_demo.dart';
 import 'package:media_core/media_core.dart';
 import 'package:media_core_native/media_core_native.dart';
-
-import 'package:example/demos/module_demo.dart';
 
 /// What the platform probe answers on the device running this app.
 ///
@@ -12,7 +11,7 @@ import 'package:example/demos/module_demo.dart';
 /// reports explain why the same stream plays differently on each.
 class ProbeDemo extends ModuleDemo {
   /// Creates the demo.
-  const ProbeDemo();
+  const new();
 
   @override
   String get id => 'platform-probe';
@@ -36,19 +35,19 @@ class ProbeDemo extends ModuleDemo {
 
   @override
   List<String> get pointsZh => const <String>[
-        'canDecodeInHardware 返回 bool? —— null 是"平台没说过"，false 才是"平台说不行"',
-        '缺失字段 / 缺失整段 / 调用失败都读作未知，未知设备不会被降级',
-        'Linux 刻意不上报编解码矩阵（需要 libva），平台级答案仍走 capabilities.hardwareDecode',
-        'backgroundPlayback 看的是应用声明（Android 清单 / iOS UIBackgroundModes），不是平台能力',
-      ];
+    'canDecodeInHardware 返回 bool? —— null 是"平台没说过"，false 才是"平台说不行"',
+    '缺失字段 / 缺失整段 / 调用失败都读作未知，未知设备不会被降级',
+    'Linux 刻意不上报编解码矩阵（需要 libva），平台级答案仍走 capabilities.hardwareDecode',
+    'backgroundPlayback 看的是应用声明（Android 清单 / iOS UIBackgroundModes），不是平台能力',
+  ];
 
   @override
   List<String> get pointsEn => const <String>[
-        'canDecodeInHardware returns bool? — null means "not asked", false means the platform said no',
-        'A missing field, a missing section and a failed call all read as unknown; an unknown device is never tuned down',
-        'Linux deliberately reports no codec matrix (that needs libva); the platform-level answer still travels in capabilities.hardwareDecode',
-        'backgroundPlayback reflects the app\'s declaration (Android manifest / iOS UIBackgroundModes), not the platform\'s ability',
-      ];
+    'canDecodeInHardware returns bool? — null means "not asked", false means the platform said no',
+    'A missing field, a missing section and a failed call all read as unknown; an unknown device is never tuned down',
+    'Linux deliberately reports no codec matrix (that needs libva); the platform-level answer still travels in capabilities.hardwareDecode',
+    "backgroundPlayback reflects the app's declaration (Android manifest / iOS UIBackgroundModes), not the platform's ability",
+  ];
 
   @override
   String get snippet => '''
@@ -74,9 +73,7 @@ provider.canHardwareDecode(VideoCodec.hevc, width: 3840, height: 2160);
     buffer
       ..writeln('probe: ${provider.isReady ? 'reported by the platform' : 'no answer (unknown everywhere)'}')
       ..writeln('       $provider')
-      ..writeln();
-
-    buffer
+      ..writeln()
       ..writeln('info')
       ..writeln('  type         : ${provider.type.value}')
       ..writeln('  name         : ${_orUnknown(provider.info.name)}')
@@ -109,9 +106,8 @@ provider.canHardwareDecode(VideoCodec.hevc, width: 3840, height: 2160);
       ..writeln('  64-bit ABI             : ${device.supports64BitAbi}')
       ..writeln('  low end (derived)      : ${device.isLowEnd}')
       ..writeln('  software decode threads: ${device.softwareDecodeThreads}')
-      ..writeln();
-
-    buffer.writeln('video codecs (reported: ${provider.codecs.reported})');
+      ..writeln()
+      ..writeln('video codecs (reported: ${provider.codecs.reported})');
 
     if (provider.codecs.isEmpty) {
       // The honest shape of an unanswered codec section: every question below
@@ -125,7 +121,9 @@ provider.canHardwareDecode(VideoCodec.hevc, width: 3840, height: 2160);
           continue;
         }
 
-        final ceiling = support.hasSizeLimits ? 'up to ${support.maxWidth}x${support.maxHeight}' : 'no reported ceiling';
+        final ceiling = support.hasSizeLimits
+            ? 'up to ${support.maxWidth}x${support.maxHeight}'
+            : 'no reported ceiling';
 
         buffer.writeln('  ${codec.name.padRight(6)}: ${support.hardware ? 'hardware' : 'software only'} ($ceiling)');
       }

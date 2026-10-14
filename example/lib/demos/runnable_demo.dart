@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 /// example ships these pages next to the printed module tour.
 final class RunnableDemo {
   /// Creates a runnable demo entry.
-  const RunnableDemo({
+  const new({
     required this.id,
     required this.nameZh,
     required this.nameEn,

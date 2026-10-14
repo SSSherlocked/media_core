@@ -1,8 +1,7 @@
 import 'dart:async';
 
-import 'package:media_core/media_core.dart';
-
 import 'package:example/demos/module_demo.dart';
+import 'package:media_core/media_core.dart';
 
 /// Failure handling: what the framework does when something breaks.
 ///
@@ -13,7 +12,7 @@ import 'package:example/demos/module_demo.dart';
 /// are classified as retryable, and how a retry budget behaves.
 class FaultDemo extends ModuleDemo {
   /// Creates the demo.
-  const FaultDemo();
+  const new();
 
   @override
   String get id => 'fault';
@@ -37,21 +36,21 @@ class FaultDemo extends ModuleDemo {
 
   @override
   List<String> get pointsZh => const <String>[
-        'FaultType 是开放词汇：networkUnavailable / networkTimeout / decoderFailure …',
-        'BugModeController 决定注入是否生效（off / 按概率 / 强制），生产构建里保持关闭',
-        'ErrorPolicy.defaults() 把网络、超时、源、后端错误标为可重试',
-        'PlayerErrorCode / PlayerErrorCategory — 稳定的错误码值对象，不是字符串',
-        '恢复阶梯（recovery 模块）按"重开当前源 → 换线路 → 换引擎 → 退避"升级，由 live/player 页面实际演示',
-      ];
+    'FaultType 是开放词汇：networkUnavailable / networkTimeout / decoderFailure …',
+    'BugModeController 决定注入是否生效（off / 按概率 / 强制），生产构建里保持关闭',
+    'ErrorPolicy.defaults() 把网络、超时、源、后端错误标为可重试',
+    'PlayerErrorCode / PlayerErrorCategory — 稳定的错误码值对象，不是字符串',
+    '恢复阶梯（recovery 模块）按"重开当前源 → 换线路 → 换引擎 → 退避"升级，由 live/player 页面实际演示',
+  ];
 
   @override
   List<String> get pointsEn => const <String>[
-        'FaultType is an open vocabulary: networkUnavailable / networkTimeout / decoderFailure …',
-        'BugModeController gates injection (off / probabilistic / forced); it stays off in production builds',
-        'ErrorPolicy.defaults() marks network, timeout, source and backend errors as retryable',
-        'PlayerErrorCode / PlayerErrorCategory — stable value objects, not strings',
-        'The recovery ladder (recovery module) escalates reopen → next line → next backend → backoff, demonstrated live by the live and player pages',
-      ];
+    'FaultType is an open vocabulary: networkUnavailable / networkTimeout / decoderFailure …',
+    'BugModeController gates injection (off / probabilistic / forced); it stays off in production builds',
+    'ErrorPolicy.defaults() marks network, timeout, source and backend errors as retryable',
+    'PlayerErrorCode / PlayerErrorCategory — stable value objects, not strings',
+    'The recovery ladder (recovery module) escalates reopen → next line → next backend → backoff, demonstrated live by the live and player pages',
+  ];
 
   @override
   String get snippet => '''
@@ -81,7 +80,7 @@ if (policy.isRetryable(PlayerErrorCode.networkTimeout)) {
 
   /// What can be injected at all.
   void _faultCatalogue(StringBuffer buffer) {
-    const List<FaultType> shown = <FaultType>[
+    const shown = <FaultType>[
       FaultType.networkUnavailable,
       FaultType.networkTimeout,
       FaultType.connectionFailure,
@@ -99,9 +98,7 @@ if (policy.isRetryable(PlayerErrorCode.networkTimeout)) {
     buffer.writeln('fault vocabulary (a value object, so a host can add its own):');
 
     for (final fault in shown) {
-      buffer.writeln(
-        '  ${fault.value.padRight(22)}${fault.isNetworkRelated ? 'network-related' : ''}',
-      );
+      buffer.writeln('  ${fault.value.padRight(22)}${fault.isNetworkRelated ? 'network-related' : ''}');
     }
 
     buffer
@@ -127,10 +124,12 @@ if (policy.isRetryable(PlayerErrorCode.networkTimeout)) {
 
     buffer
       ..writeln('BugModeConfig.aggressive (disruptive + stress + random; not chaos), one hook registered:')
-      ..writeln('  the hook supports network faults: '
-          '${hooks.canInject(const FaultConfig(type: FaultType.networkTimeout))}');
+      ..writeln(
+        '  the hook supports network faults: '
+        '${hooks.canInject(const FaultConfig(type: FaultType.networkTimeout))}',
+      );
 
-    final config = FaultConfig(type: FaultType.networkTimeout, probability: 1, delay: const Duration(milliseconds: 50));
+    const config = FaultConfig(type: FaultType.networkTimeout, delay: Duration(milliseconds: 50));
 
     if (injector.canInject(config)) {
       final pending = injector.inject(config, source: 'live', target: 'line-2');
@@ -140,8 +139,10 @@ if (policy.isRetryable(PlayerErrorCode.networkTimeout)) {
       buffer
         ..writeln('  injected: ${event.type.value} from=${event.source} target=${event.target}')
         ..writeln('  the hook ran: ${hook.triggered} time(s), faultId=${event.faultId}')
-        ..writeln('  after it returns: hasActiveFaults=${injector.hasActiveFaults} '
-            '(a fault is "active" only while it is applied)');
+        ..writeln(
+          '  after it returns: hasActiveFaults=${injector.hasActiveFaults} '
+          '(a fault is "active" only while it is applied)',
+        );
       injector.clearActiveFaults();
       buffer.writeln('  clearActiveFaults() → ${injector.hasActiveFaults}');
     } else {
@@ -150,7 +151,7 @@ if (policy.isRetryable(PlayerErrorCode.networkTimeout)) {
 
     // The same injector with injection off: what production looks like.
     final offInjector = FaultInjector(
-      modeController: BugModeController(config: BugModeConfig.disabled),
+      modeController: BugModeController(),
       hooks: BugHooks(hooks: <BugHook>[_DemoLiveHook()]),
     );
 
@@ -170,9 +171,11 @@ if (policy.isRetryable(PlayerErrorCode.networkTimeout)) {
   void _errorPolicySection(StringBuffer buffer) {
     final policy = ErrorPolicy.defaults();
 
-    buffer.writeln('ErrorPolicy.defaults(): maxRetries=${policy.maxRetries}, '
-        'retryDelay=${policy.retryDelay.inMilliseconds}ms, '
-        'retryable codes=${policy.retryable.length}');
+    buffer.writeln(
+      'ErrorPolicy.defaults(): maxRetries=${policy.maxRetries}, '
+      'retryDelay=${policy.retryDelay.inMilliseconds}ms, '
+      'retryable codes=${policy.retryable.length}',
+    );
 
     final codes = <PlayerErrorCode>[
       PlayerErrorCode.networkUnavailable,
@@ -215,14 +218,12 @@ if (policy.isRetryable(PlayerErrorCode.networkTimeout)) {
           attempts++;
           throw StateError('network still down');
         },
-        maxAttempts: 3,
-        delay: Duration.zero,
         shouldRetry: (error, stackTrace, attempt) {
-          delays.add(RetryUtils.backoff(attempt, base: const Duration(milliseconds: 200)).inMilliseconds);
+          delays.add(RetryUtils.backoff(attempt).inMilliseconds);
           return RetryUtils.until(3)(error, stackTrace, attempt);
         },
       );
-    } catch (error) {
+    } on Object catch (error) {
       buffer
         ..writeln('  attempts=$attempts, backoff between them: ${delays.join('ms, ')}ms')
         ..writeln('  final error: $error')
@@ -232,15 +233,11 @@ if (policy.isRetryable(PlayerErrorCode.networkTimeout)) {
     // Not every failure deserves a retry.
     var refused = 0;
     try {
-      await RetryUtils.run<void>(
-        () async {
-          refused++;
-          throw StateError('source is gone');
-        },
-        maxAttempts: 3,
-        shouldRetry: RetryUtils.never,
-      );
-    } catch (_) {
+      await RetryUtils.run<void>(() async {
+        refused++;
+        throw StateError('source is gone');
+      }, shouldRetry: RetryUtils.never);
+    } on Object catch (_) {
       buffer
         ..writeln()
         ..writeln('a source that no longer exists, with RetryUtils.never:')

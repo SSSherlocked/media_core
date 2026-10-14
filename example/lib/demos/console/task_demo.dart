@@ -1,6 +1,5 @@
-import 'package:media_core/media_core.dart';
-
 import 'package:example/demos/module_demo.dart';
+import 'package:media_core/media_core.dart';
 
 /// Tasks, ordering and retries: the primitives every other module is built on.
 ///
@@ -11,7 +10,7 @@ import 'package:example/demos/module_demo.dart';
 /// atomic, and a retry policy that backs off instead of spinning.
 class TaskDemo extends ModuleDemo {
   /// Creates the demo.
-  const TaskDemo();
+  const new();
 
   @override
   String get id => 'task';
@@ -35,21 +34,21 @@ class TaskDemo extends ModuleDemo {
 
   @override
   List<String> get pointsZh => const <String>[
-        'createAndQueue(priority: highest) — 同批入队，按优先级而不是入队顺序开跑',
-        'maxConcurrentTasks — 并发上限决定"同时跑几个"，不决定"下一个是谁"',
-        'SerialExecutor.execute — 同一执行器内的操作首尾相接，用于状态不变的写路径',
-        'Mutex.protect — 没有它，两次自增会互相覆盖；有它，结果可预测',
-        'RetryUtils.run(shouldRetry:) + backoff(attempt) — 预算与退避分开表达',
-      ];
+    'createAndQueue(priority: highest) — 同批入队，按优先级而不是入队顺序开跑',
+    'maxConcurrentTasks — 并发上限决定"同时跑几个"，不决定"下一个是谁"',
+    'SerialExecutor.execute — 同一执行器内的操作首尾相接，用于状态不变的写路径',
+    'Mutex.protect — 没有它，两次自增会互相覆盖；有它，结果可预测',
+    'RetryUtils.run(shouldRetry:) + backoff(attempt) — 预算与退避分开表达',
+  ];
 
   @override
   List<String> get pointsEn => const <String>[
-        'createAndQueue(priority: highest) — a batch starts by priority, not by insertion order',
-        'maxConcurrentTasks sets how many run at once, not which one is next',
-        'SerialExecutor.execute — operations in one executor never overlap; for state that must not interleave',
-        'Mutex.protect — without it two increments lose each other; with it the result is predictable',
-        'RetryUtils.run(shouldRetry:) + backoff(attempt) — the budget and the delay are separate decisions',
-      ];
+    'createAndQueue(priority: highest) — a batch starts by priority, not by insertion order',
+    'maxConcurrentTasks sets how many run at once, not which one is next',
+    'SerialExecutor.execute — operations in one executor never overlap; for state that must not interleave',
+    'Mutex.protect — without it two increments lose each other; with it the result is predictable',
+    'RetryUtils.run(shouldRetry:) + backoff(attempt) — the budget and the delay are separate decisions',
+  ];
 
   @override
   String get snippet => '''
@@ -85,12 +84,11 @@ await Future.wait([
 
   /// Priority + concurrency: what a task queue is for.
   Future<void> _queueSection(StringBuffer buffer) async {
-    final queue = TaskManager(maxConcurrentTasks: 2);
-
-    queue.createAndQueue(id: TaskId('load-metadata'), type: TaskType.load, priority: TaskPriority.low);
-    queue.createAndQueue(id: TaskId('open-stream'), type: TaskType.open, priority: TaskPriority.highest);
-    queue.createAndQueue(id: TaskId('preload-next'), type: TaskType.prepare, priority: TaskPriority.low);
-    queue.createAndQueue(id: TaskId('resolve-source'), type: TaskType.prepare, priority: TaskPriority.high);
+    final queue = TaskManager(maxConcurrentTasks: 2)
+      ..createAndQueue(id: TaskId('load-metadata'), type: TaskType.load, priority: TaskPriority.low)
+      ..createAndQueue(id: TaskId('open-stream'), type: TaskType.open, priority: TaskPriority.highest)
+      ..createAndQueue(id: TaskId('preload-next'), type: TaskType.prepare, priority: TaskPriority.low)
+      ..createAndQueue(id: TaskId('resolve-source'), type: TaskType.prepare, priority: TaskPriority.high);
 
     buffer.writeln('TaskManager(maxConcurrentTasks: 2), four tasks queued (low, highest, low, high):');
 
@@ -117,8 +115,10 @@ await Future.wait([
 
     buffer
       ..writeln('  → two at a time (the cap), highest priority first, resources released as slots free up')
-      ..writeln('  completed=${queue.completedCount} failed=${queue.failedCount} '
-          'cancelled=${queue.cancelledCount}')
+      ..writeln(
+        '  completed=${queue.completedCount} failed=${queue.failedCount} '
+        'cancelled=${queue.cancelledCount}',
+      )
       ..writeln();
 
     queue.dispose();
@@ -195,7 +195,6 @@ await Future.wait([
         }
         return 'stream-$attempts';
       },
-      maxAttempts: 3,
       delay: const Duration(milliseconds: 5),
       shouldRetry: RetryUtils.until(3),
     );
@@ -203,7 +202,9 @@ await Future.wait([
     buffer
       ..writeln('  attempts=$attempts → "$value"')
       ..writeln('  backoff sequence for attempts 1..5 (base 200ms, doubling, jittered):')
-      ..writeln('    ${<String>[for (var attempt = 1; attempt <= 5; attempt++) '${RetryUtils.backoff(attempt).inMilliseconds}ms'].join(', ')}')
+      ..writeln(
+        '    ${<String>[for (var attempt = 1; attempt <= 5; attempt++) '${RetryUtils.backoff(attempt).inMilliseconds}ms'].join(', ')}',
+      )
       ..writeln('  → a retry that waits is a retry that gives a transient outage time to clear;')
       ..writeln('    a retry that spins is how a retry budget gets spent in 200ms.');
 
@@ -213,7 +214,7 @@ await Future.wait([
         maxAttempts: 2,
         shouldRetry: RetryUtils.never,
       );
-    } catch (error) {
+    } on Object catch (error) {
       buffer.writeln('  RetryUtils.never stops after the first failure: $error');
     }
   }

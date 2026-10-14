@@ -1,6 +1,5 @@
-import 'package:media_core_audio/media_core_audio.dart';
-
 import 'package:example/demos/module_demo.dart';
+import 'package:media_core_audio/media_core_audio.dart';
 
 /// Lyric parsing and timeline matching.
 ///
@@ -9,7 +8,7 @@ import 'package:example/demos/module_demo.dart';
 /// playback — so the demo walks a whole file, not a single line.
 class LyricDemo extends ModuleDemo {
   /// Creates the demo.
-  const LyricDemo();
+  const new();
 
   @override
   String get id => 'lrc';
@@ -33,19 +32,19 @@ class LyricDemo extends ModuleDemo {
 
   @override
   List<String> get pointsZh => const <String>[
-        'LrcParser.parse(text, translation:) — 翻译按时间戳合并',
-        'LyricDocument.positionAt(position) — 行 / 行内进度 / 逐字',
-        'LyricTimeline.update(position) — 只在行或字变化时发事件',
-        '无时间戳的纯文本降级为非同步歌词，而不是丢弃',
-      ];
+    'LrcParser.parse(text, translation:) — 翻译按时间戳合并',
+    'LyricDocument.positionAt(position) — 行 / 行内进度 / 逐字',
+    'LyricTimeline.update(position) — 只在行或字变化时发事件',
+    '无时间戳的纯文本降级为非同步歌词，而不是丢弃',
+  ];
 
   @override
   List<String> get pointsEn => const <String>[
-        'LrcParser.parse(text, translation:) — translation merged by timestamp',
-        'LyricDocument.positionAt(position) — line / line progress / word',
-        'LyricTimeline.update(position) — emits only when line or word changes',
-        'Untimed plain text degrades to an unsynchronized document, never dropped',
-      ];
+    'LrcParser.parse(text, translation:) — translation merged by timestamp',
+    'LyricDocument.positionAt(position) — line / line progress / word',
+    'LyricTimeline.update(position) — emits only when line or word changes',
+    'Untimed plain text degrades to an unsynchronized document, never dropped',
+  ];
 
   @override
   String get snippet => '''
@@ -97,8 +96,7 @@ timeline.update(const Duration(seconds: 9));
       ..writeln()
       ..writeln('timeline walk:');
 
-    final timeline = LyricTimeline();
-    timeline.setDocument(document);
+    final timeline = LyricTimeline()..setDocument(document);
 
     final emitted = <String>[];
 

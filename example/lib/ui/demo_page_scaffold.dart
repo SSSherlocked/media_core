@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
-
 import 'package:example/language.dart';
 import 'package:example/ui/demo_log.dart';
+import 'package:flutter/material.dart';
 
 /// Shared shell for the runnable demo pages.
 ///
@@ -10,7 +9,7 @@ import 'package:example/ui/demo_log.dart';
 /// same way and a developer always knows where the framework's own output is.
 class DemoPageScaffold extends StatelessWidget {
   /// Creates the shell.
-  const DemoPageScaffold({
+  const new({
     required this.title,
     required this.log,
     required this.child,
@@ -61,7 +60,9 @@ class DemoPageScaffold extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Text(subtitle!, style: Theme.of(context).textTheme.bodySmall),
             ),
-          Expanded(child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: child)),
+          Expanded(
+            child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: child),
+          ),
           if (actions.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),

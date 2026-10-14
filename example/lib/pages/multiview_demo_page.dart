@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:example/demos/fakes/fake_pool_player.dart';
 import 'package:example/language.dart';
 import 'package:example/ui/demo_log.dart';
-import 'package:media_core/media_core.dart';
 import 'package:example/ui/demo_page_scaffold.dart';
-import 'package:example/demos/fakes/fake_pool_player.dart';
+import 'package:flutter/material.dart';
+import 'package:media_core/media_core.dart';
 import 'package:media_core_danmaku/media_core_danmaku.dart';
 import 'package:media_core_multiview/media_core_multiview.dart';
 
@@ -19,7 +19,7 @@ import 'package:media_core_multiview/media_core_multiview.dart';
 /// danmaku) is observable on a laptop with no network.
 class MultiviewDemoPage extends StatefulWidget {
   /// Creates the page.
-  const MultiviewDemoPage({super.key});
+  const new({super.key});
 
   @override
   State<MultiviewDemoPage> createState() => _MultiviewDemoPageState();
@@ -72,15 +72,17 @@ final class _MultiviewDemoPageState extends State<MultiviewDemoPage> {
       setState(() => _snapshot = snapshot);
     });
 
-    _log.add('wall created: 4 cells, audio mode exclusive, budget policy keepFocusedOnly');
-    _log.add('players are fake: no decoder, no network — the wall logic is the real one');
+    _log
+      ..add('wall created: 4 cells, audio mode exclusive, budget policy keepFocusedOnly')
+      ..add('players are fake: no decoder, no network — the wall logic is the real one');
   }
 
   @override
   void dispose() {
-    _sub?.cancel();
-    _wall.dispose();
-    _host.disposeAll();
+    // dispose() is synchronous: these async teardowns are fire-and-forget.
+    unawaited(_sub?.cancel());
+    unawaited(_wall.dispose());
+    unawaited(_host.disposeAll());
     _log.dispose();
 
     super.dispose();
@@ -262,8 +264,7 @@ final class _MultiviewDemoPageState extends State<MultiviewDemoPage> {
           const SizedBox(height: 12),
           Text(
             isZh
-                ? '点格子切换焦点。唯一音频归属意味着同一时刻只有一个格子出声，其余按 backgroundVolume 处理；'
-                      '卡顿恢复有独立预算，一个坏掉的格子不会拖垮整面墙。'
+                ? '点格子切换焦点。唯一音频归属意味着同一时刻只有一个格子出声，其余按 backgroundVolume 处理；卡顿恢复有独立预算，一个坏掉的格子不会拖垮整面墙。'
                 : 'Tap a cell to focus it. One audible cell at a time; the rest follow backgroundVolume. '
                       'Stall recovery has its own per-cell budget, so one dead stream does not take the wall down.',
             style: Theme.of(context).textTheme.bodySmall,
@@ -281,7 +282,7 @@ final class _MultiviewDemoPageState extends State<MultiviewDemoPage> {
 
 /// The wall itself, laid out from the controller's own layout.
 class _Grid extends StatelessWidget {
-  const _Grid({required this.wall, required this.onTap});
+  const new({required this.wall, required this.onTap});
 
   final MultiviewController wall;
   final void Function(int index) onTap;
@@ -323,7 +324,7 @@ class _Grid extends StatelessWidget {
 
 /// One cell: what it plays, how healthy it is, and what it owns.
 class _CellTile extends StatelessWidget {
-  const _CellTile({required this.cell, required this.onTap, this.tall = false});
+  const new({required this.cell, required this.onTap, this.tall = false});
 
   final MultiviewCell cell;
   final void Function(int index) onTap;

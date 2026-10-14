@@ -1,18 +1,23 @@
 import 'dart:async';
 
+import 'package:example/ui/demo_log.dart';
+import 'package:example/ui/demo_page_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:media_core/media_core.dart';
 import 'package:media_core_media_kit/media_core_media_kit.dart';
 
-import 'package:example/ui/demo_log.dart';
-import 'package:example/ui/demo_page_scaffold.dart';
-
 /// A video URL the example can play without any setup.
 const List<({String label, String url})> kSampleSources = <({String label, String url})>[
   (label: 'MP4 (Flutter assets)', url: 'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4'),
-  (label: 'MP4 (big buck bunny)', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'),
+  (
+    label: 'MP4 (big buck bunny)',
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+  ),
   (label: 'HLS (mux test stream)', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'),
-  (label: 'HLS (Apple bipbop)', url: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8'),
+  (
+    label: 'HLS (Apple bipbop)',
+    url: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8',
+  ),
 ];
 
 /// The core demo: one player, one adapter, every lifecycle call.
@@ -23,7 +28,7 @@ const List<({String label, String url})> kSampleSources = <({String label, Strin
 /// records, recovery decisions, and which backend the selector picked and why.
 class PlayerDemoPage extends StatefulWidget {
   /// Creates the page.
-  const PlayerDemoPage({super.key});
+  const new({super.key});
 
   @override
   State<PlayerDemoPage> createState() => _PlayerDemoPageState();
@@ -37,11 +42,9 @@ final class _PlayerDemoPageState extends State<PlayerDemoPage> {
   PlayerHandle? _handle;
 
   StreamSubscription<PlayerAdapterEvent>? _adapterSub;
-  StreamSubscription<PlayerTransportState>? _playbackSub;
   StreamSubscription<Operation>? _operationSub;
   StreamSubscription<RecoveryLadderEvent>? _recoverySub;
 
-  PlayerTransportState? _playback;
   bool _loop = false;
   bool _muted = false;
 
@@ -59,12 +62,12 @@ final class _PlayerDemoPageState extends State<PlayerDemoPage> {
 
   @override
   void dispose() {
-    _adapterSub?.cancel();
-    _playbackSub?.cancel();
-    _operationSub?.cancel();
-    _recoverySub?.cancel();
+    // dispose() is synchronous: these async teardowns are fire-and-forget.
+    unawaited(_adapterSub?.cancel());
+    unawaited(_operationSub?.cancel());
+    unawaited(_recoverySub?.cancel());
 
-    _kernel.dispose();
+    unawaited(_kernel.dispose());
     _url.dispose();
     _log.dispose();
 
@@ -79,9 +82,22 @@ final class _PlayerDemoPageState extends State<PlayerDemoPage> {
     }
 
     await _adapterSub?.cancel();
-    await _playbackSub?.cancel();
     await _operationSub?.cancel();
     await _recoverySub?.cancel();
+
+    // `_kernel.create` makes a new player every call — nothing is reused by
+    // source id — so pressing this button twice used to leave the first
+    // engine (its decoder and its texture) alive and unwatched. Unmount the
+    // view before the engine behind it goes away.
+    final previous = _handle;
+
+    if (previous != null) {
+      if (mounted) {
+        setState(() => _handle = null);
+      }
+
+      await previous.dispose();
+    }
 
     final source = PlayerSource(
       id: SourceId('demo_${url.hashCode}'),
@@ -105,10 +121,6 @@ final class _PlayerDemoPageState extends State<PlayerDemoPage> {
       _log.add('adapter: ${event.runtimeType}');
     });
 
-    _playbackSub = handle.playbackStream.listen((playback) {
-      setState(() => _playback = playback);
-    });
-
     // Every lifecycle call the handle performs is recorded: this is the
     // "what did the player actually do, in what order" surface.
     _operationSub = handle.onOperation.listen((operation) {
@@ -130,7 +142,7 @@ final class _PlayerDemoPageState extends State<PlayerDemoPage> {
     try {
       await action();
       _log.add('$label ok');
-    } catch (error) {
+    } on Object catch (error) {
       _log.add('$label failed: $error');
     }
   }
@@ -138,7 +150,6 @@ final class _PlayerDemoPageState extends State<PlayerDemoPage> {
   @override
   Widget build(BuildContext context) {
     final handle = _handle;
-    final playback = _playback;
 
     return DemoPageScaffold(
       title: '播放器 / PlayerIdentity',
@@ -150,24 +161,18 @@ final class _PlayerDemoPageState extends State<PlayerDemoPage> {
           icon: const Icon(Icons.play_circle_outline),
           label: const Text('打开并播放'),
         ),
-        OutlinedButton(
-          onPressed: handle == null ? null : () => _ping('play', handle.play),
-          child: const Text('播放'),
-        ),
-        OutlinedButton(
-          onPressed: handle == null ? null : () => _ping('pause', handle.pause),
-          child: const Text('暂停'),
-        ),
-        OutlinedButton(
-          onPressed: handle == null ? null : () => _ping('stop', handle.stop),
-          child: const Text('停止'),
-        ),
+        OutlinedButton(onPressed: handle == null ? null : () => _ping('play', handle.play), child: const Text('播放')),
+        OutlinedButton(onPressed: handle == null ? null : () => _ping('pause', handle.pause), child: const Text('暂停')),
+        OutlinedButton(onPressed: handle == null ? null : () => _ping('stop', handle.stop), child: const Text('停止')),
         OutlinedButton(
           onPressed: handle == null
               ? null
               : () => _ping('mute', () async {
-                  _muted = !_muted;
-                  await handle.setMute(_muted);
+                  // The label reads this field, so the toggle has to repaint
+                  // the page itself: it used to ride along on the position
+                  // tick that rebuilt everything.
+                  setState(() => _muted = !_muted);
+                  await handle.setMute(muted: _muted);
                 }),
           child: Text(_muted ? '取消静音' : '静音'),
         ),
@@ -175,8 +180,8 @@ final class _PlayerDemoPageState extends State<PlayerDemoPage> {
           onPressed: handle == null
               ? null
               : () => _ping('loop', () async {
-                  _loop = !_loop;
-                  await handle.setLoop(_loop);
+                  setState(() => _loop = !_loop);
+                  await handle.setLoop(loop: _loop);
                 }),
           child: Text(_loop ? '关闭循环' : '开启循环'),
         ),
@@ -186,49 +191,75 @@ final class _PlayerDemoPageState extends State<PlayerDemoPage> {
         children: [
           AspectRatio(
             aspectRatio: 16 / 9,
-            child: Container(
+            child: ColoredBox(
               color: Colors.black,
               child: handle == null
-                  ? const Center(child: Text('未创建播放器', style: TextStyle(color: Colors.white70)))
+                  ? const Center(
+                      child: Text('未创建播放器', style: TextStyle(color: Colors.white70)),
+                    )
                   : MediaPlayerView(handle: handle),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _url,
-            decoration: const InputDecoration(
-              labelText: '视频地址 / URL',
-              border: OutlineInputBorder(),
-              isDense: true,
-            ),
+            decoration: const InputDecoration(labelText: '视频地址 / URL', border: OutlineInputBorder(), isDense: true),
           ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             children: [
               for (final sample in kSampleSources)
-                ActionChip(
-                  label: Text(sample.label),
-                  onPressed: () => setState(() => _url.text = sample.url),
-                ),
+                ActionChip(label: Text(sample.label), onPressed: () => setState(() => _url.text = sample.url)),
             ],
           ),
           const SizedBox(height: 12),
-          if (playback != null) ...[
+          // The transport ticks at up to 4 Hz. Rebuilding the whole page for
+          // them used to rebuild the video view, the log panel and every
+          // button four times a second, so the readout owns its subscription
+          // and nothing above it moves.
+          if (handle != null) _TransportReadout(handle: handle),
+        ],
+      ),
+    );
+  }
+}
+
+/// Position / duration / volume / rate readout for one handle.
+///
+/// The scrubber and the sliders are the only things a transport update moves,
+/// so this is the widget that listens.
+final class _TransportReadout extends StatelessWidget {
+  const new({required this.handle});
+
+  final PlayerHandle handle;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<PlayerTransportState>(
+      stream: handle.playbackStream,
+      initialData: handle.playbackStream.value,
+      builder: (context, snapshot) {
+        final playback = snapshot.data;
+
+        if (playback == null) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             // The same numbers a host would bind to a scrubber.
             Row(
               children: [
                 Text(_format(playback.position)),
                 Expanded(
                   child: Slider(
-                    value: playback.position.inMilliseconds.clamp(
-                      0,
-                      playback.duration.inMilliseconds == 0 ? 1 : playback.duration.inMilliseconds,
-                    ).toDouble(),
+                    value: playback.position.inMilliseconds
+                        .clamp(0, playback.duration.inMilliseconds == 0 ? 1 : playback.duration.inMilliseconds)
+                        .toDouble(),
                     max: playback.duration.inMilliseconds == 0 ? 1 : playback.duration.inMilliseconds.toDouble(),
-                    onChanged: handle == null
-                        ? null
-                        : (value) => handle.seek(Duration(milliseconds: value.round())),
+                    onChanged: (value) => handle.seek(Duration(milliseconds: value.round())),
                   ),
                 ),
                 Text(_format(playback.duration)),
@@ -238,10 +269,7 @@ final class _PlayerDemoPageState extends State<PlayerDemoPage> {
               children: [
                 const Text('音量'),
                 Expanded(
-                  child: Slider(
-                    value: playback.volume.clamp(0.0, 1.0),
-                    onChanged: handle == null ? null : (value) => handle.setVolume(value),
-                  ),
+                  child: Slider(value: playback.volume.clamp(0.0, 1.0), onChanged: handle.setVolume),
                 ),
                 const SizedBox(width: 12),
                 const Text('倍速'),
@@ -249,21 +277,21 @@ final class _PlayerDemoPageState extends State<PlayerDemoPage> {
                   child: Slider(
                     value: playback.rate.clamp(0.25, 4.0),
                     min: 0.25,
-                    max: 4.0,
+                    max: 4,
                     divisions: 15,
-                    onChanged: handle == null ? null : (value) => handle.setRate(value),
+                    onChanged: handle.setRate,
                   ),
                 ),
               ],
             ),
             Text(
               '状态 / state: ${playback.isPlaying ? 'playing' : playback.command.runtimeType}'
-              '  后端 / backend: ${handle?.backendId ?? '-'}',
+              '  后端 / backend: ${handle.backendId}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
-        ],
-      ),
+        );
+      },
     );
   }
 

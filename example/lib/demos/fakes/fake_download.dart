@@ -15,7 +15,7 @@ import 'package:media_core_download/media_core_download.dart';
 /// file can be checked for being a true prefix without storing anything.
 final class FakeDownloadTransport implements DownloadTransport {
   /// Creates a fake transport.
-  FakeDownloadTransport({
+  new({
     this.totalBytes = 64 * 1024,
     this.chunkBytes = 8 * 1024,
     this.chunkDelay = const Duration(milliseconds: 40),

@@ -1,6 +1,5 @@
-import 'package:media_core_memory/media_core_memory.dart';
-
 import 'package:example/demos/module_demo.dart';
+import 'package:media_core_memory/media_core_memory.dart';
 
 /// Memory accounting: who is holding what, and how close that is to the budget.
 ///
@@ -10,7 +9,7 @@ import 'package:example/demos/module_demo.dart';
 /// budget that turns into a pressure level the modules can act on.
 class MemoryDemo extends ModuleDemo {
   /// Creates the demo.
-  const MemoryDemo();
+  const new();
 
   @override
   String get id => 'memory';
@@ -30,25 +29,25 @@ class MemoryDemo extends ModuleDemo {
 
   @override
   String get purposeEn =>
-      'Every module reports what it holds (items + bytes); an account sums its contributors instead of keeping the last one; the total is turned into one of four pressure levels by MemoryBudget. No Dart API reports a decoder\'s real bytes, so module figures are declared — while the cache, downloads and recordings report measured ones.';
+      "Every module reports what it holds (items + bytes); an account sums its contributors instead of keeping the last one; the total is turned into one of four pressure levels by MemoryBudget. No Dart API reports a decoder's real bytes, so module figures are declared — while the cache, downloads and recordings report measured ones.";
 
   @override
   List<String> get pointsZh => const <String>[
-        'MediaCoreMemory.of(MemoryModule.pool) — 取账本，report/withdraw 按实例记账',
-        '多个贡献者相加：一面 3×3 视频墙的 9 个弹幕队列不会被最后一个覆盖',
-        'MemoryBudget 阈值 → normal / elevated / critical / emergency',
-        'report().describe() — 一行一模块，最大的排在最前',
-        'attachDeviceProvider — 设备实测值与申报值同框显示（是不同的两个数）',
-      ];
+    'MediaCoreMemory.of(MemoryModule.pool) — 取账本，report/withdraw 按实例记账',
+    '多个贡献者相加：一面 3×3 视频墙的 9 个弹幕队列不会被最后一个覆盖',
+    'MemoryBudget 阈值 → normal / elevated / critical / emergency',
+    'report().describe() — 一行一模块，最大的排在最前',
+    'attachDeviceProvider — 设备实测值与申报值同框显示（是不同的两个数）',
+  ];
 
   @override
   List<String> get pointsEn => const <String>[
-        'MediaCoreMemory.of(MemoryModule.pool) — take a ledger; report/withdraw per instance',
-        'Contributors add up: nine walls do not collapse into the last one that reported',
-        'MemoryBudget thresholds → normal / elevated / critical / emergency',
-        'report().describe() — one line per module, largest first',
-        'attachDeviceProvider — measured device numbers next to declared ones (two different numbers)',
-      ];
+    'MediaCoreMemory.of(MemoryModule.pool) — take a ledger; report/withdraw per instance',
+    'Contributors add up: nine walls do not collapse into the last one that reported',
+    'MemoryBudget thresholds → normal / elevated / critical / emergency',
+    'report().describe() — one line per module, largest first',
+    'attachDeviceProvider — measured device numbers next to declared ones (two different numbers)',
+  ];
 
   @override
   String get snippet => '''
@@ -70,34 +69,44 @@ print(MediaCoreMemory.report().describe());
     // Setting a small budget makes the thresholds reachable in a few lines
     // instead of in a few hundred megabytes.
     final previousBudget = MediaCoreMemory.budget;
-    MediaCoreMemory.budget = const MemoryBudget(maxBytes: 600 * 1024 * 1024, warningThreshold: 0.5, criticalThreshold: 0.75);
+    MediaCoreMemory.budget = const MemoryBudget(
+      maxBytes: 600 * 1024 * 1024,
+      warningThreshold: 0.5,
+      criticalThreshold: 0.75,
+    );
 
     try {
       buffer
         ..writeln('budget: ${MediaCoreMemory.budget}')
-        ..writeln('  warning at ${MemoryEstimates.formatBytes(MediaCoreMemory.budget.warningBytes)}, '
-            'critical at ${MemoryEstimates.formatBytes(MediaCoreMemory.budget.criticalBytes)}')
+        ..writeln(
+          '  warning at ${MemoryEstimates.formatBytes(MediaCoreMemory.budget.warningBytes)}, '
+          'critical at ${MemoryEstimates.formatBytes(MediaCoreMemory.budget.criticalBytes)}',
+        )
         ..writeln();
 
       // One module, two instances: a host running two walls.
-      final danmaku = MediaCoreMemory.of(MemoryModule.danmaku);
-      danmaku.report('wall-1', items: 120, bytes: 120 * MemoryEstimates.danmakuMessage, note: 'wall 1 queue');
-      danmaku.report('wall-2', items: 80, bytes: 80 * MemoryEstimates.danmakuMessage, note: 'wall 2 queue');
+      final danmaku = MediaCoreMemory.of(MemoryModule.danmaku)
+        ..report('wall-1', items: 120, bytes: 120 * MemoryEstimates.danmakuMessage, note: 'wall 1 queue')
+        ..report('wall-2', items: 80, bytes: 80 * MemoryEstimates.danmakuMessage, note: 'wall 2 queue');
 
       buffer
         ..writeln('two contributors on one account:')
-        ..writeln('  danmaku account: ${danmaku.bytes} bytes, ${danmaku.items} items, '
-            '${danmaku.contributorCount} contributor(s)')
+        ..writeln(
+          '  danmaku account: ${danmaku.bytes} bytes, ${danmaku.items} items, '
+          '${danmaku.contributorCount} contributor(s)',
+        )
         ..writeln('  → summed, not overwritten; note comes from the largest: "${danmaku.note}"')
         ..writeln();
 
       // A single-instance module uses the implicit contributor.
-      final pool = MediaCoreMemory.of(MemoryModule.pool);
-      pool.set(items: 6, bytes: 6 * MemoryEstimates.videoStream720p, note: '4 active, 2 warm');
+      final pool = MediaCoreMemory.of(MemoryModule.pool)
+        ..set(items: 6, bytes: 6 * MemoryEstimates.videoStream720p, note: '4 active, 2 warm');
 
       buffer
-        ..writeln('pool holds ${pool.items} players → '
-            '${MemoryEstimates.formatBytes(pool.bytes)} (${MemoryEstimates.formatBytes(MemoryEstimates.videoStream720p)} each, declared)')
+        ..writeln(
+          'pool holds ${pool.items} players → '
+          '${MemoryEstimates.formatBytes(pool.bytes)} (${MemoryEstimates.formatBytes(MemoryEstimates.videoStream720p)} each, declared)',
+        )
         ..writeln('  pressure now: ${MediaCoreMemory.pressure.label}')
         ..writeln();
 
@@ -118,8 +127,10 @@ print(MediaCoreMemory.report().describe());
 
       buffer
         ..writeln()
-        ..writeln('the ledger knows it was higher before: pool peak = '
-            '${MemoryEstimates.formatBytes(pool.peakBytes)} (the report shows peaks per module)')
+        ..writeln(
+          'the ledger knows it was higher before: pool peak = '
+          '${MemoryEstimates.formatBytes(pool.peakBytes)} (the report shows peaks per module)',
+        )
         ..writeln();
 
       // Measuring the device is the host's job; the framework ships no reader.

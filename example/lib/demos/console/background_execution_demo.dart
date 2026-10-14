@@ -1,8 +1,7 @@
 import 'dart:async';
 
-import 'package:media_core_native/media_core_native.dart';
-
 import 'package:example/demos/module_demo.dart';
+import 'package:media_core_native/media_core_native.dart';
 
 /// Holding a background-execution session, and what its notification can say.
 ///
@@ -12,7 +11,7 @@ import 'package:example/demos/module_demo.dart';
 /// `+1` for the other, and a bar that fills while the download runs.
 class BackgroundExecutionDemo extends ModuleDemo {
   /// Creates the demo.
-  const BackgroundExecutionDemo();
+  const new();
 
   @override
   String get id => 'background-execution';
@@ -36,25 +35,25 @@ class BackgroundExecutionDemo extends ModuleDemo {
 
   @override
   List<String> get pointsZh => const <String>[
-        'BackgroundNotification 描述通知：title / text / kind（决定内置图标）/ icon（宿主自己的 drawable 名）/ progress',
-        'BackgroundProgress 有"已知总量"和"未知总量"两种形状，直播录制没有总量，就不该画一根假装有意义的进度条',
-        'session.update(description.copyWith(...)) 是长任务刷新的方式：录制每秒推一次已录时长与字节数',
-        '两个任务共享一条通知：最新启动的那个拥有它（正文标 +1），先释放一个不会拆掉另一个的保护',
-        'Android 13+ 的通知权限由这个包自己在有 Activity 时弹出；拒绝也照跑 —— 唤醒锁还在，只是看不到通知',
-        'iOS 拿到的是"转场窗口"（约 30 秒），不是无限时间；长时间录制要应用自己声明 audio 后台模式',
-        '按钮 / 通知渠道名不在可配范围：前者要一条回调进 Dart 的通道，后者是整库一个，好让用户一次静音掉所有后台任务',
-      ];
+    'BackgroundNotification 描述通知：title / text / kind（决定内置图标）/ icon（宿主自己的 drawable 名）/ progress',
+    'BackgroundProgress 有"已知总量"和"未知总量"两种形状，直播录制没有总量，就不该画一根假装有意义的进度条',
+    'session.update(description.copyWith(...)) 是长任务刷新的方式：录制每秒推一次已录时长与字节数',
+    '两个任务共享一条通知：最新启动的那个拥有它（正文标 +1），先释放一个不会拆掉另一个的保护',
+    'Android 13+ 的通知权限由这个包自己在有 Activity 时弹出；拒绝也照跑 —— 唤醒锁还在，只是看不到通知',
+    'iOS 拿到的是"转场窗口"（约 30 秒），不是无限时间；长时间录制要应用自己声明 audio 后台模式',
+    '按钮 / 通知渠道名不在可配范围：前者要一条回调进 Dart 的通道，后者是整库一个，好让用户一次静音掉所有后台任务',
+  ];
 
   @override
   List<String> get pointsEn => const <String>[
-        'BackgroundNotification describes the notification: title / text / kind (picks the built-in glyph) / icon (a drawable of the host\'s own) / progress',
-        'BackgroundProgress has two shapes — a known total and an unknown one — because a live recording has no total and a bar pretending otherwise would mean nothing',
-        'session.update(description.copyWith(...)) is how a long job refreshes it: a recording pushes elapsed time and bytes written once a second',
-        'Two jobs share one notification: the one started last owns it (the text carries +1), and releasing one does not take the other\'s protection apart',
-        'On Android 13+ this package asks for the notification permission itself while an activity is attached; a refusal still runs the job — the wake lock holds, only the notification stays hidden',
-        'On iOS the assertion buys the transition window (about 30 seconds), not unlimited time; a long recording needs the app\'s own audio background mode',
-        'Buttons and the channel name are deliberately not configurable: the first needs a callback path into Dart, the second is one per library so a user can silence all background work at once',
-      ];
+    "BackgroundNotification describes the notification: title / text / kind (picks the built-in glyph) / icon (a drawable of the host's own) / progress",
+    'BackgroundProgress has two shapes — a known total and an unknown one — because a live recording has no total and a bar pretending otherwise would mean nothing',
+    'session.update(description.copyWith(...)) is how a long job refreshes it: a recording pushes elapsed time and bytes written once a second',
+    "Two jobs share one notification: the one started last owns it (the text carries +1), and releasing one does not take the other's protection apart",
+    'On Android 13+ this package asks for the notification permission itself while an activity is attached; a refusal still runs the job — the wake lock holds, only the notification stays hidden',
+    "On iOS the assertion buys the transition window (about 30 seconds), not unlimited time; a long recording needs the app's own audio background mode",
+    'Buttons and the channel name are deliberately not configurable: the first needs a callback path into Dart, the second is one per library so a user can silence all background work at once',
+  ];
 
   @override
   String get snippet => '''
@@ -84,13 +83,12 @@ await session?.release();   // 通知随会话消失
 
   @override
   Future<String> run() async {
-    final buffer = StringBuffer();
-
-    buffer.writeln('BackgroundExecution.isSupported: ${BackgroundExecution.isSupported}');
+    final buffer = StringBuffer()..writeln('BackgroundExecution.isSupported: ${BackgroundExecution.isSupported}');
 
     if (!BackgroundExecution.isSupported) {
-      buffer.writeln('这个平台没有实现：任务照跑，只是没有保护（不是失败）。');
-      buffer.writeln('No implementation here: the job still runs, just unprotected (not a failure).');
+      buffer
+        ..writeln('这个平台没有实现：任务照跑，只是没有保护（不是失败）。')
+        ..writeln('No implementation here: the job still runs, just unprotected (not a failure).');
       return buffer.toString();
     }
 
@@ -108,16 +106,20 @@ await session?.release();   // 通知随会话消失
     buffer.writeln('acquire -> $recording');
 
     if (recording == null) {
-      buffer.writeln('平台拒绝了前台服务：任务仍会继续，只是屏幕一关就可能被冻结。');
-      buffer.writeln('The platform refused the foreground service: the job continues, but may be frozen once the screen goes off.');
+      buffer
+        ..writeln('平台拒绝了前台服务：任务仍会继续，只是屏幕一关就可能被冻结。')
+        ..writeln(
+          'The platform refused the foreground service: the job continues, but may be frozen once the screen goes off.',
+        );
       return buffer.toString();
     }
 
     try {
-      buffer.writeln('');
-      buffer.writeln('通知栏现在应该有一条常驻通知（Android），正文是 demo_recording。');
-      buffer.writeln('A persistent notification should be in the shade now (Android), reading demo_recording.');
-      buffer.writeln('— 再取一个下载会话，它会"接管"这条通知 / a download session takes the notification over —');
+      buffer
+        ..writeln()
+        ..writeln('通知栏现在应该有一条常驻通知（Android），正文是 demo_recording。')
+        ..writeln('A persistent notification should be in the shade now (Android), reading demo_recording.')
+        ..writeln('— 再取一个下载会话，它会"接管"这条通知 / a download session takes the notification over —');
 
       final download = await BackgroundExecution.acquire(
         notification: const BackgroundNotification(
@@ -128,9 +130,10 @@ await session?.release();   // 通知随会话消失
         ),
       );
 
-      buffer.writeln('acquire -> $download');
-      buffer.writeln('一条通知只能描述一个任务：最新启动的这个拥有它，录制那笔写在正文的 +1 里。');
-      buffer.writeln('One notification describes one job: the newest owns it, the recording shows up as +1 in the text.');
+      buffer
+        ..writeln('acquire -> $download')
+        ..writeln('一条通知只能描述一个任务：最新启动的这个拥有它，录制那笔写在正文的 +1 里。')
+        ..writeln('One notification describes one job: the newest owns it, the recording shows up as +1 in the text.');
 
       for (final step in const <int>[20, 40, 60, 80, 100]) {
         await download?.update(
@@ -145,8 +148,9 @@ await session?.release();   // 通知随会话消失
         await Future<void>.delayed(const Duration(milliseconds: 500));
       }
 
-      buffer.writeln('');
-      buffer.writeln('— 释放下载：通知回到还在跑的那个录制上 —');
+      buffer
+        ..writeln()
+        ..writeln('— 释放下载：通知回到还在跑的那个录制上 —');
       await download?.release();
       buffer.writeln('released -> $download');
 
@@ -155,9 +159,10 @@ await session?.release();   // 通知随会话消失
       // Every path out of here releases, which is the whole point of a session
       // object: the protection cannot outlive the job that asked for it.
       await recording.release();
-      buffer.writeln('');
-      buffer.writeln('— 全部释放，通知消失 —');
-      buffer.writeln('released -> $recording');
+      buffer
+        ..writeln()
+        ..writeln('— 全部释放，通知消失 —')
+        ..writeln('released -> $recording');
     }
 
     return buffer.toString();

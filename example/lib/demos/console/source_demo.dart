@@ -1,7 +1,5 @@
-import 'package:media_core/source/player_source.dart';
-import 'package:media_core_audio/media_core_audio.dart';
-
 import 'package:example/demos/module_demo.dart';
+import 'package:media_core_audio/media_core_audio.dart';
 
 /// Music sources: the extension point a platform integration implements.
 ///
@@ -11,7 +9,7 @@ import 'package:example/demos/module_demo.dart';
 /// real one.
 class SourceDemo extends ModuleDemo {
   /// Creates the demo.
-  const SourceDemo();
+  const new();
 
   @override
   String get id => 'source';
@@ -35,19 +33,19 @@ class SourceDemo extends ModuleDemo {
 
   @override
   List<String> get pointsZh => const <String>[
-        'MusicSource: search / trackDetail / qualities / resolveTrackSource / resolveLyric',
-        'TrackSource 带 headers / expiresAt → 平台签名 URL 短时效也不会被重放',
-        'TrackSource.toPlayerSource() 是"音乐"到"播放器"的唯一转换点',
-        'LocalMusicSource 把本地文件也当成一种音源（可混排）',
-      ];
+    'MusicSource: search / trackDetail / qualities / resolveTrackSource / resolveLyric',
+    'TrackSource 带 headers / expiresAt → 平台签名 URL 短时效也不会被重放',
+    'TrackSource.toPlayerSource() 是"音乐"到"播放器"的唯一转换点',
+    'LocalMusicSource 把本地文件也当成一种音源（可混排）',
+  ];
 
   @override
   List<String> get pointsEn => const <String>[
-        'MusicSource: search / trackDetail / qualities / resolveTrackSource / resolveLyric',
-        'TrackSource carries headers / expiresAt → a short-lived signed URL is never replayed',
-        'TrackSource.toPlayerSource() is the only bridge from "music" to "player"',
-        'LocalMusicSource treats files on disk as one more source (queues can mix)',
-      ];
+    'MusicSource: search / trackDetail / qualities / resolveTrackSource / resolveLyric',
+    'TrackSource carries headers / expiresAt → a short-lived signed URL is never replayed',
+    'TrackSource.toPlayerSource() is the only bridge from "music" to "player"',
+    'LocalMusicSource treats files on disk as one more source (queues can mix)',
+  ];
 
   @override
   String get snippet => '''
@@ -100,7 +98,7 @@ final playerSource = source.toPlayerSource(trackId: track.id);
       ..writeln();
 
     // The single conversion point between the music domain and the player.
-    final PlayerSource playerSource = resolution.toPlayerSource(trackId: track.id, title: track.displayName);
+    final playerSource = resolution.toPlayerSource(trackId: track.id, title: track.displayName);
 
     buffer
       ..writeln('→ PlayerSource')

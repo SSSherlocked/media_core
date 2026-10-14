@@ -1,12 +1,4 @@
-import 'package:example/pages/feed_demo_page.dart';
-import 'package:example/pages/live_demo_page.dart';
-import 'package:example/pages/memory_demo_page.dart';
-import 'package:example/pages/music_demo_page.dart';
-import 'package:example/pages/multiview_demo_page.dart';
-import 'package:example/pages/media_session_demo_page.dart';
-import 'package:example/pages/player_demo_page.dart';
-import 'package:example/pages/ui_styles_demo_page.dart';
-import 'package:example/pages/presentation_demo_page.dart';
+import 'package:example/demos/console/background_execution_demo.dart';
 import 'package:example/demos/console/cache_demo.dart';
 import 'package:example/demos/console/download_demo.dart';
 import 'package:example/demos/console/fault_demo.dart';
@@ -18,12 +10,20 @@ import 'package:example/demos/console/platform_demo.dart';
 import 'package:example/demos/console/pool_demo.dart';
 import 'package:example/demos/console/probe_demo.dart';
 import 'package:example/demos/console/queue_demo.dart';
-import 'package:example/demos/console/background_execution_demo.dart';
 import 'package:example/demos/console/recording_demo.dart';
 import 'package:example/demos/console/source_demo.dart';
 import 'package:example/demos/console/task_demo.dart';
 import 'package:example/demos/module_demo.dart';
 import 'package:example/demos/runnable_demo.dart';
+import 'package:example/pages/feed_demo_page.dart';
+import 'package:example/pages/live_demo_page.dart';
+import 'package:example/pages/media_session_demo_page.dart';
+import 'package:example/pages/memory_demo_page.dart';
+import 'package:example/pages/multiview_demo_page.dart';
+import 'package:example/pages/music_demo_page.dart';
+import 'package:example/pages/player_demo_page.dart';
+import 'package:example/pages/presentation_demo_page.dart';
+import 'package:example/pages/ui_styles_demo_page.dart';
 
 /// Pages a developer interacts with.
 ///
@@ -38,14 +38,16 @@ final List<RunnableDemo> runnableDemos = <RunnableDemo>[
     nameZh: '播放器与生命周期',
     nameEn: 'PlayerIdentity & lifecycle',
     purposeZh: 'kernel → 注册后端 → create → open → play；含 seek / 音量 / 倍速 / 静音 / 循环与操作记录。',
-    purposeEn: 'kernel → register backend → create → open → play; with seek, volume, rate, mute, loop and operation records.',
+    purposeEn:
+        'kernel → register backend → create → open → play; with seek, volume, rate, mute, loop and operation records.',
     builder: (_) => const PlayerDemoPage(),
   ),
   RunnableDemo(
     id: 'ui-styles',
     nameZh: '界面风格：六套设计语言',
     nameEn: 'UI styles: six design languages',
-    purposeZh: 'material / cupertino / fluent / macos / yaru / neumorphic 共用一层控制逻辑，播放中切换风格不重置状态、进度与显隐策略；同页演示双指缩放、双击缩放与截图落盘。',
+    purposeZh:
+        'material / cupertino / fluent / macos / yaru / neumorphic 共用一层控制逻辑，播放中切换风格不重置状态、进度与显隐策略；同页演示双指缩放、双击缩放与截图落盘。',
     purposeEn: 'material / cupertino / fluent / macos / yaru / neumorphic share one control layer, so switching mid-playback keeps state, position and visibility policy; the same page shows pinch/double-tap zoom and a saved screenshot.',
     builder: (_) => const UiStylesDemoPage(),
   ),

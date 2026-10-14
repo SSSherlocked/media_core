@@ -1,8 +1,7 @@
 import 'dart:io';
 
-import 'package:media_core_audio/media_core_audio.dart';
-
 import 'package:example/demos/module_demo.dart';
+import 'package:media_core_audio/media_core_audio.dart';
 
 /// Permissions and the ffmpeg download arguments.
 ///
@@ -12,7 +11,7 @@ import 'package:example/demos/module_demo.dart';
 /// which ffmpeg arguments a download turns into.
 class PlatformDemo extends ModuleDemo {
   /// Creates the demo.
-  const PlatformDemo();
+  const new();
 
   @override
   String get id => 'platform';
@@ -36,19 +35,19 @@ class PlatformDemo extends ModuleDemo {
 
   @override
   List<String> get pointsZh => const <String>[
-        'isGranted 只读状态，request 才会弹窗 / 拉起设置页',
-        '悬浮窗权限没有对话框：request 会等用户在系统设置页开关后才返回',
-        'requestAll 遇到拒绝即停止，不连弹多个对话框',
-        'buildArguments：copy 只用于可命名的容器，流式 URL 转码；-xerror 让损坏的下载失败而不是留半成品',
-      ];
+    'isGranted 只读状态，request 才会弹窗 / 拉起设置页',
+    '悬浮窗权限没有对话框：request 会等用户在系统设置页开关后才返回',
+    'requestAll 遇到拒绝即停止，不连弹多个对话框',
+    'buildArguments：copy 只用于可命名的容器，流式 URL 转码；-xerror 让损坏的下载失败而不是留半成品',
+  ];
 
   @override
   List<String> get pointsEn => const <String>[
-        'isGranted only reads state; request is what shows UI',
-        'The overlay permission has no dialog: request waits for the system settings switch',
-        'requestAll stops at the first refusal instead of stacking dialogs',
-        'buildArguments: copy only for a nameable container, streams are transcoded; -xerror fails a corrupt download instead of leaving a partial file',
-      ];
+    'isGranted only reads state; request is what shows UI',
+    'The overlay permission has no dialog: request waits for the system settings switch',
+    'requestAll stops at the first refusal instead of stacking dialogs',
+    'buildArguments: copy only for a nameable container, streams are transcoded; -xerror fails a corrupt download instead of leaving a partial file',
+  ];
 
   @override
   String get snippet => '''
@@ -66,8 +65,9 @@ final args = downloader.buildArguments(request);   // pure, printable
     final buffer = StringBuffer();
     final permissions = AudioPermissionService();
 
-    buffer.writeln('platform: ${Platform.operatingSystem}');
-    buffer.writeln('permissions (read-only; no dialog is shown here):');
+    buffer
+      ..writeln('platform: ${Platform.operatingSystem}')
+      ..writeln('permissions (read-only; no dialog is shown here):');
 
     for (final permission in AudioPermission.values) {
       buffer.writeln('  ${permission.name.padRight(20)} granted=${await permissions.isGranted(permission)}');
@@ -87,7 +87,6 @@ final args = downloader.buildArguments(request);   // pure, printable
       headers: const <String, String>{'Referer': 'https://example.com'},
       userAgent: 'media_core-demo/1.0',
       format: MusicDownloadFormat.mp3,
-      bitrateKbps: 320,
       expectedDuration: const Duration(minutes: 3),
       title: 'Demo Song',
       artist: 'Artist A',
@@ -108,7 +107,9 @@ final args = downloader.buildArguments(request);   // pure, printable
     );
 
     buffer
-      ..writeln('plan for a .flac URL: format=${copy.format.name} → ${copy.outputPath.split(Platform.pathSeparator).last}')
+      ..writeln(
+        'plan for a .flac URL: format=${copy.format.name} → ${copy.outputPath.split(Platform.pathSeparator).last}',
+      )
       ..writeln('(copy branch: bytes are copied, extension preserved)')
       ..writeln()
       ..writeln('ffmpeg arguments — copy branch:')

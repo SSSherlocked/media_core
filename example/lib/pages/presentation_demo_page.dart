@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:example/ui/demo_log.dart';
+import 'package:example/ui/demo_page_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:media_core/media_core.dart';
 import 'package:media_core_danmaku/media_core_danmaku.dart';
 import 'package:media_core_media_kit/media_core_media_kit.dart';
 import 'package:media_core_presentation/media_core_presentation.dart';
-
-import 'package:example/ui/demo_log.dart';
-import 'package:example/ui/demo_page_scaffold.dart';
 
 /// Presentation (fullscreen / PiP / floating) and the danmaku overlay.
 ///
@@ -18,7 +17,7 @@ import 'package:example/ui/demo_page_scaffold.dart';
 /// what a site integration replaces with a real one.
 class PresentationDemoPage extends StatefulWidget {
   /// Creates the page.
-  const PresentationDemoPage({super.key});
+  const new({super.key});
 
   @override
   State<PresentationDemoPage> createState() => _PresentationDemoPageState();
@@ -45,7 +44,7 @@ final class _PresentationDemoPageState extends State<PresentationDemoPage> {
     _kernel = PlayerKernel()..registerBackend(const MediaKitAdapterFactory().registration());
 
     // The kernel forwards fullscreen/PiP/floating requests to this driver.
-    _kernel.attachPresentation(_presentation);
+    _kernel.presentationDriver = _presentation;
     _presentation.observeKernel(_kernel);
 
     // The overlay only accepts messages while its surface is visible.
@@ -56,9 +55,10 @@ final class _PresentationDemoPageState extends State<PresentationDemoPage> {
   void dispose() {
     _fakeDanmaku?.cancel();
 
-    _presentation.dispose();
-    _danmaku.dispose();
-    _kernel.dispose();
+    // dispose() is synchronous: these async teardowns are fire-and-forget.
+    unawaited(_presentation.dispose());
+    unawaited(_danmaku.dispose());
+    unawaited(_kernel.dispose());
     _url.dispose();
     _log.dispose();
 
@@ -126,7 +126,7 @@ final class _PresentationDemoPageState extends State<PresentationDemoPage> {
     try {
       await request(handle.id);
       _log.add('$label requested');
-    } catch (error) {
+    } on Object catch (error) {
       // "No presentation driver attached" is the honest answer on platforms
       // without one, and it is worth showing rather than hiding.
       _log.add('$label failed: $error');
@@ -145,19 +145,10 @@ final class _PresentationDemoPageState extends State<PresentationDemoPage> {
       log: _log,
       actions: [
         FilledButton.icon(onPressed: _open, icon: const Icon(Icons.play_arrow), label: const Text('打开视频')),
-        OutlinedButton(
-          onPressed: () => _applyPresentation('全屏', _kernel.enterFullscreen),
-          child: const Text('全屏'),
-        ),
-        OutlinedButton(
-          onPressed: () => _applyPresentation('退出全屏', _kernel.exitFullscreen),
-          child: const Text('退出全屏'),
-        ),
+        OutlinedButton(onPressed: () => _applyPresentation('全屏', _kernel.enterFullscreen), child: const Text('全屏')),
+        OutlinedButton(onPressed: () => _applyPresentation('退出全屏', _kernel.exitFullscreen), child: const Text('退出全屏')),
         OutlinedButton(onPressed: () => _applyPresentation('PiP', _kernel.enterPip), child: const Text('画中画')),
-        OutlinedButton(
-          onPressed: () => _applyPresentation('悬浮窗', _kernel.enterFloating),
-          child: const Text('悬浮窗'),
-        ),
+        OutlinedButton(onPressed: () => _applyPresentation('悬浮窗', _kernel.enterFloating), child: const Text('悬浮窗')),
         OutlinedButton(onPressed: _toggleFakeDanmaku, child: Text(_fakeDanmaku == null ? '开始弹幕' : '停止弹幕')),
         OutlinedButton(
           onPressed: () {
@@ -172,10 +163,12 @@ final class _PresentationDemoPageState extends State<PresentationDemoPage> {
         children: [
           AspectRatio(
             aspectRatio: 16 / 9,
-            child: Container(
+            child: ColoredBox(
               color: Colors.black,
               child: handle == null
-                  ? const Center(child: Text('未打开视频', style: TextStyle(color: Colors.white70)))
+                  ? const Center(
+                      child: Text('未打开视频', style: TextStyle(color: Colors.white70)),
+                    )
                   : MediaPlayerView(handle: handle),
             ),
           ),
@@ -186,14 +179,16 @@ final class _PresentationDemoPageState extends State<PresentationDemoPage> {
           ),
           const SizedBox(height: 12),
           Text(
-            '桌面悬浮窗支持 / floating window: ${_presentation.supportsFloatingWindow}\n'
+            '桌面悬浮窗支持 / floating window: ${_presentation.supportsPresentationWindow}\n'
             '悬停控件 / hover overlays: ${_presentation.overlayHoverMode}\n'
             '方向 / orientation: ${_presentation.orientation.name}',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 12),
-          Text('弹幕 / danmaku（活动 ${live.length} 条，enabled=${_danmaku.isEnabled}）',
-              style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            '弹幕 / danmaku（活动 ${live.length} 条，enabled=${_danmaku.isEnabled}）',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
           const SizedBox(height: 6),
           // A real overlay renders and animates these; the demo shows the
           // session's state, which is what the package owns.

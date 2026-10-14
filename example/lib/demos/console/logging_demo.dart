@@ -1,8 +1,7 @@
 import 'dart:io';
 
-import 'package:media_core_logging/media_core_logging.dart';
-
 import 'package:example/demos/module_demo.dart';
+import 'package:media_core_logging/media_core_logging.dart';
 
 /// Levelled logging: what gets through, where it goes, and what it costs.
 ///
@@ -12,7 +11,7 @@ import 'package:example/demos/module_demo.dart';
 /// the counts a throttle reported on the next line that got through.
 class LoggingDemo extends ModuleDemo {
   /// Creates the demo.
-  const LoggingDemo();
+  const new();
 
   @override
   String get id => 'logging';
@@ -27,8 +26,7 @@ class LoggingDemo extends ModuleDemo {
   String get nameEn => 'Levelled logging: levels, categories, sinks, filters, throttling';
 
   @override
-  String get purposeZh =>
-      '日志默认完全静默；开启后按「分类的有效最低等级」决定是否产生记录。同一份记录可以同时进控制台、内存环形缓冲与轮转文件，开发者还能按分类收窄、按关键词搜索、给热路径限流。';
+  String get purposeZh => '日志默认完全静默；开启后按「分类的有效最低等级」决定是否产生记录。同一份记录可以同时进控制台、内存环形缓冲与轮转文件，开发者还能按分类收窄、按关键词搜索、给热路径限流。';
 
   @override
   String get purposeEn =>
@@ -36,31 +34,31 @@ class LoggingDemo extends ModuleDemo {
 
   @override
   List<String> get pointsZh => const <String>[
-        'MediaCoreLog.level — 全局最低等级；setCategoryLevel 只调高一个模块',
-        'MemoryLogSink — 内存环形缓冲，给应用内日志页或"复制诊断"用',
-        'LogFileSink — 追加写文件，按 maxBytes 轮转、保留 maxFiles 份',
-        'LogFilter — 限定分类 + 关键词搜索（消息与字段一起搜）',
-        'LogThrottle — 被丢弃的条数附在下一条通过的记录上（suppressed）',
-        'LogScope.run — 作用域内每条记录自动带上 roomId 之类的上下文',
-      ];
+    'MediaCoreLog.level — 全局最低等级；setCategoryLevel 只调高一个模块',
+    'MemoryLogSink — 内存环形缓冲，给应用内日志页或"复制诊断"用',
+    'LogFileSink — 追加写文件，按 maxBytes 轮转、保留 maxFiles 份',
+    'LogFilter — 限定分类 + 关键词搜索（消息与字段一起搜）',
+    'LogThrottle — 被丢弃的条数附在下一条通过的记录上（suppressed）',
+    'LogScope.run — 作用域内每条记录自动带上 roomId 之类的上下文',
+  ];
 
   @override
   List<String> get pointsEn => const <String>[
-        'MediaCoreLog.level — the global floor; setCategoryLevel raises one module only',
-        'MemoryLogSink — a ring buffer for an in-app log screen or "copy diagnostics"',
-        'LogFileSink — append-only file, rotating at maxBytes and keeping maxFiles',
-        'LogFilter — category narrowing plus keyword search over messages and fields',
-        'LogThrottle — the dropped count rides on the next record that gets through (suppressed)',
-        'LogScope.run — every record inside carries context such as roomId',
-      ];
+    'MediaCoreLog.level — the global floor; setCategoryLevel raises one module only',
+    'MemoryLogSink — a ring buffer for an in-app log screen or "copy diagnostics"',
+    'LogFileSink — append-only file, rotating at maxBytes and keeping maxFiles',
+    'LogFilter — category narrowing plus keyword search over messages and fields',
+    'LogThrottle — the dropped count rides on the next record that gets through (suppressed)',
+    'LogScope.run — every record inside carries context such as roomId',
+  ];
 
   @override
-  String get snippet => '''
+  String get snippet => r'''
 MediaCoreLog.level = LogLevel.warning;                            // global floor
 MediaCoreLog.setCategoryLevel(LogCategory.playback, LogLevel.trace);  // one module louder
 
 final memory = MediaCoreLog.attachMemorySink(capacity: 500);
-MediaCoreLog.attachFileSink(File('\${dir}/media_core.log'));
+MediaCoreLog.attachFileSink(File('${dir}/media_core.log'));
 
 LogScope.run({'roomId': room.id}, () {
   MediaCoreLog.playback('opened', fields: {'uri': uri});   // tagged with the room
@@ -84,8 +82,10 @@ print(memory.messagesFor(LogCategory.playback));
 
     try {
       buffer
-        ..writeln('global level: ${MediaCoreLog.level.name}, '
-            'playback override: ${MediaCoreLog.minimumLevelFor(LogCategory.playback).name}')
+        ..writeln(
+          'global level: ${MediaCoreLog.level.name}, '
+          'playback override: ${MediaCoreLog.minimumLevelFor(LogCategory.playback).name}',
+        )
         ..writeln();
 
       // Five records, three of which are below their category's floor.
@@ -96,7 +96,9 @@ print(memory.messagesFor(LogCategory.playback));
       MediaCoreLog.error(LogCategory.source, 'signed URL expired', fields: <String, Object?>{'expiresIn': '0s'});
 
       buffer
-        ..writeln('after emitting 5 records (playback trace, playback debug, pool info, recovery warning, source error):')
+        ..writeln(
+          'after emitting 5 records (playback trace, playback debug, pool info, recovery warning, source error):',
+        )
         ..writeln(memory.dump())
         ..writeln();
 
@@ -116,7 +118,7 @@ print(memory.messagesFor(LogCategory.playback));
 
       // A filter is what a developer reaches for while staring at output.
       MediaCoreLog.setCategoryLevel(LogCategory.playback, LogLevel.nothing);
-      MediaCoreLog.setFilter(LogFilter(categories: <LogCategory>{LogCategory.recovery}, keyword: 'line'));
+      MediaCoreLog.filter = LogFilter(categories: <LogCategory>{LogCategory.recovery}, keyword: 'line');
       memory.clear();
 
       MediaCoreLog.warning(LogCategory.recovery, 'retrying the same line');
@@ -128,11 +130,11 @@ print(memory.messagesFor(LogCategory.playback));
         ..writeln('  ${memory.messagesFor(LogCategory.recovery)}')
         ..writeln();
 
-      MediaCoreLog.setFilter(null);
+      MediaCoreLog.filter = null;
 
       // Throttling a hot path, and how the dropped count is reported.
       MediaCoreLog.setCategoryLevel(LogCategory.buffering, LogLevel.trace);
-      MediaCoreLog.setThrottle(LogThrottle(maxRecords: 2, window: const Duration(seconds: 30)));
+      MediaCoreLog.throttle = LogThrottle(maxRecords: 2, window: const Duration(seconds: 30));
       memory.clear();
 
       for (var frame = 1; frame <= 6; frame++) {
@@ -146,12 +148,12 @@ print(memory.messagesFor(LogCategory.playback));
         ..writeln('  (a burst is not lost silently: the count rides on the next record that passes)')
         ..writeln();
 
-      MediaCoreLog.setThrottle(null);
+      MediaCoreLog.throttle = null;
 
       // A file sink is what a bug report reads; rotation is its whole policy.
       final directory = await Directory.systemTemp.createTemp('media_core_logging_demo');
       final file = File('${directory.path}${Platform.pathSeparator}media_core.log');
-      final fileSink = LogFileSink(file, maxBytes: 4 * 1024, maxFiles: 3);
+      final fileSink = LogFileSink(file, maxBytes: 4 * 1024);
 
       MediaCoreLog.addSink(fileSink.call);
       MediaCoreLog.setCategoryLevel(LogCategory.logging, LogLevel.info);
@@ -163,11 +165,13 @@ print(memory.messagesFor(LogCategory.playback));
 
       await fileSink.close();
 
-      final written = await file.exists() ? await file.readAsString() : '';
+      final written = file.existsSync() ? await file.readAsString() : '';
       buffer
         ..writeln('file sink → ${file.path}')
-        ..writeln('  lines on disk: ${written.trim().split('\n').length}, '
-            'rotating at ${fileSink.maxBytes ~/ 1024}KB, keeping ${fileSink.maxFiles} file(s)')
+        ..writeln(
+          '  lines on disk: ${written.trim().split('\n').length}, '
+          'rotating at ${fileSink.maxBytes ~/ 1024}KB, keeping ${fileSink.maxFiles} file(s)',
+        )
         ..writeln('  last line: ${written.trim().split('\n').last}');
 
       await _deleteQuietly(directory);

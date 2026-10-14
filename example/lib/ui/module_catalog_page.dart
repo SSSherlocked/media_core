@@ -1,10 +1,9 @@
-import 'package:flutter/material.dart';
-
 import 'package:example/demos/module_demo.dart';
 import 'package:example/demos/registry.dart';
 import 'package:example/demos/runnable_demo.dart';
 import 'package:example/language.dart';
 import 'package:example/ui/module_demo_page.dart';
+import 'package:flutter/material.dart';
 
 /// Home page: the runnable demos, then the module tour grouped by category.
 ///
@@ -13,7 +12,7 @@ import 'package:example/ui/module_demo_page.dart';
 /// it, not the entry point.
 class ModuleCatalogPage extends StatelessWidget {
   /// Creates the page.
-  const ModuleCatalogPage({super.key, required this.entries});
+  const new({required this.entries, super.key});
 
   /// Runnable demo pages, in display order.
   final List<RunnableDemo> entries;
@@ -23,10 +22,7 @@ class ModuleCatalogPage extends StatelessWidget {
     final isZh = DemoLanguageScope.of(context) == DemoLanguage.zh;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isZh ? 'media_core 示例' : 'media_core example'),
-        actions: const [_LanguageToggle()],
-      ),
+      appBar: AppBar(title: Text(isZh ? 'media_core 示例' : 'media_core example'), actions: const [_LanguageToggle()]),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
@@ -43,11 +39,7 @@ class ModuleCatalogPage extends StatelessWidget {
                 style: const TextStyle(fontFamily: 'monospace', fontSize: 13, fontWeight: FontWeight.w600),
               ),
               title: Text(isZh ? demo.nameZh : demo.nameEn),
-              subtitle: Text(
-                isZh ? demo.purposeZh : demo.purposeEn,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+              subtitle: Text(isZh ? demo.purposeZh : demo.purposeEn, maxLines: 2, overflow: TextOverflow.ellipsis),
               trailing: const Icon(Icons.play_circle_outline),
               onTap: () => Navigator.push<void>(context, MaterialPageRoute<void>(builder: demo.builder)),
             ),
@@ -65,11 +57,7 @@ class ModuleCatalogPage extends StatelessWidget {
                     style: const TextStyle(fontFamily: 'monospace', fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                   title: Text(isZh ? demo.nameZh : demo.nameEn),
-                  subtitle: Text(
-                    isZh ? demo.purposeZh : demo.purposeEn,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  subtitle: Text(isZh ? demo.purposeZh : demo.purposeEn, maxLines: 2, overflow: TextOverflow.ellipsis),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.push<void>(
                     context,
@@ -85,7 +73,7 @@ class ModuleCatalogPage extends StatelessWidget {
 
 /// Section title with a one-line explanation of what the section's entries do.
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, required this.note, this.compact = false});
+  const new({required this.title, required this.note, this.compact = false});
 
   final String title;
   final String note;
@@ -102,10 +90,7 @@ class _SectionHeader extends StatelessWidget {
         children: [
           Text(
             title,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
+            style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
           ),
           Text(note, style: theme.textTheme.bodySmall),
         ],
@@ -116,7 +101,7 @@ class _SectionHeader extends StatelessWidget {
 
 /// App-bar language switch.
 class _LanguageToggle extends StatelessWidget {
-  const _LanguageToggle();
+  const new();
 
   @override
   Widget build(BuildContext context) {

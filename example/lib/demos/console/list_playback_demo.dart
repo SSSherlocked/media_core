@@ -1,7 +1,6 @@
+import 'package:example/demos/module_demo.dart';
 import 'package:media_core/media_core.dart' show PlayerSource, SourceId;
 import 'package:media_core_list_playback/media_core_list_playback.dart';
-
-import 'package:example/demos/module_demo.dart';
 
 /// List playback: switching items and remembering where the viewer was.
 ///
@@ -13,7 +12,7 @@ import 'package:example/demos/module_demo.dart';
 /// a few lines, with no media and no backend.
 class ListPlaybackDemo extends ModuleDemo {
   /// Creates the demo.
-  const ListPlaybackDemo();
+  const new();
 
   @override
   String get id => 'list';
@@ -37,21 +36,21 @@ class ListPlaybackDemo extends ModuleDemo {
 
   @override
   List<String> get pointsZh => const <String>[
-        'next() / previous() / jumpTo() — 都先 savePosition() 再 open()，顺序就是语义',
-        'resumedFrom 出现在状态里：宿主可以提示"已从 3:20 继续"，而不是猜',
-        'isNearCompletion(position, duration) — 直播（duration 为 0）永远不算看完',
-        'PlaybackListItem.id 与 source 分离：同一个流出现在两条目下不共享进度',
-        'store 可换成持久实现（InMemoryPlaybackProgressStore 只是默认）',
-      ];
+    'next() / previous() / jumpTo() — 都先 savePosition() 再 open()，顺序就是语义',
+    'resumedFrom 出现在状态里：宿主可以提示"已从 3:20 继续"，而不是猜',
+    'isNearCompletion(position, duration) — 直播（duration 为 0）永远不算看完',
+    'PlaybackListItem.id 与 source 分离：同一个流出现在两条目下不共享进度',
+    'store 可换成持久实现（InMemoryPlaybackProgressStore 只是默认）',
+  ];
 
   @override
   List<String> get pointsEn => const <String>[
-        'next() / previous() / jumpTo() all savePosition() before open() — the order is the semantics',
-        'resumedFrom is part of the state, so a host can say "resumed at 3:20" instead of guessing',
-        'isNearCompletion(position, duration) — a live stream (zero duration) is never finished',
-        'PlaybackListItem.id is separate from its source: the same stream under two ids does not share progress',
-        'The store is replaceable; InMemoryPlaybackProgressStore is only the default',
-      ];
+    'next() / previous() / jumpTo() all savePosition() before open() — the order is the semantics',
+    'resumedFrom is part of the state, so a host can say "resumed at 3:20" instead of guessing',
+    'isNearCompletion(position, duration) — a live stream (zero duration) is never finished',
+    'PlaybackListItem.id is separate from its source: the same stream under two ids does not share progress',
+    'The store is replaceable; InMemoryPlaybackProgressStore is only the default',
+  ];
 
   @override
   String get snippet => '''
@@ -104,14 +103,14 @@ await list.next();                        // saves, then opens index 3
     try {
       buffer.writeln('three items, completion threshold 15s, one fake player:');
 
-      await list.open(index: 0);
-      player.simulatePlayback(const Duration(minutes: 3, seconds: 20));
+      await list.open();
+      player.position = const Duration(minutes: 3, seconds: 20);
 
       await list.next();
-      player.simulatePlayback(const Duration(minutes: 1, seconds: 5));
+      player.position = const Duration(minutes: 1, seconds: 5);
 
       await list.next();
-      player.simulatePlayback(const Duration(minutes: 42)); // abandoned near the end
+      player.position = const Duration(minutes: 42); // abandoned near the end
       await settle();
 
       buffer
@@ -150,7 +149,7 @@ await list.next();                        // saves, then opens index 3
       // The store is what survives a process; the demo can show it directly.
       await list.savePosition();
       await list.clearProgress();
-      await list.open(index: 0);
+      await list.open();
       await settle();
 
       buffer
@@ -181,35 +180,34 @@ await list.next();                        // saves, then opens index 3
 /// all a fake needs to provide — and it is why the rule can be demonstrated
 /// without decoding a single frame.
 final class _FakeListPlayer implements PlaybackListPlayer {
-  Duration _position = Duration.zero;
+  /// Where the pretend viewer is, as [PlaybackListPlayer.position].
+  ///
+  /// The demo sets it directly to stand in for watching; [open] and [seek] then
+  /// move it the way a real player would, which is what the resume rule reads.
+  @override
+  Duration position = Duration.zero;
+
   final Duration _duration = const Duration(minutes: 42, seconds: 15);
 
   /// Every call the list made, in order.
   final List<String> calls = <String>[];
 
-  /// Pretends the viewer watched up to [position].
-  void simulatePlayback(Duration position) {
-    _position = position;
-  }
-
   @override
   Future<void> open(PlayerSource source) async {
     calls.add('open(${source.id})');
-    _position = Duration.zero;
+    position = Duration.zero;
   }
 
   @override
   Future<void> seek(Duration position) async {
     calls.add('seek(${_mmss(position)})');
-    _position = position;
+    this.position = position;
   }
-
-  @override
-  Duration get position => _position;
 
   @override
   Duration get duration => _duration;
 
-  static String _mmss(Duration duration) => '${duration.inMinutes}:'
+  static String _mmss(Duration duration) =>
+      '${duration.inMinutes}:'
       '${(duration.inSeconds % 60).toString().padLeft(2, '0')}';
 }

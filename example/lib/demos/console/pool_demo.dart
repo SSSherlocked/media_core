@@ -1,7 +1,6 @@
-import 'package:media_core/media_core.dart';
-
 import 'package:example/demos/fakes/fake_pool_player.dart';
 import 'package:example/demos/module_demo.dart';
+import 'package:media_core/media_core.dart';
 
 /// The player pool: which item plays, which ones stay warm, what gets recycled.
 ///
@@ -11,7 +10,7 @@ import 'package:example/demos/module_demo.dart';
 /// one reconciliation, printed with the plan it produced.
 class PoolDemo extends ModuleDemo {
   /// Creates the demo.
-  const PoolDemo();
+  const new();
 
   @override
   String get id => 'pool';
@@ -35,23 +34,23 @@ class PoolDemo extends ModuleDemo {
 
   @override
   List<String> get pointsZh => const <String>[
-        'setItems / onVisibilityChanged(ratio) — 池的输入只有"哪一项露出多少"',
-        'playVisibilityThreshold 明确可见即接管；否则 pauseVisibilityThreshold 之上保持当前项（滞回）',
-        '暖窗 preloadCount 把相邻项打开但不播，滑动到位时是换源而不是冷启动',
-        'reuseIdlePlayers — 空闲播放器被重新指向，而不是新建（看 host 的 created 计数）',
-        'reportPressure(emergency) — 预载降为 0，暖窗收缩，超出窗口的空闲项被释放',
-        'setViewportVisible(false) / setOccluded(true) — 整页离开或应用退后台时，只剩账本',
-      ];
+    'setItems / onVisibilityChanged(ratio) — 池的输入只有"哪一项露出多少"',
+    'playVisibilityThreshold 明确可见即接管；否则 pauseVisibilityThreshold 之上保持当前项（滞回）',
+    '暖窗 preloadCount 把相邻项打开但不播，滑动到位时是换源而不是冷启动',
+    'reuseIdlePlayers — 空闲播放器被重新指向，而不是新建（看 host 的 created 计数）',
+    'reportPressure(emergency) — 预载降为 0，暖窗收缩，超出窗口的空闲项被释放',
+    'setViewportVisible(false) / setOccluded(true) — 整页离开或应用退后台时，只剩账本',
+  ];
 
   @override
   List<String> get pointsEn => const <String>[
-        'setItems / onVisibilityChanged(ratio) — the pool\'s only input is how much of an item is visible',
-        'playVisibilityThreshold takes over when something is clearly visible; otherwise the current item is kept above pauseVisibilityThreshold (hysteresis)',
-        'The warm window (preloadCount) opens neighbours without playing them, so a swipe is a source swap, not a cold start',
-        'reuseIdlePlayers re-points an idle player instead of creating one (watch the host\'s created count)',
-        'reportPressure(emergency) drops preload to zero, shrinks the window and releases idle players outside it',
-        'setViewportVisible(false) / setOccluded(true) — the page or the app went away; only the ledger is left',
-      ];
+    "setItems / onVisibilityChanged(ratio) — the pool's only input is how much of an item is visible",
+    'playVisibilityThreshold takes over when something is clearly visible; otherwise the current item is kept above pauseVisibilityThreshold (hysteresis)',
+    'The warm window (preloadCount) opens neighbours without playing them, so a swipe is a source swap, not a cold start',
+    "reuseIdlePlayers re-points an idle player instead of creating one (watch the host's created count)",
+    'reportPressure(emergency) drops preload to zero, shrinks the window and releases idle players outside it',
+    'setViewportVisible(false) / setOccluded(true) — the page or the app went away; only the ledger is left',
+  ];
 
   @override
   String get snippet => '''
@@ -87,15 +86,7 @@ if (pool.handleFor(3) != null) {
     final buffer = StringBuffer();
 
     final host = FakePoolPlayerHost();
-    final pool = PlaybackPoolOrchestrator(
-      host: host,
-      config: const PlayerPoolConfig(
-        preloadCount: 1,
-        warmSize: 3,
-        maxPlayers: 6,
-        reuseIdlePlayers: true,
-      ),
-    );
+    final pool = PlaybackPoolOrchestrator(host: host, config: const PlayerPoolConfig(warmSize: 3, maxPlayers: 6));
 
     try {
       await pool.setItems(_sources());
@@ -110,8 +101,10 @@ if (pool.handleFor(3) != null) {
         ];
         buffer
           ..writeln(label)
-          ..writeln('  active=${plan.activeIndex}  held=${plan.heldCount}  '
-              'players created=${host.handles.length}  acquired=${host.acquires}')
+          ..writeln(
+            '  active=${plan.activeIndex}  held=${plan.heldCount}  '
+            'players created=${host.handles.length}  acquired=${host.acquires}',
+          )
           ..writeln('  ${roles.isEmpty ? '(nothing held)' : roles.join('  ')}');
       }
 
@@ -139,22 +132,18 @@ if (pool.handleFor(3) != null) {
 
       buffer
         ..writeln()
-        ..writeln('  → six visibility reports (two of them mid-scroll), and only '
-            '${host.handles.length} player(s) ever existed:')
+        ..writeln(
+          '  → six visibility reports (two of them mid-scroll), and only '
+          '${host.handles.length} player(s) ever existed:',
+        )
         ..writeln('    ${host.summary()}')
         ..writeln('    the item the swipe reached was already open, so it was re-pointed, not created.')
         ..writeln();
 
       // Pressure: the warm window is the first thing to give up.
-      await show(
-        'device reports critical pressure',
-        await pool.reportPressure(ResourcePressure.critical),
-      );
+      await show('device reports critical pressure', await pool.reportPressure(ResourcePressure.critical));
 
-      await show(
-        'device reports emergency pressure',
-        await pool.reportPressure(ResourcePressure.emergency),
-      );
+      await show('device reports emergency pressure', await pool.reportPressure(ResourcePressure.emergency));
 
       buffer
         ..writeln()
@@ -170,7 +159,7 @@ if (pool.handleFor(3) != null) {
         ..writeln('    budget policy makes when it gives the warm window up first.');
 
       // Leaving the page: nothing may keep playing.
-      await show('the list scrolled fully out of view', await pool.setViewportVisible(false));
+      await show('the list scrolled fully out of view', await pool.setViewportVisible(visible: false));
 
       buffer
         ..writeln()
@@ -181,8 +170,10 @@ if (pool.handleFor(3) != null) {
       final account = MediaCoreMemory.report().forModule(MemoryModule.pool);
       buffer
         ..writeln()
-        ..writeln('memory module view of the same pool: ${account?.bytes ?? 0} bytes declared, '
-            '${account?.items ?? 0} item(s) — "${account?.note}"');
+        ..writeln(
+          'memory module view of the same pool: ${account?.bytes ?? 0} bytes declared, '
+          '${account?.items ?? 0} item(s) — "${account?.note}"',
+        );
 
       return buffer.toString();
     } finally {

@@ -27,6 +27,10 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^2.0.0
+
   flutter:
     sdk: flutter
 
@@ -34,9 +38,23 @@ dependencies:
   media_core:
     ^0.1.0
 
-  # The backend this example plays through (it brings media_kit /
-  # media_kit_video in from the pinned upstream revision).
-  media_core_media_kit:
+  media_core_audio:
+    ^0.1.0
+
+  media_core_danmaku:
+    ^0.1.0
+
+  media_core_download:
+    ^0.1.0
+
+  media_core_feed:
+    ^0.1.0
+
+  media_core_list_playback:
+    ^0.1.0
+
+  # Feature modules, one import per demo page below.
+  media_core_live:
     ^0.1.0
 
   # Logging: the framework logs through this package, and the example turns
@@ -44,27 +62,30 @@ dependencies:
   media_core_logging:
     ^0.1.0
 
+  # The backend this example plays through (it brings media_kit /
+  # media_kit_video in from the pinned upstream revision).
+  media_core_media_kit:
+    ^0.1.0
+
+  # System media surfaces (notification / lock screen / SMTC / MPRIS) for the
+  # video player.
+  media_core_mediasession:
+    ^0.1.0
+
   # Memory accounting: the memory demo page and the cache demo both read it.
   media_core_memory:
     ^0.1.0
 
-  # Feature modules, one import per demo page below.
-  media_core_live:
-    ^0.1.0
-  media_core_feed:
-    ^0.1.0
-  media_core_audio:
-    ^0.1.0
-  media_core_presentation:
-    ^0.1.0
-  media_core_danmaku:
-    ^0.1.0
   media_core_multiview:
     ^0.1.0
-  media_core_list_playback:
+
+  # The platform capability probe the probe demo prints.
+  media_core_native:
+    ^0.2.0
+
+  media_core_presentation:
     ^0.1.0
-  media_core_download:
-    ^0.1.0
+
   media_core_recording_ffmpeg:
     ^0.1.0
 
@@ -73,29 +94,16 @@ dependencies:
   media_core_ui:
     ^0.1.0
 
-  # The platform capability probe the probe demo prints.
-  media_core_native:
-    ^0.2.0
-
-  # System media surfaces (notification / lock screen / SMTC / MPRIS) for the
-  # video player.
-  media_core_mediasession:
-    ^0.1.0
-
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^2.0.0
-
 dev_dependencies:
-  flutter_test:
-    sdk: flutter
-
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+  flutter_test:
+    sdk: flutter
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

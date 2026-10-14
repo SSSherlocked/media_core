@@ -1,8 +1,7 @@
-import 'package:media_core/media_core.dart' show TaskId, TaskPriority;
-import 'package:media_core_download/media_core_download.dart';
-
 import 'package:example/demos/fakes/fake_download.dart';
 import 'package:example/demos/module_demo.dart';
+import 'package:media_core/media_core.dart' show TaskId, TaskPriority;
+import 'package:media_core_download/media_core_download.dart';
 
 /// The download queue: concurrency, resume, verification and retries.
 ///
@@ -13,7 +12,7 @@ import 'package:example/demos/module_demo.dart';
 /// than what a particular server happened to do.
 class DownloadDemo extends ModuleDemo {
   /// Creates the demo.
-  const DownloadDemo();
+  const new();
 
   @override
   String get id => 'download';
@@ -37,32 +36,32 @@ class DownloadDemo extends ModuleDemo {
 
   @override
   List<String> get pointsZh => const <String>[
-        'maxConcurrent 决定同时几个传输，priority 决定下一个是谁',
-        '续传：先读本地尾 N 字节与远端前 N 字节比对（verifyTailBytes），一致才 append',
-        '服务端忽略 Range（返回 200 + 整个文件）时，文件从头重下，绝不重复追加',
-        'attempt 用尽 → failed；ResumeMismatch 不重试（重试也会得到同一个文件）',
-        '进度与速度按 200ms 采样，事件流直接可绑进度条',
-      ];
+    'maxConcurrent 决定同时几个传输，priority 决定下一个是谁',
+    '续传：先读本地尾 N 字节与远端前 N 字节比对（verifyTailBytes），一致才 append',
+    '服务端忽略 Range（返回 200 + 整个文件）时，文件从头重下，绝不重复追加',
+    'attempt 用尽 → failed；ResumeMismatch 不重试（重试也会得到同一个文件）',
+    '进度与速度按 200ms 采样，事件流直接可绑进度条',
+  ];
 
   @override
   List<String> get pointsEn => const <String>[
-        'maxConcurrent sets how many transfers run at once; priority sets which one is next',
-        'Resume: the local tail is compared with the remote head (verifyTailBytes) before anything is appended',
-        'A server that ignores Range (200 + whole body) restarts the file instead of duplicating bytes',
-        'A spent attempt budget → failed; a resume mismatch is not retried (a retry would produce the same file)',
-        'Progress and speed are sampled every 200ms, and the task stream binds straight to a progress bar',
-      ];
+    'maxConcurrent sets how many transfers run at once; priority sets which one is next',
+    'Resume: the local tail is compared with the remote head (verifyTailBytes) before anything is appended',
+    'A server that ignores Range (200 + whole body) restarts the file instead of duplicating bytes',
+    'A spent attempt budget → failed; a resume mismatch is not retried (a retry would produce the same file)',
+    'Progress and speed are sampled every 200ms, and the task stream binds straight to a progress bar',
+  ];
 
   @override
-  String get snippet => '''
+  String get snippet => r'''
 final manager = DownloadManager(
   transport: HttpDownloadTransport(config: config),
   config: const DownloadConfig(maxConcurrent: 2, maxAttempts: 3, verifyTailBytes: 1024),
 );
 
-manager.onTaskChanged.listen((task) => print('\${task.id} \${task.status.name}'));
+manager.onTaskChanged.listen((task) => print('${task.id} ${task.status.name}'));
 
-manager.add(DownloadTask(id: TaskId('ep1'), url: url, filePath: '\${dir}/ep1.mp4'));
+manager.add(DownloadTask(id: TaskId('ep1'), url: url, filePath: '${dir}/ep1.mp4'));
 await manager.pause('ep1');    // keeps the partial file
 await manager.resume('ep1');   // verifies, then continues
 ''';
@@ -133,11 +132,7 @@ await manager.resume('ep1');   // verifies, then continues
       transport: transport,
       files: files,
       config: const DownloadConfig(maxConcurrent: 1, verifyTailBytes: 256),
-    );
-
-    manager.add(
-      DownloadTask(id: TaskId('movie'), url: 'https://example.com/movie.mp4', filePath: '/tmp/movie.mp4'),
-    );
+    )..add(DownloadTask(id: TaskId('movie'), url: 'https://example.com/movie.mp4', filePath: '/tmp/movie.mp4'));
 
     // Let it get partway, then pause: the partial file is the whole point.
     await Future<void>.delayed(const Duration(milliseconds: 60));
@@ -159,8 +154,10 @@ await manager.resume('ep1');   // verifies, then continues
 
     buffer
       ..writeln('after resume:')
-      ..writeln('  status=${manager.task('movie')?.status.name}, '
-          'bytes=${files.files['/tmp/movie.mp4']?.length ?? 0}')
+      ..writeln(
+        '  status=${manager.task('movie')?.status.name}, '
+        'bytes=${files.files['/tmp/movie.mp4']?.length ?? 0}',
+      )
       ..writeln('  requests the resume issued: $resumedRequests')
       ..writeln('  the first 256 bytes were re-fetched and compared before anything was appended —')
       ..writeln('  that is what makes appending to a stale file safe.')
@@ -183,19 +180,21 @@ await manager.resume('ep1');   // verifies, then continues
     // this transport, so it cannot be a prefix of the remote file.
     files.seed('/tmp/poisoned.mp4', 4096);
 
-    manager.add(
-      DownloadTask(id: TaskId('poisoned'), url: 'https://example.com/x.mp4', filePath: '/tmp/poisoned.mp4'),
-    );
+    manager.add(DownloadTask(id: TaskId('poisoned'), url: 'https://example.com/x.mp4', filePath: '/tmp/poisoned.mp4'));
 
     await _settle(manager);
 
     buffer
       ..writeln('a partial file that is NOT a prefix of the remote one (simulating a rotated URL):')
-      ..writeln('  status=${manager.task('poisoned')?.status.name}, '
-          'final bytes=${files.files['/tmp/poisoned.mp4']?.length ?? 0}')
+      ..writeln(
+        '  status=${manager.task('poisoned')?.status.name}, '
+        'final bytes=${files.files['/tmp/poisoned.mp4']?.length ?? 0}',
+      )
       ..writeln('  the manager truncated it and started over instead of appending 60KB of garbage')
-      ..writeln('  requests: ${transport.requests.length} '
-          '(one rejected by the tail check, one full fetch)')
+      ..writeln(
+        '  requests: ${transport.requests.length} '
+        '(one rejected by the tail check, one full fetch)',
+      )
       ..writeln();
 
     await manager.dispose();
@@ -212,11 +211,7 @@ await manager.resume('ep1');   // verifies, then continues
     final manager = DownloadManager(
       transport: transport,
       files: files,
-      config: const DownloadConfig(
-        maxConcurrent: 1,
-        maxAttempts: 3,
-        retryDelay: Duration(milliseconds: 10),
-      ),
+      config: const DownloadConfig(maxConcurrent: 1, retryDelay: Duration(milliseconds: 10)),
     );
 
     final statuses = <String>[];

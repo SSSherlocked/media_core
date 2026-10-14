@@ -1,12 +1,11 @@
 import 'dart:async';
 
+import 'package:example/ui/demo_log.dart';
+import 'package:example/ui/demo_page_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:media_core/media_core.dart';
 import 'package:media_core_live/media_core_live.dart';
 import 'package:media_core_media_kit/media_core_media_kit.dart';
-
-import 'package:example/ui/demo_log.dart';
-import 'package:example/ui/demo_page_scaffold.dart';
 
 /// Live playback: several lines, one engine sweep at a time.
 ///
@@ -16,7 +15,7 @@ import 'package:example/ui/demo_page_scaffold.dart';
 /// and only reports a failure when everything is spent.
 class LiveDemoPage extends StatefulWidget {
   /// Creates the page.
-  const LiveDemoPage({super.key});
+  const new({super.key});
 
   @override
   State<LiveDemoPage> createState() => _LiveDemoPageState();
@@ -24,9 +23,7 @@ class LiveDemoPage extends StatefulWidget {
 
 final class _LiveDemoPageState extends State<LiveDemoPage> {
   final DemoLog _log = DemoLog();
-  final TextEditingController _urls = TextEditingController(
-    text: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-  );
+  final TextEditingController _urls = TextEditingController(text: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8');
 
   late final PlayerKernel _kernel;
   late final LivePlaybackController _controller;
@@ -34,7 +31,7 @@ final class _LiveDemoPageState extends State<LiveDemoPage> {
   StreamSubscription<PlayerCoreState>? _stateSub;
   StreamSubscription<PlayerFailure>? _failureSub;
 
-  PlayerCoreState _state = const PlayerCoreState();
+  PlayerCoreState _state = PlayerCoreState.idle;
 
   @override
   void initState() {
@@ -57,11 +54,13 @@ final class _LiveDemoPageState extends State<LiveDemoPage> {
 
   @override
   void dispose() {
-    _stateSub?.cancel();
-    _failureSub?.cancel();
+    // dispose() is synchronous: these async teardowns are fire-and-forget, the
+    // framework offers no await point inside State.dispose.
+    unawaited(_stateSub?.cancel());
+    unawaited(_failureSub?.cancel());
 
-    _controller.dispose();
-    _kernel.dispose();
+    unawaited(_controller.dispose());
+    unawaited(_kernel.dispose());
     _urls.dispose();
     _log.dispose();
 
@@ -106,10 +105,12 @@ final class _LiveDemoPageState extends State<LiveDemoPage> {
         children: [
           AspectRatio(
             aspectRatio: 16 / 9,
-            child: Container(
+            child: ColoredBox(
               color: Colors.black,
               child: handle == null
-                  ? const Center(child: Text('未开始', style: TextStyle(color: Colors.white70)))
+                  ? const Center(
+                      child: Text('未开始', style: TextStyle(color: Colors.white70)),
+                    )
                   : MediaPlayerView(handle: handle),
             ),
           ),

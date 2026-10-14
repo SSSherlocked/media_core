@@ -1,13 +1,12 @@
 import 'dart:async';
 
+import 'package:example/pages/player_demo_page.dart' show kSampleSources;
+import 'package:example/ui/demo_log.dart';
+import 'package:example/ui/demo_page_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:media_core/media_core.dart';
 import 'package:media_core_media_kit/media_core_media_kit.dart';
 import 'package:media_core_mediasession/media_core_mediasession.dart';
-
-import 'package:example/ui/demo_log.dart';
-import 'package:example/ui/demo_page_scaffold.dart';
-import 'package:example/pages/player_demo_page.dart' show kSampleSources;
 
 /// A video player with a system media surface — and no wiring on this page.
 ///
@@ -26,7 +25,7 @@ import 'package:example/pages/player_demo_page.dart' show kSampleSources;
 /// stays a truthful demonstration of what the host would see.
 class MediaSessionDemoPage extends StatefulWidget {
   /// Creates the page.
-  const MediaSessionDemoPage({super.key});
+  const new({super.key});
 
   @override
   State<MediaSessionDemoPage> createState() => _MediaSessionDemoPageState();
@@ -39,9 +38,8 @@ final class _MediaSessionDemoPageState extends State<MediaSessionDemoPage> {
   late final PlayerKernel _kernel;
 
   PlayerHandle? _handle;
-  // Typed as void on purpose: `PlayerTransportState` exists both in media_core and in
-  // audio_service (the surface's own state), and these are only ever cancelled.
-  StreamSubscription<void>? _playbackSub;
+  // Typed as void on purpose: the surface's own state types collide with
+  // media_core's, and these subscriptions are only ever cancelled.
   StreamSubscription<void>? _itemSub;
   StreamSubscription<void>? _stateSub;
 
@@ -56,21 +54,24 @@ final class _MediaSessionDemoPageState extends State<MediaSessionDemoPage> {
     _kernel = PlayerKernel();
     _kernel.registerBackend(const MediaKitAdapterFactory().registration());
 
-    _log.add('kernel created — driver attached automatically (${MediaSessionBootstrap.current})');
-    _log.add('the platform was told to show: play/pause · ±'
-        '${const MediaSessionConfig().seekStep.inSeconds}s · stop');
+    _log
+      ..add('kernel created — driver attached automatically (${MediaSessionBootstrap.current})')
+      ..add(
+        'the platform was told to show: play/pause · ±'
+        '${const MediaSessionConfig().seekStep.inSeconds}s · stop',
+      );
 
     _observeSurface();
   }
 
   @override
   void dispose() {
-    _playbackSub?.cancel();
-    _itemSub?.cancel();
-    _stateSub?.cancel();
+    // dispose() is synchronous: these async teardowns are fire-and-forget.
+    unawaited(_itemSub?.cancel());
+    unawaited(_stateSub?.cancel());
 
-    _handle?.dispose();
-    _kernel.dispose();
+    unawaited(_handle?.dispose());
+    unawaited(_kernel.dispose());
     _url.dispose();
     _log.dispose();
 
@@ -95,10 +96,16 @@ final class _MediaSessionDemoPageState extends State<MediaSessionDemoPage> {
 
     _itemSub = handler.mediaItem.listen((item) {
       _log.add('surface ← item: ${item?.title ?? '(cleared)'}  art=${item?.artUri?.pathSegments.last ?? 'none'}');
+
+      // The rows below read the live surface, so a change there is what asks
+      // for a repaint — not the transport ticks that used to drive this page.
+      if (mounted) {
+        setState(() {});
+      }
     });
 
-    String lastSignature = '';
-    Duration lastPosition = Duration.zero;
+    var lastSignature = '';
+    var lastPosition = Duration.zero;
 
     _stateSub = handler.playbackState.listen((state) {
       final signature = '${state.playing}|${state.controls.length}|${state.processingState.name}';
@@ -106,10 +113,16 @@ final class _MediaSessionDemoPageState extends State<MediaSessionDemoPage> {
       if (signature != lastSignature) {
         lastSignature = signature;
 
-        _log.add('surface ← state: ${state.playing ? 'playing' : 'paused'}, '
-            '${state.controls.length} controls, ${state.processingState.name}');
+        _log.add(
+          'surface ← state: ${state.playing ? 'playing' : 'paused'}, '
+          '${state.controls.length} controls, ${state.processingState.name}',
+        );
 
         lastPosition = state.updatePosition;
+
+        if (mounted) {
+          setState(() {});
+        }
 
         return;
       }
@@ -137,8 +150,10 @@ final class _MediaSessionDemoPageState extends State<MediaSessionDemoPage> {
       if (MediaSessionBootstrap.enabled) {
         await MediaSessionBootstrap.disable();
 
-        _log.add('surfaces off: the notification clears itself, and this kernel stops publishing '
-            '(it is already created, so re-enabling needs attachTo)');
+        _log.add(
+          'surfaces off: the notification clears itself, and this kernel stops publishing '
+          '(it is already created, so re-enabling needs attachTo)',
+        );
       } else {
         // A kernel created while the surfaces were off does not pick them up by
         // itself — `attachTo` is the path for exactly that case.
@@ -146,7 +161,7 @@ final class _MediaSessionDemoPageState extends State<MediaSessionDemoPage> {
 
         _log.add('surfaces on again: ${driver.active?.id.value ?? 'no active player yet'}');
       }
-    } catch (error) {
+    } on Object catch (error) {
       _log.add('toggle failed: $error');
     } finally {
       if (mounted) {
@@ -159,16 +174,11 @@ final class _MediaSessionDemoPageState extends State<MediaSessionDemoPage> {
     final previous = _handle;
 
     if (previous != null) {
-      _playbackSub?.cancel();
       await previous.dispose();
     }
 
     final url = _url.text.trim();
-    final source = PlayerSource(
-      id: SourceId.generate(),
-      uri: Uri.parse(url),
-      title: url.split('/').last,
-    );
+    final source = PlayerSource(id: SourceId.generate(), uri: Uri.parse(url), title: url.split('/').last);
 
     final handle = await _kernel.create(source: source, config: const PlayerConfig(autoPlay: true));
 
@@ -180,12 +190,6 @@ final class _MediaSessionDemoPageState extends State<MediaSessionDemoPage> {
 
     setState(() => _handle = handle);
 
-    _playbackSub = handle.stateChanges.listen((state) {
-      if (mounted && state.isPlaying) {
-        setState(() {});
-      }
-    });
-
     _log.add('opened ${handle.id.value} (backend ${handle.backendId}) — the surface follows it automatically');
   }
 
@@ -196,18 +200,13 @@ final class _MediaSessionDemoPageState extends State<MediaSessionDemoPage> {
 
     return DemoPageScaffold(
       title: '系统媒体面：自动挂载的通知 / 锁屏 / SMTC',
-      subtitle: 'main() 里一行 enable()，之后每个播放器都自动接上系统媒体面：视频、音乐、feed 都一样。'
-          '播一会儿，再看设备的通知栏（Windows 的音量浮层、GNOME 的媒体部件也行）——按上面的按钮，'
-          '下面的日志会出现对应的状态变化。'
+      subtitle:
+          'main() 里一行 enable()，之后每个播放器都自动接上系统媒体面：视频、音乐、feed 都一样。播一会儿，再看设备的通知栏（Windows 的音量浮层、GNOME 的媒体部件也行）——按上面的按钮，下面的日志会出现对应的状态变化。'
           ' · One enable() at app start, every player after that publishes itself. Play, then press the '
           "notification's buttons and watch the transitions land in the log below.",
       log: _log,
       actions: <Widget>[
-        FilledButton.icon(
-          onPressed: _open,
-          icon: const Icon(Icons.play_circle_outline),
-          label: const Text('打开并播放'),
-        ),
+        FilledButton.icon(onPressed: _open, icon: const Icon(Icons.play_circle_outline), label: const Text('打开并播放')),
         OutlinedButton.icon(
           onPressed: _busy ? null : _toggleSurfaces,
           icon: Icon(
@@ -221,10 +220,12 @@ final class _MediaSessionDemoPageState extends State<MediaSessionDemoPage> {
         children: <Widget>[
           AspectRatio(
             aspectRatio: 16 / 9,
-            child: Container(
+            child: ColoredBox(
               color: Colors.black,
               child: handle == null
-                  ? const Center(child: Text('打开一个地址后出现画面', style: TextStyle(color: Colors.white70)))
+                  ? const Center(
+                      child: Text('打开一个地址后出现画面', style: TextStyle(color: Colors.white70)),
+                    )
                   : MediaPlayerView(handle: handle),
             ),
           ),
@@ -245,8 +246,8 @@ final class _MediaSessionDemoPageState extends State<MediaSessionDemoPage> {
                     driver == null
                         ? '—'
                         : driver.skipToNextHandler != null
-                            ? 'previous · play/pause · next · stop'
-                            : 'play/pause · ±${driver.config.seekStep.inSeconds}s · stop',
+                        ? 'previous · play/pause · next · stop'
+                        : 'play/pause · ±${driver.config.seekStep.inSeconds}s · stop',
                   ),
                   _row('title shown', handle?.source?.hasTitle == true ? handle!.source!.title! : '—'),
                   _row('artwork', driver?.artUriResolver == null ? 'source metadata only' : 'resolver installed'),
@@ -257,21 +258,14 @@ final class _MediaSessionDemoPageState extends State<MediaSessionDemoPage> {
           const SizedBox(height: 12),
           TextField(
             controller: _url,
-            decoration: const InputDecoration(
-              labelText: '视频地址 / URL',
-              border: OutlineInputBorder(),
-              isDense: true,
-            ),
+            decoration: const InputDecoration(labelText: '视频地址 / URL', border: OutlineInputBorder(), isDense: true),
           ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             children: <Widget>[
               for (final sample in kSampleSources)
-                ActionChip(
-                  label: Text(sample.label),
-                  onPressed: () => setState(() => _url.text = sample.url),
-                ),
+                ActionChip(label: Text(sample.label), onPressed: () => setState(() => _url.text = sample.url)),
             ],
           ),
         ],
@@ -285,7 +279,9 @@ final class _MediaSessionDemoPageState extends State<MediaSessionDemoPage> {
       child: Row(
         children: <Widget>[
           SizedBox(width: 140, child: Text(label, style: const TextStyle(fontSize: 12))),
-          Expanded(child: Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
+          Expanded(
+            child: Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          ),
         ],
       ),
     );

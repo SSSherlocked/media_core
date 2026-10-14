@@ -1,6 +1,5 @@
-import 'package:media_core_audio/media_core_audio.dart';
-
 import 'package:example/demos/module_demo.dart';
+import 'package:media_core_audio/media_core_audio.dart';
 
 /// Queue rules and play modes.
 ///
@@ -10,7 +9,7 @@ import 'package:example/demos/module_demo.dart';
 /// explicitly instead of describing them.
 class QueueDemo extends ModuleDemo {
   /// Creates the demo.
-  const QueueDemo();
+  const new();
 
   @override
   String get id => 'queue';
@@ -25,8 +24,7 @@ class QueueDemo extends ModuleDemo {
   String get nameEn => 'Queue & play modes';
 
   @override
-  String get purposeZh =>
-      'PlayQueue 持有顺序、游标与随机排列；PlayMode 区分顺序 / 列表循环 / 单曲循环 / 随机。随机用预生成排列，因此一轮不重复且 previous() 能真正回溯。';
+  String get purposeZh => 'PlayQueue 持有顺序、游标与随机排列；PlayMode 区分顺序 / 列表循环 / 单曲循环 / 随机。随机用预生成排列，因此一轮不重复且 previous() 能真正回溯。';
 
   @override
   String get purposeEn =>
@@ -34,19 +32,19 @@ class QueueDemo extends ModuleDemo {
 
   @override
   List<String> get pointsZh => const <String>[
-        'queue.indexAfter(automatic: true) — 自动续播：单曲循环回自身，顺序播放在末尾停止',
-        'queue.indexAfter(automatic: false) — 用户按下一首：不在末尾静默回绕',
-        'append / insertNext(下一首播放) / removeAt / jumpTo',
-        '随机模式返回的排列可枚举，便于调试"为什么放了这首"',
-      ];
+    'queue.indexAfter(automatic: true) — 自动续播：单曲循环回自身，顺序播放在末尾停止',
+    'queue.indexAfter(automatic: false) — 用户按下一首：不在末尾静默回绕',
+    'append / insertNext(下一首播放) / removeAt / jumpTo',
+    '随机模式返回的排列可枚举，便于调试"为什么放了这首"',
+  ];
 
   @override
   List<String> get pointsEn => const <String>[
-        'queue.indexAfter(automatic: true) — auto advance: single-loop repeats, list stops at the end',
-        'queue.indexAfter(automatic: false) — user pressed next: no silent wrap at the end',
-        'append / insertNext (play next) / removeAt / jumpTo',
-        'The shuffled permutation is enumerable, which answers "why did it play this"',
-      ];
+    'queue.indexAfter(automatic: true) — auto advance: single-loop repeats, list stops at the end',
+    'queue.indexAfter(automatic: false) — user pressed next: no silent wrap at the end',
+    'append / insertNext (play next) / removeAt / jumpTo',
+    'The shuffled permutation is enumerable, which answers "why did it play this"',
+  ];
 
   @override
   String get snippet => '''
@@ -103,11 +101,12 @@ queue.jumpTo(2);
 
       final userNext = userQueue.indexAfter(automatic: false);
 
-      buffer.writeln(
-        '  from the last track, a user "next" → '
-        '${userNext == null ? 'stay (no silent wrap in list mode)' : userQueue.tracks[userNext].title}',
-      );
-      buffer.writeln();
+      buffer
+        ..writeln(
+          '  from the last track, a user "next" → '
+          '${userNext == null ? 'stay (no silent wrap in list mode)' : userQueue.tracks[userNext].title}',
+        )
+        ..writeln();
     }
 
     final random = PlayQueue(tracks: _tracks(), mode: PlayMode.random);
@@ -119,8 +118,7 @@ queue.jumpTo(2);
       ..writeln()
       ..writeln('insertNext("下一首播放") on a 5-track queue:');
 
-    final insertion = PlayQueue(tracks: _tracks());
-    insertion.jumpTo(1);
+    final insertion = PlayQueue(tracks: _tracks())..jumpTo(1);
     final insertedAt = insertion.insertNext(
       const MusicTrack(id: 'next', title: 'PlayNext', artist: 'demo', sourceId: 'demo'),
     );

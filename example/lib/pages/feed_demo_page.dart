@@ -1,10 +1,11 @@
+import 'dart:async';
+
+import 'package:example/ui/demo_log.dart';
+import 'package:example/ui/demo_page_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:media_core/media_core.dart';
 import 'package:media_core_feed/media_core_feed.dart';
 import 'package:media_core_media_kit/media_core_media_kit.dart';
-
-import 'package:example/ui/demo_log.dart';
-import 'package:example/ui/demo_page_scaffold.dart';
 
 /// Vertical feed: one shared player, pages attached by swiping.
 ///
@@ -14,7 +15,7 @@ import 'package:example/ui/demo_page_scaffold.dart';
 /// widget, which is how a real feed avoids running N surfaces.
 class FeedDemoPage extends StatefulWidget {
   /// Creates the page.
-  const FeedDemoPage({super.key});
+  const new({super.key});
 
   @override
   State<FeedDemoPage> createState() => _FeedDemoPageState();
@@ -49,8 +50,10 @@ final class _FeedDemoPageState extends State<FeedDemoPage> {
 
   @override
   void dispose() {
-    _feed.dispose();
-    _kernel.dispose();
+    // dispose() is synchronous, so these async teardowns run detached; the
+    // framework gives no place to await them from a State.
+    unawaited(_feed.dispose());
+    unawaited(_kernel.dispose());
     _pages.dispose();
     _urls.dispose();
     _log.dispose();

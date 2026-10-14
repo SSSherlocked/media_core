@@ -1,9 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:media_core/media_core.dart';
-
 import 'package:example/demos/module_demo.dart';
+import 'package:media_core/media_core.dart';
 
 /// Two caches, two lifetimes: an in-memory LRU and a disk store.
 ///
@@ -15,7 +14,7 @@ import 'package:example/demos/module_demo.dart';
 /// where a footprint is a real number rather than a declared estimate.
 class CacheDemo extends ModuleDemo {
   /// Creates the demo.
-  const CacheDemo();
+  const new();
 
   @override
   String get id => 'cache';
@@ -39,28 +38,28 @@ class CacheDemo extends ModuleDemo {
 
   @override
   List<String> get pointsZh => const <String>[
-        'MemoryCache(maxEntries, maxBytes) — 两层上限，任意一层越界即触发淘汰',
-        'eviction 策略可替换：默认 LruCacheEviction，也可实现 CacheEviction 自定规则',
-        'CacheEntry.sizeBytes 让内存缓存能上报真实占用（而非估算）',
-        'DiskCache(directory) — write / read / entries / remove / clear，条目就是磁盘上的文件',
-        'expiresAt 过期条目在读取时被丢弃，不占着位置等清理',
-      ];
+    'MemoryCache(maxEntries, maxBytes) — 两层上限，任意一层越界即触发淘汰',
+    'eviction 策略可替换：默认 LruCacheEviction，也可实现 CacheEviction 自定规则',
+    'CacheEntry.sizeBytes 让内存缓存能上报真实占用（而非估算）',
+    'DiskCache(directory) — write / read / entries / remove / clear，条目就是磁盘上的文件',
+    'expiresAt 过期条目在读取时被丢弃，不占着位置等清理',
+  ];
 
   @override
   List<String> get pointsEn => const <String>[
-        'MemoryCache(maxEntries, maxBytes) — two ceilings; crossing either triggers eviction',
-        'The eviction policy is replaceable: LruCacheEviction by default, or your own CacheEviction',
-        'CacheEntry.sizeBytes lets the memory cache report a measured footprint instead of an estimate',
-        'DiskCache(directory) — write / read / entries / remove / clear, one file per entry',
-        'Expired entries are dropped on read rather than waiting for a sweep',
-      ];
+    'MemoryCache(maxEntries, maxBytes) — two ceilings; crossing either triggers eviction',
+    'The eviction policy is replaceable: LruCacheEviction by default, or your own CacheEviction',
+    'CacheEntry.sizeBytes lets the memory cache report a measured footprint instead of an estimate',
+    'DiskCache(directory) — write / read / entries / remove / clear, one file per entry',
+    'Expired entries are dropped on read rather than waiting for a sweep',
+  ];
 
   @override
-  String get snippet => '''
+  String get snippet => r'''
 final memory = MemoryCache<Uint8List>(maxEntries: 3, maxBytes: 512 * 1024);
 await memory.write(CacheEntry(key: const CacheKey('room/1'), value: bytes, sizeBytes: bytes.length));
 
-final disk = DiskCache(directory: Directory('\${dir}/cache'));
+final disk = DiskCache(directory: Directory('${dir}/cache'));
 await disk.initialize();
 await disk.write(CacheEntry(key: const CacheKey('room/1'), value: bytes, sizeBytes: bytes.length));
 
@@ -97,19 +96,15 @@ print(MediaCoreMemory.report().forModule(MemoryModule.cache)?.bytes);  // measur
       ..writeln('  read room/a (touches it, so it is now the most recently used)')
       ..writeln();
 
-    await memory.write(
-      CacheEntry<Uint8List>(key: const CacheKey('room/d'), value: Uint8List(512), sizeBytes: 512),
-    );
+    await memory.write(CacheEntry<Uint8List>(key: const CacheKey('room/d'), value: Uint8List(512), sizeBytes: 512));
 
     final remaining = await memory.entries();
     buffer
       ..writeln('  after writing room/d with 3 entries already held:')
       ..writeln('    retained: ${remaining.map((entry) => entry.key.value).join(', ')}')
       ..writeln('    evicted : room/b — the least recently used, which is what LRU means')
-      ..writeln();
-
-    // The memory module sees the real number.
-    buffer
+      ..writeln()
+      // The memory module sees the real number.
       ..writeln('  the memory account for this cache (measured, not estimated):')
       ..writeln('    ${MediaCoreMemory.report().forModule(MemoryModule.cache)}')
       ..writeln();
@@ -156,8 +151,10 @@ print(MediaCoreMemory.report().forModule(MemoryModule.cache)?.bytes);  // measur
 
     final reread = await disk.read(const CacheKey('room/a'));
     buffer
-      ..writeln('  read room/a after a fresh read from disk: ${reread?.value.length} bytes, '
-          'metadata=${reread?.metadata.keys.join(',')}')
+      ..writeln(
+        '  read room/a after a fresh read from disk: ${reread?.value.length} bytes, '
+        'metadata=${reread?.metadata.keys.join(',')}',
+      )
       ..writeln('  entries(): ${(await disk.entries()).length}');
 
     await disk.clear();

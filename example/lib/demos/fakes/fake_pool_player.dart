@@ -16,7 +16,7 @@ import 'package:media_core/media_core.dart';
 /// what a demo should spend its time showing.
 final class FakePoolPlayerHandle implements PoolPlayerHandle {
   /// Creates a fake player handle.
-  FakePoolPlayerHandle({
+  new({
     required this.id,
     this.openDelay = const Duration(milliseconds: 60),
     this.tick = const Duration(milliseconds: 250),
@@ -71,8 +71,10 @@ final class FakePoolPlayerHandle implements PoolPlayerHandle {
 
   @override
   Future<void> open(PlayerSource source, {bool autoPlay = false}) async {
-    calls.add('open(${source.uri.pathSegments.isEmpty ? source.uri : source.uri.pathSegments.last}'
-        '${autoPlay ? ', autoPlay' : ''})');
+    calls.add(
+      'open(${source.uri.pathSegments.isEmpty ? source.uri : source.uri.pathSegments.last}'
+      '${autoPlay ? ', autoPlay' : ''})',
+    );
 
     if (openDelay > Duration.zero) {
       await Future<void>.delayed(openDelay);
@@ -127,7 +129,7 @@ final class FakePoolPlayerHandle implements PoolPlayerHandle {
   }
 
   @override
-  Future<void> setMute(bool muted) async {
+  Future<void> setMute({required bool muted}) async {
     calls.add('setMute($muted)');
     _muted = muted;
     _emit();
@@ -196,7 +198,7 @@ final class FakePoolPlayerHandle implements PoolPlayerHandle {
 /// difference between a pool that recycles and one that leaks decoders.
 final class FakePoolPlayerHost implements PoolPlayerHost {
   /// Creates a fake host.
-  FakePoolPlayerHost({this.openDelay = const Duration(milliseconds: 60), this.failuresBeforeSuccess = 0});
+  new({this.openDelay = const Duration(milliseconds: 60), this.failuresBeforeSuccess = 0});
 
   /// Delay every created handle uses for [FakePoolPlayerHandle.open].
   final Duration openDelay;
