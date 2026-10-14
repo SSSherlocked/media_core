@@ -22,23 +22,34 @@ final class FvpAdapterFactory implements PlayerAdapterFactory {
     this.configure,
   });
 
+  /// Capability set every adapter this factory creates reports.
   final PlayerAdapterCapabilities capabilities;
+
+  /// Raw mdk properties applied to every adapter, before a source opens.
   final Map<String, String> properties;
+
+  /// Video decoder list in preference order; null leaves mdk's default.
   final List<String>? videoDecoders;
+
+  /// Audio backend list in preference order; null leaves mdk's default.
   final List<String>? audioBackends;
+
+  /// How the texture each adapter owns is presented and sized.
   final FvpVideoConfig videoConfig;
+
+  /// Runs once per adapter after construction, for per-instance customisation.
   final void Function(FvpPlayerAdapter adapter)? configure;
 
   @override
   PlayerAdapter create(String id) {
     final adapter = FvpPlayerAdapter(
-        id: id,
-        capabilities: capabilities,
-        properties: properties,
-        videoDecoders: videoDecoders,
-        audioBackends: audioBackends,
-        videoConfig: videoConfig,
-      );
+      id: id,
+      capabilities: capabilities,
+      properties: properties,
+      videoDecoders: videoDecoders,
+      audioBackends: audioBackends,
+      videoConfig: videoConfig,
+    );
 
     configure?.call(adapter);
 
@@ -75,13 +86,13 @@ void registerFvpFactory(
 }) {
   factory.register(id, () {
     final adapter = FvpPlayerAdapter(
-        id: id,
-        capabilities: capabilities,
-        properties: properties,
-        videoDecoders: videoDecoders,
-        audioBackends: audioBackends,
-        videoConfig: videoConfig,
-      );
+      id: id,
+      capabilities: capabilities,
+      properties: properties,
+      videoDecoders: videoDecoders,
+      audioBackends: audioBackends,
+      videoConfig: videoConfig,
+    );
 
     configure?.call(adapter);
 
@@ -95,8 +106,8 @@ void registerFvpRegistry(
   int priority = 80,
   PlayerAdapterCapabilities capabilities = FvpPlayerAdapter.defaultCapabilities,
   Map<String, String> properties = const <String, String>{},
-    List<String>? videoDecoders,
-    List<String>? audioBackends,
+  List<String>? videoDecoders,
+  List<String>? audioBackends,
   FvpVideoConfig videoConfig = const FvpVideoConfig(),
   void Function(FvpPlayerAdapter adapter)? configure,
 }) {

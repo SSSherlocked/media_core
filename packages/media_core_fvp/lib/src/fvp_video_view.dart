@@ -13,7 +13,8 @@ import 'package:media_core_fvp/src/fvp_player_adapter.dart';
 /// FvpVideoView(adapter: myAdapter)
 /// ```
 class FvpVideoView extends StatelessWidget {
-  const FvpVideoView({super.key, required this.adapter});
+  /// Creates the view that renders [adapter]'s texture.
+  const FvpVideoView({required this.adapter, super.key});
 
   /// The adapter whose surface is rendered.
   final FvpPlayerAdapter adapter;

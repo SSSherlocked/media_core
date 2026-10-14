@@ -15,10 +15,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  media_core:
-    ^0.1.0
-  media_core_logging:
-    ^0.1.0
 
   # Published package. Note that pure_live vendors a stripped copy (android/ios
   # plugin platforms only) to keep libmdk off desktop; that copy is not used
@@ -26,5 +22,15 @@ dependencies:
   # dependency themselves.
   fvp: ^0.38.1
 
+  media_core:
+    ^0.1.0
+
+  media_core_logging:
+    ^0.1.0
+
 dev_dependencies:
+  # Lint
   flutter_lints: ^6.0.0
+
+  flutter_test:
+    sdk: flutter

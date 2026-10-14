@@ -14,13 +14,9 @@
 /// drive it from `FvpPlayerAdapter.textureListenable`.
 library;
 
-// Adapter, configs, factory, view.
-export 'package:media_core_fvp/src/fvp_player_adapter.dart' show FvpPlayerAdapter;
-export 'package:media_core_fvp/src/fvp_video_config.dart' show FvpVideoConfig;
-export 'package:media_core_fvp/src/fvp_video_view.dart' show FvpVideoView;
-export 'package:media_core_fvp/src/fvp_adapter_factory.dart'
-    show FvpAdapterFactory, kFvpPlayerBackendId, registerFvpFactory, registerFvpRegistry;
+import 'package:media_core_fvp/src/fvp_video_view.dart' show FvpVideoView;
 
+export 'package:fvp/fvp.dart';
 // The engine this adapter is built on, re-exported so a host reaches it from
 // its single dependency on this adapter: `package:fvp/mdk.dart` is the player
 // API (`FvpPlayer`, `MediaInfo`, …) and `package:fvp/fvp.dart` the
@@ -29,4 +25,9 @@ export 'package:media_core_fvp/src/fvp_adapter_factory.dart'
 // engine's bare `Player`/`PlaybackState`/`MediaType` re-export without
 // ambiguity.
 export 'package:fvp/mdk.dart';
-export 'package:fvp/fvp.dart';
+export 'package:media_core_fvp/src/fvp_adapter_factory.dart'
+    show FvpAdapterFactory, kFvpPlayerBackendId, registerFvpFactory, registerFvpRegistry;
+// Adapter, configs, factory, view.
+export 'package:media_core_fvp/src/fvp_player_adapter.dart' show FvpPlayerAdapter;
+export 'package:media_core_fvp/src/fvp_video_config.dart' show FvpVideoConfig;
+export 'package:media_core_fvp/src/fvp_video_view.dart' show FvpVideoView;

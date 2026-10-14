@@ -54,7 +54,11 @@ final class FvpPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
   final List<String>? audioBackends;
 
   FvpVideoConfig _videoConfig;
+
+  /// The video configuration the current controller was built with.
   FvpVideoConfig get videoConfig => _videoConfig;
+
+  /// Replaces [videoConfig] and publishes the new fit when it changed.
   set videoConfig(FvpVideoConfig value) {
     _videoConfig = value;
     if (_fitNotifier.value != value.fit) {
@@ -88,8 +92,8 @@ final class FvpPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
   /// Whether the current source already had its one geometry retry.
   bool _geometryRetried = false;
 
-  double _volume = 1.0;
-  double _lastEmittedVolume = -1.0;
+  double _volume = 1;
+  double _lastEmittedVolume = -1;
 
   /// The engine's current texture, or null while there is no video output.
   final ValueNotifier<int?> _textureNotifier = ValueNotifier<int?>(null);
@@ -149,7 +153,10 @@ final class FvpPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
     _currentUrl = url;
 
     player
-      ..setProperty('avio.headers', encodeHeaders(source.hasHeaders ? source.headers!.values : const <String, String>{}))
+      ..setProperty(
+        'avio.headers',
+        encodeHeaders(source.hasHeaders ? source.headers!.values : const <String, String>{}),
+      )
       // FFmpeg ignores an empty `http_proxy`, which is what a loopback relay
       // wants: the relay owns the proxied connection.
       ..setActiveTracks(mdk.MediaType.video, audioOnly ? const <int>[] : const <int>[0])
@@ -169,10 +176,7 @@ final class FvpPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
       // Reported inside the open window, so the base turns it into a failed
       // open: the controller then escalates to the next line or engine instead
       // of leaving the user with audio and no picture.
-      reportEngineError(
-        message: 'fvp prepare failed ($result) for $url',
-        code: PlayerErrorCode.backendOpenFailed,
-      );
+      reportEngineError(message: 'fvp prepare failed ($result) for $url', code: PlayerErrorCode.backendOpenFailed);
       return;
     }
 
@@ -258,7 +262,7 @@ final class FvpPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
   }
 
   @override
-  Future<void> onSetAudioOnly(bool audioOnly) async {
+  Future<void> onSetAudioOnly({required bool audioOnly}) async {
     final player = _player;
 
     if (player == null) return;
@@ -288,7 +292,7 @@ final class FvpPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
   ///
   /// Used around engine switches: the outgoing engine must go silent before the
   /// incoming one has produced a frame.
-  Future<void> setAudioOutputSuppressed(bool suppressed) async {
+  Future<void> setAudioOutputSuppressed({required bool suppressed}) async {
     _audioOutputSuppressed = suppressed;
     _player?.volume = suppressed ? 0.0 : _volume;
   }
@@ -378,7 +382,7 @@ final class FvpPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
         _applyEngineOption(player, option);
 
         outcomes.add(EngineOptionOutcome.appliedLive);
-      } catch (_) {
+      } on Object catch (_) {
         outcomes.add(EngineOptionOutcome.stagedForNextOpen);
       }
     }
@@ -411,7 +415,7 @@ final class FvpPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
   String _mdkOptionValue(Object? value) {
     return switch (value) {
       null => '',
-      bool flag => flag ? '1' : '0',
+      final bool flag => flag ? '1' : '0',
       final String text => text,
       final other => '$other',
     };
@@ -430,8 +434,9 @@ final class FvpPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
 
     if (player == null) return;
 
-    player.volume = 0.0;
-    player.dispose();
+    player
+      ..volume = 0.0
+      ..dispose();
   }
 
   /// `avio.headers` takes CRLF-terminated lines; values that would inject extra
@@ -440,7 +445,9 @@ final class FvpPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
     final buffer = StringBuffer();
 
     headers.forEach((name, value) {
-      if (name.isEmpty || RegExp(r'[\r\n:]').hasMatch(name) || RegExp(r'[\r\n]').hasMatch(value)) return;
+      if (name.isEmpty || RegExp(r'[\r\n:]').hasMatch(name) || RegExp(r'[\r\n]').hasMatch(value)) {
+        return;
+      }
 
       buffer.write('$name: $value\r\n');
     });
@@ -540,7 +547,7 @@ final class FvpPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
 
     _bufferingNow = buffering;
 
-    emitBuffering(buffering, resumePlaying: buffering ? null : _playingNow);
+    emitBuffering(buffering: buffering, resumePlaying: buffering ? null : _playingNow);
   }
 
   // ---------------------------------------------------------------------------
@@ -561,7 +568,9 @@ final class FvpPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
     if (duration > Duration.zero) emitDurationChanged(duration);
 
     _positionTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      if (isDisposed || _player != player || !_hasOpened || !_playingNow) return;
+      if (isDisposed || _player != player || !_hasOpened || !_playingNow) {
+        return;
+      }
 
       emitPositionChanged(Duration(milliseconds: player.position));
 
@@ -597,7 +606,7 @@ final class FvpPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
       final milliseconds = player.mediaInfo.duration;
 
       return milliseconds > 0 ? Duration(milliseconds: milliseconds) : Duration.zero;
-    } catch (_) {
+    } on Object catch (_) {
       return Duration.zero;
     }
   }
@@ -740,12 +749,15 @@ final class FvpPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
   Future<void> _retryGeometryOnce(mdk.Player player) async {
     final url = _currentUrl;
 
-    if (_geometryRetried || url == null || audioOnly || isDisposed || _player != player) return;
+    if (_geometryRetried || url == null || audioOnly || isDisposed || _player != player) {
+      return;
+    }
 
     _geometryRetried = true;
 
-    player.state = mdk.PlaybackState.stopped;
-    player.media = url;
+    player
+      ..state = mdk.PlaybackState.stopped
+      ..media = url;
 
     final result = await player.prepare();
 
@@ -780,6 +792,8 @@ final class FvpPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
   // Capabilities
   // ---------------------------------------------------------------------------
 
+  /// What this backend claims it can do, and the reason every claim is true or
+  /// deliberately missing (see the audio-only note above the class).
   static const PlayerAdapterCapabilities defaultCapabilities = PlayerAdapterCapabilities(
     // Core playback.
     supportsLive: true,
@@ -788,68 +802,16 @@ final class FvpPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
     supportsStop: true,
     supportsRateControl: true,
     supportsVolumeControl: true,
-    supportsMuteControl: false,
     supportsAudioOnly: true,
     supportsEngineOptions: true,
-
-    // Video and rendering.
-    //
-    // libmdk exposes no decoded-frame callback, so the frame heartbeat stays
-    // off: claiming it would arm the watchdog with a signal that can never
-    // arrive, and recovery would then tear down healthy streams.
-    supportsVideoFrameProgress: false,
     supportsVideoSizeChanged: true,
-    supportsVideoReconfig: false,
-    supportsHwdecInfo: false,
-    supportsVideoFilters: false,
-    // This backend has no frame-capture API of its own: screenshots are served
-    // by capturing the rendered surface of a MediaPlayerView instead, so the
-    // capability stays false and `captureFrame` inherits its null answer.
-    supportsScreenshot: false,
-
-    // Audio.
-    supportsAudioReconfig: false,
-    supportsAudioDeviceSelection: false,
-    supportsAudioFilters: false,
-
-    // Tracks and subtitles.
-    supportsTrackSelection: false,
-    supportsSubtitleTrack: false,
-    supportsExternalSubtitle: false,
-
-    // Playback state and buffering.
-    supportsCacheState: false,
-    supportsBufferingProgress: false,
-    supportsChapterControl: false,
-    supportsLoop: false,
-
-    // Metadata and playlist.
-    supportsMetadata: false,
-    supportsPlaylist: false,
-    supportsPlaylistControl: false,
-
-    // Diagnostics and integration.
-    supportsClientMessage: false,
-    supportsLogMessages: false,
 
     // Decoders.
     supportsHardwareDecoder: true,
-    supportsSoftwareDecoder: true,
-
-    // Presentation.
-    supportsPictureInPicture: false,
     supportsFullscreen: true,
 
     // Source matching.
     supportedProtocols: FvpFormats.supportedProtocols,
     supportedFormats: FvpFormats.supportedFormats,
-    // FVP opens one URL through its FFmpeg demuxer and reads whatever
-    // essences that container carries. Like IJKPlayer it has no
-    // side-channel for external audio, so the planner refuses a
-    // composite here rather than playing it video-only.
-    // A manifest URL is the one input that would carry both essences,
-    // but whether libmdk's bundled libavformat was built with the dash
-    // demuxer is not verified on device, so this stays `none` until it is.
-    compositeSupport: CompositeSupport.none,
   );
 }

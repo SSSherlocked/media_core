@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 /// large the render target may be.
 @immutable
 final class FvpVideoConfig {
+  /// Creates a video configuration.
   const FvpVideoConfig({
     this.fit = BoxFit.contain,
     this.fill = const Color(0xFF000000),
