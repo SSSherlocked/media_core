@@ -7,13 +7,15 @@
 ///   Windows    → Win32PipWindow (direct user32 calls, no plugin)
 ///   macOS/Linux→ WindowManagerPipWindow (the window_manager plugin)
 ///   selection  → defaultDesktopPipWindow(), injectable per host
-/// android → the platform's own PiP window (NativePipSystemPip,
-///           ExoPlayer handoff; API 26+, FlutterFragmentActivity in the host)
-/// iOS     → the platform's own PiP window too (NativePipSystemPip,
-///           AVKit handoff; 14+, UIBackgroundModes audio in the host).
-///           PiP on mobile replays the source in the system player: the host
-///           supplies PipDriver.pipMediaResolver and takes playback back
-///           through PipDriver.onHandoffReturn.
+/// android → a draggable overlay above every app (OverlayPipSystemPip,
+///           flutter_overlay_window). The video replays in a second Flutter
+///           engine: the host registers an `overlayMain` entrypoint through
+///           overlayPipMain(), supplies the URL via PipDriver.pipMediaResolver
+///           and takes playback back through PipDriver.onHandoffReturn.
+/// iOS     → the system PiP window around the app's own live player layer
+///           (OverlayPipSystemPip, pip_kit). The host mounts PipHost at the
+///           app root and renders the video through a platform view; no
+///           handoff, no second player.
 /// ```
 ///
 /// [DisplayAwarePipWindow] layers the desktop placement policy (multi-
@@ -30,7 +32,8 @@ import 'package:media_core_pip/media_core_pip.dart' show DisplayAwarePipWindow, 
 
 export 'package:media_core_pip/src/desktop_pip_window.dart';
 export 'package:media_core_pip/src/display_pip_window.dart';
-export 'package:media_core_pip/src/native_pip_system_pip.dart';
+export 'package:media_core_pip/src/overlay_pip.dart';
+export 'package:media_core_pip/src/overlay_pip_system_pip.dart';
 export 'package:media_core_pip/src/pip_config.dart';
 export 'package:media_core_pip/src/pip_controller.dart';
 export 'package:media_core_pip/src/pip_driver.dart';

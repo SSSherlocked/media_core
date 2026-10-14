@@ -1,52 +1,53 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show TargetPlatform, debugDefaultTargetPlatformOverride;
 import 'package:flutter/painting.dart' show Offset, Rect, Size;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_core/media_core.dart';
 import 'package:media_core_pip/media_core_pip.dart';
-import 'package:native_picture_in_picture/native_picture_in_picture_platform_interface.dart';
-import 'package:native_picture_in_picture/pip_event.dart';
 
-/// The default mobile backend, driven without a device.
-final class _FakeNativePlatform extends NativePictureInPicturePlatform {
-  String? initializedUrl;
-  final StreamController<PipEvent> events = StreamController<PipEvent>.broadcast();
+/// Drives the shipped mobile backend (OverlayPipSystemPip) through a fake
+/// overlay seam, so the full chain (resolver -> enable -> close event ->
+/// host callback) runs the way a device would.
+final class _FakeOverlayWindow implements OverlayWindowApi {
+  final StreamController<Object?> _inbox = StreamController<Object?>.broadcast();
 
-  @override
-  Future<bool> isPipSupported() async => true;
+  bool active = false;
 
-  @override
-  Future<void> initialize(String videoUrl) async => initializedUrl = videoUrl;
+  /// Simulates a message arriving from the overlay engine.
+  void emit(Object? event) => _inbox.add(event);
 
   @override
-  Future<void> startPiP() async {}
+  Future<bool> isPermissionGranted() async => true;
 
   @override
-  Future<void> stopPiP() async {}
+  Future<bool?> requestPermission() async => true;
 
   @override
-  Future<bool> isPipActive() async => false;
+  Future<void> showOverlay({
+    required int width,
+    required int height,
+    required bool enableDrag,
+    required String title,
+  }) async {
+    active = true;
+  }
 
   @override
-  Future<void> seekTo(Duration position) async {}
+  Future<bool> isActive() async => active;
 
   @override
-  Future<Duration> getPosition() async => Duration.zero;
+  Future<bool?> closeOverlay() async {
+    final wasActive = active;
+    active = false;
+    return wasActive;
+  }
 
   @override
-  Future<void> play() async {}
+  Future<void> shareData(Object data) async {}
 
   @override
-  Future<void> pause() async {}
-
-  @override
-  Future<void> setAutoPipEnabled(bool enabled) async {}
-
-  @override
-  Future<void> dispose() async {}
-
-  @override
-  Stream<PipEvent> get onPipEvent => events.stream;
+  Stream<Object?> get messages => _inbox.stream;
 }
 
 final class _FakePipWindow implements PipWindow {
@@ -188,6 +189,9 @@ final class _FakeSystemPip implements SystemPip {
 PlayerId _player() => PlayerId('player_pip');
 
 void main() {
+  // The mobile backend reads the view's pixel ratio to size the overlay.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('PipDriver on desktop', () {
     late _FakePipWindow window;
     late PipDriver driver;
@@ -515,17 +519,17 @@ void main() {
       expect(withoutMedia.isPip, isFalse);
     });
 
-    test('the handoff return fires when the system window is gone', () async {
-      // The default mobile backend is NativePipSystemPip: drive it through a
-      // fake platform so the full chain (resolver -> enable -> didStop ->
-      // host callback) runs the way a device would.
-      final platform = _FakeNativePlatform();
-      NativePictureInPicturePlatform.instance = platform;
-      addTearDown(platform.events.close);
+    test('the handoff return fires when the overlay window is gone', () async {
+      // The shipped mobile backend is OverlayPipSystemPip; on the test host it
+      // needs the Android path, so the platform override picks it.
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
+      final window = _FakeOverlayWindow();
       final returns = <PlayerId>[];
       final handoff = PipDriver(
         platform: PipPlatform.mobile,
+        systemPip: OverlayPipSystemPip(overlayWindow: window),
         pipMediaResolver: (_) async => const SystemPipMedia(url: 'https://host/v.mp4', position: Duration(seconds: 5)),
         onHandoffReturn: (playerId) async => returns.add(playerId),
       );
@@ -537,10 +541,11 @@ void main() {
       await handoff.apply(playerId, PresentationRequest.pip());
 
       expect(handoff.isPip, isTrue);
-      expect(platform.initializedUrl, 'https://host/v.mp4');
+      expect(window.active, isTrue);
       expect(returns, isEmpty);
 
-      platform.events.add(PipEvent.didStop);
+      // The overlay engine reports before tearing itself down.
+      window.emit(<String, Object?>{'type': 'close'});
       await Future<void>.delayed(Duration.zero);
 
       expect(handoff.isPip, isFalse);

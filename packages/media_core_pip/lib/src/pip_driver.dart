@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/painting.dart' show Offset, Rect, Size;
 import 'package:media_core/media_core.dart';
 import 'package:media_core_pip/src/desktop_pip_window.dart';
-import 'package:media_core_pip/src/native_pip_system_pip.dart';
+import 'package:media_core_pip/src/overlay_pip_system_pip.dart';
 import 'package:media_core_pip/src/pip_config.dart';
 import 'package:media_core_pip/src/pip_window.dart';
 import 'package:media_core_pip/src/system_pip.dart';
@@ -74,11 +74,12 @@ enum PipPlatform {
 ///   `normal` cannot undo it; the state follows the system's own status stream;
 /// - Android accepts only aspect ratios inside 1/2.39..2.39, so an extreme
 ///   video falls back to the platform default rather than failing the request;
-/// - the shipped backend (`native_picture_in_picture`) renders the picture in
-///   its **own** native player (ExoPlayer / AVKit, Android 26+ / iOS 14+), so
-///   entering on mobile is a handoff: [pipMediaResolver] must name a URL the
-///   platform can open, and [onHandoffReturn] gives the host its playback
-///   back when the window closes.
+/// - the shipped backend ([OverlayPipSystemPip]) splits by platform: Android
+///   (`flutter_overlay_window`) replays the source in a second Flutter engine
+///   inside a draggable overlay, so entering there is a handoff —
+///   [pipMediaResolver] must name a URL and [onHandoffReturn] gives the host
+///   its playback back; iOS (`pip_kit`) shrinks the app's own live player
+///   layer into the system window, so no handoff happens there at all.
 ///
 /// A request the platform cannot serve throws [UnsupportedError] rather than
 /// silently doing nothing: the presentation state machine records a failed
@@ -119,20 +120,23 @@ final class PipDriver implements KernelPresentationDriver {
   /// hosts that build their hooks after the driver; see [updateLifecycleHooks].
   PresentationLifecycleHooks lifecycleHooks;
 
-  /// Supplies the media a handoff PiP player should take over.
+  /// Supplies the media the Android overlay engine takes over.
   ///
-  /// The shipped mobile backend (`native_picture_in_picture`) plays the picture
-  /// in its own native player, so entering PiP is a handoff: this resolver is
-  /// asked, at the moment of entry, for the URL the *native* player can open
-  /// by itself and the position to resume from. Returning null - a signed
-  /// header source, a loopback proxy, anything the platform player cannot
-  /// reach - makes the entry throw [UnsupportedError] rather than show an
-  /// empty system window. Desktop paths never call it.
+  /// The shipped Android backend (`flutter_overlay_window`) renders the
+  /// picture in a second Flutter engine that reopens the source by itself, so
+  /// this resolver is asked, at the moment of entry, for the URL that engine
+  /// can open by itself and the position to resume from. Returning null - a
+  /// signed header source, a loopback proxy, anything a fresh engine cannot
+  /// reach - makes the Android entry throw [UnsupportedError] rather than show
+  /// an empty overlay. The iOS path (pip_kit) plays on in this app's own
+  /// engine and never calls it; desktop paths never call it either.
   final Future<SystemPipMedia?> Function(PlayerId playerId)? pipMediaResolver;
 
-  /// Called when a handoff PiP window is gone and the system player is torn
+  /// Called when a handoff PiP window is gone and the second engine is torn
   /// down: the host resumes its own engine here (pause it via
-  /// [PresentationLifecycleHooks.beforeEnter] at the other edge).
+  /// [PresentationLifecycleHooks.beforeEnter] at the other edge). The position
+  /// the overlay closed at is readable through `OverlayPipSystemPip
+  /// .lastClosedPosition`.
   final Future<void> Function(PlayerId playerId)? onHandoffReturn;
 
   PlayerId? _lastPlayerId;
@@ -205,7 +209,7 @@ final class PipDriver implements KernelPresentationDriver {
       return;
     }
 
-    final pip = _systemPip ??= NativePipSystemPip();
+    final pip = _systemPip ??= OverlayPipSystemPip(overlayTitle: config.title);
     try {
       _statusSubscription = pip.statusStream.listen(_handleSystemStatus, onError: (_) {});
     } on Object catch (_) {
@@ -455,8 +459,8 @@ final class PipDriver implements KernelPresentationDriver {
       },
     );
 
-    // A handoff backend renders from its own player, not from this app's
-    // surface: ask the host what the native player can play, and refuse the
+    // A handoff backend renders from its own engine, not from this app's
+    // surface: ask the host what the overlay engine can open, and refuse the
     // transition rather than open a window with nothing in it.
     SystemPipMedia? media;
     final resolver = pipMediaResolver;
@@ -464,14 +468,14 @@ final class PipDriver implements KernelPresentationDriver {
       media = await resolver(playerId);
       if (media == null) {
         _log.warning(
-          'the source cannot be handed to the system player',
+          'the source cannot be handed to the overlay engine',
           fields: <String, Object?>{'playerId': playerId.value},
         );
         throw UnsupportedError(
-          'Picture-in-picture on this platform replays the source in a native '
-          'player, and the host could not name a URL it can open. Serve PiP '
-          'only for openly playable sources, or install a shrink-style '
-          'SystemPip implementation.',
+          'Picture-in-picture on Android replays the source in a second '
+          'Flutter engine, and the host could not name a URL it can open. '
+          'Serve PiP only for openly playable sources, or install a '
+          'shrink-style SystemPip implementation.',
         );
       }
     }

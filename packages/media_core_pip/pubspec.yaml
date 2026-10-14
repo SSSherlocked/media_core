@@ -15,14 +15,17 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  # Android: a draggable overlay above every app; the video replays there in a
+  # second Flutter engine (see overlay_pip.dart).
+  flutter_overlay_window: ^1.0.0
   media_core:
     path: ../media_core
   media_core_win32:
     path: ../media_core_win32
-  # Desktop small window (Windows, macOS, Linux)
-  native_picture_in_picture: ^1.0.1
+  # Desktop small window (Windows, macOS, Linux) and the iOS system PiP window.
+  pip_kit: ^1.0.2
   window_manager: ^0.5.2
-
 dev_dependencies:
   flutter_lints: ^6.0.0
 
