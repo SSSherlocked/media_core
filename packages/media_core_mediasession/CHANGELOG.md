@@ -1,3 +1,8 @@
+## Unreleased
+
+- `MediaSessionDriver.setForegroundHold`: keeps the surfaces "playing" (and so the Android foreground service) while the host reconnects, waits or is interrupted, also across a player released between two opens.
+- `MediaSessionDriver.onRemotePause`: told when the notification, lock screen or a media key pauses or stops; such a pause also cancels a resume planned for the end of an interruption.
+
 ## 0.1.0
 
 Initial release.

@@ -89,6 +89,20 @@ base class MediaSessionDriver implements KernelAudioDriver {
   /// Playback-rate changes coming from the platform.
   Future<void> Function(double rate)? setSpeedHandler;
 
+  /// Called when the platform surface — the notification, the lock screen,
+  /// a media key or a headset button — asks to pause or stop, before the
+  /// command reaches the player.
+  ///
+  /// A host that keeps the surfaces "playing" with [setForegroundHold] uses
+  /// it to tell the user's own pause from a pause of its own making (a
+  /// reconnect, a call) and let the hold go.
+  void Function()? onRemotePause;
+
+  bool _foregroundHold = false;
+
+  /// What the surfaces describe now; null when they show nothing.
+  MediaSessionItem? _publishedItem;
+
   StreamSubscription<void>? _playbackSub;
   StreamSubscription<asession.AudioInterruptionEvent>? _interruptionSub;
   StreamSubscription<void>? _noisySub;
@@ -139,9 +153,15 @@ base class MediaSessionDriver implements KernelAudioDriver {
     _handler = await asvc.AudioService.init(
       builder: () => MediaSessionHandler(
         onPlay: () async => _active?.play(),
-        onPause: () async => _active?.pause(),
+        onPause: () async {
+          _onRemotePause();
+          await _active?.pause();
+        },
         onSeek: (position) async => _active?.seek(position),
-        onStop: () async => _active?.stop(),
+        onStop: () async {
+          _onRemotePause();
+          await _active?.stop();
+        },
         onNext: skipToNextHandler == null ? null : () async => skipToNextHandler!.call(),
         onPrevious: skipToPreviousHandler == null ? null : () async => skipToPreviousHandler!.call(),
         onSkipToQueueItem: skipToQueueItemHandler == null ? null : (index) async => skipToQueueItemHandler!.call(index),
@@ -201,6 +221,66 @@ base class MediaSessionDriver implements KernelAudioDriver {
 
     _active = null;
     _handler = null;
+    _publishedItem = null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Foreground hold
+  // ---------------------------------------------------------------------------
+
+  /// Whether the surfaces are held "playing" ([setForegroundHold]).
+  bool get foregroundHold => _foregroundHold;
+
+  /// Holds the surfaces in the "playing" state while [hold] is true.
+  ///
+  /// On Android the media notification's foreground service follows the
+  /// published `playing` flag: audio_service leaves the foreground when it
+  /// turns false and stops the service when the state goes idle. Android 12
+  /// and later refuse to start a foreground service again while the app is
+  /// in the background, so a player that pauses, reconnects or is released
+  /// between two opens away from the app loses its notification for good,
+  /// and with it the process priority that keeps the network up in Doze.
+  ///
+  /// While held, the active player is described as playing whatever it
+  /// reports, and a player that goes away (released and replaced by a
+  /// reconnect) leaves the last media item in place instead of publishing
+  /// idle. Releasing the hold publishes the real state again (idle when no
+  /// player is bound any more).
+  ///
+  /// Holding never brings back surfaces that are already gone: with nothing
+  /// published, it only takes effect once a player is bound.
+  void setForegroundHold(bool hold) {
+    if (_disposed || _foregroundHold == hold) {
+      return;
+    }
+
+    _foregroundHold = hold;
+
+    final handler = _handler;
+
+    if (handler == null) {
+      return;
+    }
+
+    final handle = _active;
+
+    if (handle != null) {
+      _publishCurrent(handle);
+
+      return;
+    }
+
+    if (!hold && _publishedItem != null) {
+      handler.publishIdle();
+      handler.clearMediaItem();
+      _publishedItem = null;
+    }
+  }
+
+  void _onRemotePause() {
+    // The user's pause wins over a resume planned for the end of a call.
+    _resumeOnInterruptionEnd = false;
+    onRemotePause?.call();
   }
 
   // ---------------------------------------------------------------------------
@@ -248,13 +328,25 @@ base class MediaSessionDriver implements KernelAudioDriver {
     }
 
     if (handle == null) {
+      if (_foregroundHold && _publishedItem != null) {
+        // Between two players while held: keep the item and keep saying it
+        // plays, so the foreground service survives the gap.
+        handler.publishState(
+          const MediaSessionState(playing: true, position: Duration.zero, duration: Duration.zero, speed: 1.0),
+          controls: _buildControls(true),
+        );
+
+        return;
+      }
+
       handler.publishIdle();
       handler.clearMediaItem();
+      _publishedItem = null;
 
       return;
     }
 
-    handler.publishMediaItem(_itemFor(handle));
+    _publishItem(handler, _itemFor(handle));
     _publishCurrent(handle);
 
     _playbackSub = handle.playbackStream.listen(
@@ -281,7 +373,7 @@ base class MediaSessionDriver implements KernelAudioDriver {
       return;
     }
 
-    handler.publishMediaItem(_itemFor(handle));
+    _publishItem(handler, _itemFor(handle));
     _publishCurrent(handle);
 
     _playbackSub ??= handle.playbackStream.listen(
@@ -402,17 +494,23 @@ base class MediaSessionDriver implements KernelAudioDriver {
     ];
   }
 
+  void _publishItem(MediaSessionHandler handler, MediaSessionItem item) {
+    _publishedItem = item;
+    handler.publishMediaItem(item);
+  }
+
   void _publishCurrent(PlayerHandle handle) {
     final playback = handle.playback;
+    final playing = playback.isPlaying || _foregroundHold;
 
     _handler?.publishState(
       MediaSessionState(
-        playing: playback.isPlaying,
+        playing: playing,
         position: playback.position,
         duration: playback.duration,
         speed: playback.rate,
       ),
-      controls: _buildControls(playback.isPlaying),
+      controls: _buildControls(playing),
     );
   }
 
