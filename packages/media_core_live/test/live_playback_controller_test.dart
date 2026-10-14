@@ -256,12 +256,11 @@ void main() {
       await kernel.dispose();
     }, timeout: const Timeout(Duration(seconds: 30)));
 
-    test('an engine error during a staged attempt ends verification with the real reason', () async {
-      // The first open of a session is always staged — there is no player to
-      // replace — and a staged attempt had no adapter subscription until it
-      // committed. A playlist that 404s therefore looked like a frozen
-      // position for the whole window, and the reason the engine had already
-      // stated never reached the report.
+    test('an engine error during the first open ends verification with the real reason', () async {
+      // A playlist that 404s used to look like a frozen position for the
+      // whole window, and the reason the engine had already stated never
+      // reached the report. The first open now attaches its player before
+      // verifying, so the engine's error reaches the sweep at once.
       final adapters = {'engine-a': _fake('engine-a')};
       final kernel = _kernel(adapters);
       final controller = _controller(kernel, sourceReadyTimeout: const Duration(seconds: 12));
@@ -555,8 +554,8 @@ Future<void> _untilPlayRequested(FakePlayerAdapter adapter) async {
 ///
 /// The fake adapter only reports a position when it is asked to seek, so this
 /// stands in for a stream that is actually advancing. It seeks the adapters
-/// rather than `controller.handle`, because the handle is only published once
-/// verification has already passed — during the sweep it is still staged.
+/// rather than `controller.handle`, because an engine switch is staged: its
+/// handle is only published once verification has already passed.
 /// Verification polls every 250 ms inside its deadline, which this covers.
 Future<void> _pumpPosition(
   Iterable<FakePlayerAdapter> adapters, {

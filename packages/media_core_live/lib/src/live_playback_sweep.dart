@@ -228,8 +228,37 @@ extension _LivePlaybackSweep on LivePlaybackController {
   Future<void> _openOn(String engine, PlayerSource source) async {
     final generation = _playGeneration;
 
-    final current = _handle;
-    final sameEngine = current != null && !current.disposed && current.backendId == engine;
+    var current = _handle;
+
+    // Nothing on screen yet (the first room after a cold start, or after the
+    // idle release): there is no picture to protect, so staging only cost.
+    // A staged player is opened and verified with no view bound to it; on
+    // Android that left media_kit to attach its surface mid-stream and seek
+    // (which a live stream may refuse, failing the line), and every failed
+    // line built another cold player, so the first room sat black for tens
+    // of seconds while later rooms, reusing an attached player, were
+    // instant. Attach the new player first and verify it in place, exactly
+    // like a line switch on a warm player.
+    if (current == null || current.disposed) {
+      MediaCoreLog.info(
+        LogCategory.fallback,
+        'attaching engine $engine for ${source.uri}',
+        fields: <String, Object?>{'line': _sourceIndex, 'staged': false},
+      );
+      final created = await kernel.create(preferredBackend: engine);
+      if (_abandoned(generation)) {
+        try {
+          await kernel.release(created.id);
+        } catch (_) {
+          // Best-effort cleanup of a player nobody asked for any more.
+        }
+        return;
+      }
+      _attach(created);
+      current = created;
+    }
+
+    final sameEngine = !current.disposed && current.backendId == engine;
 
     if (!sameEngine) {
       await _openOnStaged(engine, source, generation: generation, previous: current);
@@ -265,7 +294,7 @@ extension _LivePlaybackSweep on LivePlaybackController {
     // The step that separates "opened" from "playing": without it an
     // engine that accepts a source but never delivers a frame reads as
     // success and the sweep stops on a frozen player.
-    await _verifyPlayback(handle, source);
+    await _verifyPlayback(handle, source, generation: generation);
 
     if (_abandoned(generation)) {
       return;
@@ -291,7 +320,7 @@ extension _LivePlaybackSweep on LivePlaybackController {
     MediaCoreLog.info(
       LogCategory.fallback,
       'attaching engine $engine for ${source.uri}',
-      fields: <String, Object?>{'line': _sourceIndex, 'staged': previous != null},
+      fields: <String, Object?>{'line': _sourceIndex, 'staged': true},
     );
 
     _setState(_liveState(PlayerPlaybackState.opening));
@@ -348,7 +377,7 @@ extension _LivePlaybackSweep on LivePlaybackController {
       }
 
       await staged.play();
-      await _verifyPlayback(staged, source);
+      await _verifyPlayback(staged, source, generation: generation);
 
       if (_abandoned(generation) && !_supersededBySamePlayback(engine, source)) {
         throw StateError('Staged engine $engine was abandoned mid-verify.');
@@ -440,7 +469,12 @@ extension _LivePlaybackSweep on LivePlaybackController {
   /// Silence at this point is not evidence of death, because there is no
   /// signal that says "still probing" — no position and no buffering
   /// report exist until the demuxer has finished opening.
-  Future<void> _verifyPlayback(PlayerHandle handle, PlayerSource source) async {
+  ///
+  /// A newer play request (a refresh, a line change) ends the wait at once:
+  /// it returns early and the caller's own abandonment check takes over,
+  /// instead of the new request queueing behind up to a whole window of a
+  /// line nobody is waiting for any more.
+  Future<void> _verifyPlayback(PlayerHandle handle, PlayerSource source, {required int generation}) async {
     final window = watchdogs.sourceReadyTimeout;
 
     // Zero turns the deadline off, and verification *is* that deadline.
@@ -454,6 +488,10 @@ extension _LivePlaybackSweep on LivePlaybackController {
     while (DateTime.now().isBefore(until)) {
       if (_disposed || !_playbackRequested) {
         throw StateError('Playback verification abandoned: playback was stopped.');
+      }
+
+      if (_abandoned(generation) && !_supersededBySamePlayback(handle.backendId, source)) {
+        return;
       }
 
       final adapterError = _sweepAdapterError;

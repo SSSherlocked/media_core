@@ -986,9 +986,28 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
   }
 
   void _onError(String message) {
+    if (isRefusedSeekMessage(message)) {
+      // media_kit forwards every error-level `cplayer` log line as an error,
+      // including mpv refusing a seek on a stream it does not consider
+      // seekable. Nothing failed: playback carries on. media_kit's Android
+      // output seeks to the current position whenever it attaches its
+      // surface, so on a live stream this line came with every cold start
+      // and the sweep condemned a healthy line for it.
+      MediaCoreLog.info(LogCategory.error, 'ignored: $message');
+      return;
+    }
+
     MediaCoreLog.warning(LogCategory.error, message);
 
     reportEngineError(message: message);
+  }
+
+  /// mpv's two error lines for a refused seek
+  /// (`Cannot seek in this stream.` and the `--force-seekable` hint).
+  @visibleForTesting
+  static bool isRefusedSeekMessage(String message) {
+    final text = message.trim();
+    return text.startsWith('Cannot seek') || text.contains('--force-seekable');
   }
 
   void _onBuffer(Duration buffered) {
