@@ -27,18 +27,19 @@ abstract interface class DownloadFileSink {
 
 /// [DownloadFileSink] backed by `dart:io`.
 final class IoDownloadFileSink implements DownloadFileSink {
+  /// Creates a `dart:io`-backed sink.
   const IoDownloadFileSink();
 
   @override
   Future<int> length(String path) async {
     final file = File(path);
-    return await file.exists() ? await file.length() : 0;
+    return file.existsSync() ? await file.length() : 0;
   }
 
   @override
   Future<List<int>> readTail(String path, int count) async {
     final file = File(path);
-    if (!await file.exists() || count <= 0) {
+    if (!file.existsSync() || count <= 0) {
       return const <int>[];
     }
     final length = await file.length();
@@ -59,14 +60,14 @@ final class IoDownloadFileSink implements DownloadFileSink {
   Future<void> append(String path, List<int> bytes) async {
     final file = File(path);
     await ensureParentDirectory(path);
-    await file.writeAsBytes(bytes, mode: FileMode.append, flush: false);
+    await file.writeAsBytes(bytes, mode: FileMode.append);
   }
 
   @override
   Future<void> truncate(String path, int length) async {
     final file = File(path);
     await ensureParentDirectory(path);
-    if (!await file.exists()) {
+    if (!file.existsSync()) {
       await file.create(recursive: true);
     }
     final handle = await file.open(mode: FileMode.write);
@@ -80,7 +81,7 @@ final class IoDownloadFileSink implements DownloadFileSink {
   @override
   Future<void> delete(String path) async {
     final file = File(path);
-    if (await file.exists()) {
+    if (file.existsSync()) {
       await file.delete();
     }
   }

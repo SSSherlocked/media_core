@@ -1,5 +1,6 @@
 /// Tunables for the download queue.
 final class DownloadConfig {
+  /// Creates a configuration, using defaults for the unspecified tunables.
   const DownloadConfig({
     this.maxConcurrent = 3,
     this.maxAttempts = 3,
@@ -57,6 +58,7 @@ final class DownloadConfig {
   /// User agent sent with every request.
   final String userAgent;
 
+  /// A copy with the given tunables replaced; omitted ones keep their current value.
   DownloadConfig copyWith({
     int? maxConcurrent,
     int? maxAttempts,

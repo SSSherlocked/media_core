@@ -20,6 +20,8 @@
 /// (see [DownloadResumePlanner]).
 library;
 
+import 'package:media_core_download/media_core_download.dart' show DownloadManager, DownloadResumePlanner;
+
 export 'package:media_core_download/src/download_config.dart';
 export 'package:media_core_download/src/download_file_sink.dart';
 export 'package:media_core_download/src/download_manager.dart';

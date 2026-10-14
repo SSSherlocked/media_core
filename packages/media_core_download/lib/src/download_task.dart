@@ -9,17 +9,18 @@ import 'package:media_core_download/src/download_status.dart';
 /// The task is the unit the viewer sees: it carries what to fetch, where it
 /// goes, how far along it is and why it stopped. The manager owns when it runs.
 final class DownloadTask {
+  /// Creates a task for [url] destined for [filePath], starting in [status].
   DownloadTask({
     required this.id,
     required this.url,
-    this.priority = TaskPriority.normal,
     required this.filePath,
+    this.priority = TaskPriority.normal,
     this.headers = const <String, String>{},
     this.title,
     this.status = DownloadStatus.idle,
-    DownloadProgress progress = const DownloadProgress(),
+    this.progress = const DownloadProgress(),
     this.error,
-  }) : progress = progress;
+  });
 
   /// Task identity, from the core task model.
   ///

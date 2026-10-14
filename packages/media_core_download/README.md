@@ -38,7 +38,6 @@ manager.add(DownloadTask(
   filePath: '/storage/downloads/room-123.ts',
   headers: {'Referer': pageUrl},
 ));
-
 // 暂停 / 恢复。
 await manager.pause('room-123');
 await manager.resume('room-123');
@@ -49,6 +48,8 @@ await manager.retry('room-123');
 // 清理已完成任务。
 await manager.clearCompleted();
 ```
+
+`onTaskChanged` 的**进度事件按 200ms 窗口发**，不是每个数据块发一次：快链路一秒能到几百块，每块都付一次任务拷贝、一次内存记账、一次监听唤醒，而画面上那个百分比根本读不出区别。首块仍立即上报（UI 不会开局空着），窗口是**按任务**记的（六个并发下载不会互相饿死），终态那次带精确字节数——节流只吃中间过程，不吃结果。
 
 ### 续传验证流程
 

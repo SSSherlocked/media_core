@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:media_core/media_core.dart' show TaskId, TaskPriority;
+import 'package:media_core/media_core.dart'
+    show MediaJobKind, MediaJobOutcome, MediaJobReporter, MediaJobReporting, TaskId, TaskPriority;
 import 'package:media_core_download/media_core_download.dart';
 
 /// Bytes a fake remote serves.
@@ -30,6 +31,11 @@ final class _FakeTransport implements DownloadTransport {
 
   /// When true the body stops early.
   bool truncateBody = false;
+
+  /// When set, the body arrives as chunks of these sizes instead of one piece -
+  /// which is what a real HTTP byte stream does, and the only way to see how
+  /// often the manager publishes progress for it.
+  List<int>? chunks;
 
   int fetchCount = 0;
   final List<DownloadRequest> requests = <DownloadRequest>[];
@@ -60,15 +66,41 @@ final class _FakeTransport implements DownloadTransport {
 
     return DownloadResponse(
       statusCode: ranged ? 206 : 200,
-      byteStream: Stream<List<int>>.value(served),
+      byteStream: _body(served),
       contentLength: served.length,
       totalBytes: payload.length,
       acceptsRanges: acceptsRanges,
     );
   }
 
+  /// The body as a stream: chunked when the test asked for chunks, with a
+  /// microtask between them so they arrive as separate events.
+  Stream<List<int>> _body(List<int> served) async* {
+    final plan = chunks;
+    if (plan == null) {
+      yield served;
+      return;
+    }
+    var offset = 0;
+    for (final size in plan) {
+      if (offset >= served.length) break;
+      final to = offset + size > served.length ? served.length : offset + size;
+      yield served.sublist(offset, to);
+      offset += size;
+      await Future<void>.delayed(Duration.zero);
+    }
+  }
+
   @override
   Future<void> dispose() async {}
+}
+
+/// The reporter the tests install to see what a finished download says.
+final class _CapturingReporter implements MediaJobReporter {
+  final List<MediaJobOutcome> seen = <MediaJobOutcome>[];
+
+  @override
+  void report(MediaJobOutcome outcome) => seen.add(outcome);
 }
 
 final class _MemorySink implements DownloadFileSink {
@@ -111,12 +143,8 @@ void _seed(_MemorySink sink, String path, Uint8List bytes) {
   sink.files[path] = BytesBuilder()..add(bytes);
 }
 
-DownloadTask _task(String id, {TaskPriority priority = TaskPriority.normal}) => DownloadTask(
-  id: TaskId(id),
-  url: 'https://example.com/$id',
-  filePath: '/downloads/$id.ts',
-  priority: priority,
-);
+DownloadTask _task(String id, {TaskPriority priority = TaskPriority.normal}) =>
+    DownloadTask(id: TaskId(id), url: 'https://example.com/$id', filePath: '/downloads/$id.ts', priority: priority);
 
 void main() {
   group('DownloadResumePlanner', () {
@@ -275,6 +303,31 @@ void main() {
       expect(manager.task('a')!.progress.percent, 100);
     });
 
+    test('progress is published on a UI cadence, not once per chunk', () async {
+      // 100 chunks of 10 bytes: what a real HTTP body looks like from here.
+      transport.chunks = List<int>.filled(100, 10);
+      final running = <DownloadTask>[];
+      final subscription = manager.onTaskChanged
+          .where((task) => task.id.value == 'a' && !task.isTerminal)
+          .listen(running.add);
+      addTearDown(subscription.cancel);
+
+      manager.add(_task('a'));
+      await waitForTerminal('a');
+
+      expect(transport.chunks, hasLength(100), reason: 'the body did arrive in pieces');
+      expect(
+        running.length,
+        lessThan(20),
+        reason:
+            'one event per chunk is 100 task copies, 100 memory reports and 100 '
+            'listener wakes to draw a number nobody can read; a 200 ms window is a handful',
+      );
+      expect(running, isNotEmpty, reason: 'the first chunk still reports at once');
+      expect(manager.task('a')!.status, DownloadStatus.completed);
+      expect(sink.bytesOf('/downloads/a.ts'), transport.payload, reason: 'throttling must not lose bytes');
+    });
+
     test('caps concurrency and starts the next task when a slot frees', () async {
       final single = DownloadManager(
         transport: transport,
@@ -283,11 +336,12 @@ void main() {
       );
       addTearDown(single.dispose);
 
-      single.add(_task('a'));
-      single.add(_task('b'));
-      await single.onTaskChanged.firstWhere((task) => task.id.value == 'b' && task.isTerminal).timeout(
-        const Duration(seconds: 5),
-      );
+      single
+        ..add(_task('a'))
+        ..add(_task('b'));
+      await single.onTaskChanged
+          .firstWhere((task) => task.id.value == 'b' && task.isTerminal)
+          .timeout(const Duration(seconds: 5));
 
       expect(sink.bytesOf('/downloads/a.ts'), transport.payload);
       expect(sink.bytesOf('/downloads/b.ts'), transport.payload);
@@ -420,6 +474,69 @@ void main() {
       await manager.dispose();
 
       expect(() => manager.add(_task('a')), throwsA(isA<StateError>()));
+    });
+
+    group('reports how it ended to whoever installed a reporter', () {
+      late _CapturingReporter reporter;
+
+      setUp(() {
+        reporter = _CapturingReporter();
+        MediaJobReporting.reporter = reporter;
+      });
+
+      tearDown(MediaJobReporting.reset);
+
+      test('a finished file says what landed', () async {
+        manager.add(_task('a'));
+        await waitForTerminal('a');
+
+        expect(reporter.seen, hasLength(1));
+        expect(reporter.seen.single.kind, MediaJobKind.download);
+        expect(reporter.seen.single.success, isTrue);
+        expect(reporter.seen.single.label, 'a.ts');
+        expect(reporter.seen.single.bytesWritten, 1000);
+        expect(reporter.seen.single.error, isNull);
+      });
+
+      test('a retry that is still coming says nothing yet', () async {
+        // One failed request out of a two-attempt budget: the viewer is told once,
+        // when the file is there, not once per attempt.
+        transport.failures = 1;
+        manager.add(_task('a'));
+        await waitForTerminal('a');
+
+        expect(reporter.seen, hasLength(1));
+        expect(reporter.seen.single.success, isTrue);
+      });
+
+      test('a spent budget reports the failure it stopped on', () async {
+        transport.failures = 9;
+        manager.add(_task('a'));
+        await waitForTerminal('a');
+
+        expect(reporter.seen, hasLength(1));
+        expect(reporter.seen.single.success, isFalse);
+        expect(reporter.seen.single.error, isA<DownloadHttpException>());
+      });
+
+      test('a cancelled file is not announced as a failure', () async {
+        manager.add(_task('a'));
+        await waitForTerminal('a');
+        reporter.seen.clear();
+
+        await manager.cancel('a');
+        await settle();
+
+        expect(reporter.seen, isEmpty, reason: 'the viewer asked for the cancel; it is not news');
+      });
+
+      test('nobody listening does not disturb the download', () async {
+        MediaJobReporting.reset();
+        manager.add(_task('a'));
+        await waitForTerminal('a');
+
+        expect(manager.task('a')!.status, DownloadStatus.completed);
+      });
     });
   });
 }

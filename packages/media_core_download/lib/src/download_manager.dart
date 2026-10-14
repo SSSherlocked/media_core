@@ -72,11 +72,7 @@ final MemoryAccount _memory = MediaCoreMemory.of(MemoryModule.download);
 /// queue pins its capacity at construction, so changing the limit means building
 /// a new manager rather than quietly keeping the old one.
 final class DownloadManager {
-
-  /// This instance's key in the shared account: a module can have several
-  /// live instances, and a report sums their contributions rather than
-  /// keeping whichever reported last.
-  late final String _memoryKey = memoryContributorKey(this);
+  /// Creates a manager over a [transport], file [files] sink and [config].
   DownloadManager({
     DownloadTransport? transport,
     DownloadFileSink? files,
@@ -91,7 +87,12 @@ final class DownloadManager {
        _queue = queue ?? TaskManager(maxConcurrentTasks: config.maxConcurrent),
        _clock = clock ?? DateTime.now;
 
-  DownloadTransport _transport;
+  /// This instance's key in the shared account: a module can have several
+  /// live instances, and a report sums their contributions rather than
+  /// keeping whichever reported last.
+  late final String _memoryKey = memoryContributorKey(this);
+
+  final DownloadTransport _transport;
   final DownloadFileSink _files;
   DownloadConfig _config;
   DownloadResumePlanner _resumePlanner;
@@ -102,6 +103,7 @@ final class DownloadManager {
   final DateTime Function() _clock;
 
   final Map<String, DownloadTask> _tasks = <String, DownloadTask>{};
+
   /// Task → the attempt currently transferring it.
   ///
   /// A token rather than a set: a task can have a previous attempt winding down
@@ -112,6 +114,17 @@ final class DownloadManager {
   final StreamController<DownloadTask> _taskController = StreamController<DownloadTask>.broadcast();
 
   bool _disposed = false;
+
+  /// When each running task last published progress to listeners.
+  ///
+  /// Chunk arrival is not a UI clock: a fast link delivers hundreds of chunks a
+  /// second, and every publish copies the task, runs the memory accounting and
+  /// wakes every listener for a number no one can read. The window is per task,
+  /// so six concurrent downloads cannot starve one another of updates.
+  final Map<String, DateTime> _lastProgressAt = <String, DateTime>{};
+
+  static const Duration _progressInterval = Duration(milliseconds: 200);
+
   DateTime _lastTick = DateTime.fromMillisecondsSinceEpoch(0);
 
   /// Task type every download registers under.
@@ -179,6 +192,7 @@ final class DownloadManager {
     _retryTimers.remove(id)?.cancel();
     _queue.remove(TaskId(id));
     final task = _tasks.remove(id);
+    _lastProgressAt.remove(id);
     if (task != null && deleteFile) {
       await _files.delete(task.filePath);
     }
@@ -231,8 +245,9 @@ final class DownloadManager {
       }
       _log.info('pausing a queued download', fields: <String, Object?>{'id': id});
       _retryTimers.remove(id)?.cancel();
-      _queue.cancel(task.id, 'paused by the viewer');
-      _queue.remove(task.id);
+      _queue
+        ..cancel(task.id, 'paused by the viewer')
+        ..remove(task.id);
       _inFlight.remove(task.id);
       _emit(task.copyWith(status: DownloadStatus.paused));
       return;
@@ -280,6 +295,7 @@ final class DownloadManager {
     for (final task in _tasks.values.where((task) => task.isTerminal).toList()) {
       // The download view is keyed by the id value; the queue is keyed by the id.
       _tasks.remove(task.id.value);
+      _lastProgressAt.remove(task.id.value);
       _queue.remove(task.id);
     }
   }
@@ -295,7 +311,7 @@ final class DownloadManager {
     _resumePlanner = DownloadResumePlanner(config: config);
     final transport = _transport;
     if (transport is HttpDownloadTransport) {
-      transport.updateConfig(config);
+      transport.config = config;
     }
     await _pump();
   }
@@ -318,13 +334,12 @@ final class DownloadManager {
         continue;
       }
       active++;
-      bytes += task.progress.receivedBytes == 0
-          ? MemoryEstimates.downloadTransferBuffer
-          : task.progress.receivedBytes;
+      bytes += task.progress.receivedBytes == 0 ? MemoryEstimates.downloadTransferBuffer : task.progress.receivedBytes;
     }
     _memory.report(_memoryKey, items: active, bytes: bytes, note: '$active transferring');
   }
 
+  /// Pauses every in-flight transfer and releases the manager's resources.
   Future<void> dispose() async {
     if (_disposed) {
       return;
@@ -380,6 +395,9 @@ final class DownloadManager {
       try {
         _queue.registerOrReplace(coreTask);
         break;
+        // The core queue signals "slot still held" as a StateError (see above);
+        // catching it here is control flow, not error suppression.
+        // ignore: avoid_catching_errors
       } on StateError {
         if (attempt >= 600) {
           rethrow;
@@ -389,7 +407,6 @@ final class DownloadManager {
     }
 
     _queue.queue(task.id);
-    // ignore: avoid_print
   }
 
   /// Runs as many queued transfers as the core queue has capacity for.
@@ -400,7 +417,6 @@ final class DownloadManager {
     if (_disposed) {
       return;
     }
-    // ignore: avoid_print
     while (!_disposed && _queue.hasCapacity && _queue.hasQueuedTasks) {
       // Not awaited: a transfer runs until it finishes, and waiting here would
       // serialize the whole queue behind the first task.
@@ -417,7 +433,6 @@ final class DownloadManager {
       await _queue.execute((coreTask) async {
         final id = coreTask.id.value;
         final task = _tasks[id];
-        // ignore: avoid_print
         if (task == null || task.isTerminal) {
           return null;
         }
@@ -463,12 +478,11 @@ final class DownloadManager {
       // is the queue's verdict, and the only place a download learns that its
       // transfer failed.
       _fail(failure.task.id.value, failure.error);
-    } catch (_) {
+    } on Object catch (_) {
       // A failure that is not the task's own (the queue was disposed, or the
       // task was cancelled) has already been reflected in the download status.
     }
 
-    // ignore: avoid_print
     if (!_disposed && _queue.hasQueuedTasks) {
       await _pump();
     }
@@ -552,7 +566,7 @@ final class DownloadManager {
 
     final verifyBytes = _config.verifyTailBytes;
     var received = startByte;
-    var head = <int>[];
+    final head = <int>[];
 
     // With a resume, the first `verifyBytes` bytes are the verification: they
     // are compared with what is already on disk, and the file is truncated back
@@ -635,13 +649,25 @@ final class DownloadManager {
     if (current == null || current.status != DownloadStatus.running) {
       return;
     }
+
+    final now = _clock();
+    final key = task.id.value;
+    final since = now.difference(_lastProgressAt[key] ?? DateTime.fromMillisecondsSinceEpoch(0));
+    if (_lastProgressAt.containsKey(key) && since < _progressInterval) {
+      return;
+    }
+    _lastProgressAt[key] = now;
+
     _reportMemory();
     final lastReceived = current.progress.receivedBytes;
-    final elapsed = _clock().difference(_lastTick);
+    final elapsed = now.difference(_lastTick);
     var speed = current.progress.speedBytesPerSecond;
     if (elapsed.inMilliseconds >= 200) {
+      // Measured from the last speed sample, not from this publish: a suppressed
+      // chunk leaves `lastReceived` at the previous emitted figure, so the rate
+      // covers the whole window it describes.
       speed = ((received - lastReceived) * 1000 / elapsed.inMilliseconds).round().clamp(0, 1 << 40);
-      _lastTick = _clock();
+      _lastTick = now;
     }
     _emit(
       current.copyWith(
@@ -671,6 +697,26 @@ final class DownloadManager {
       fields: <String, Object?>{'id': id, 'bytes': task.progress.receivedBytes, 'filePath': task.filePath},
     );
     _emit(task.copyWith(status: DownloadStatus.completed, clearError: true));
+    _reportOutcome(task, success: true);
+  }
+
+  /// Tells the notification layer how this job ended, if anybody installed one.
+  ///
+  /// A completed download is what the viewer waited for, and a download that ran
+  /// out of attempts is the line they need to see before they go looking; an
+  /// intermediate failure is not, because the retry is still coming. The call is
+  /// fire-and-forget and never throws back into the manager — a notification that
+  /// cannot be drawn must not fail a file that downloaded fine.
+  void _reportOutcome(DownloadTask task, {required bool success, Object? error}) {
+    MediaJobReporting.reporter?.report(
+      MediaJobOutcome(
+        kind: MediaJobKind.download,
+        label: task.title ?? task.fileName,
+        success: success,
+        bytesWritten: task.progress.receivedBytes,
+        error: error,
+      ),
+    );
   }
 
   /// Reports a failure and decides between waiting for a retry and giving up.
@@ -696,6 +742,7 @@ final class DownloadManager {
       );
       _queue.fail(TaskId(id), error);
       _emit(task.copyWith(status: DownloadStatus.failed, error: error));
+      _reportOutcome(task, success: false, error: error);
       return;
     }
 

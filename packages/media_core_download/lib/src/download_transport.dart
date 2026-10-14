@@ -7,6 +7,7 @@ import 'package:media_core_download/src/download_config.dart';
 
 /// One ranged request.
 final class DownloadRequest {
+  /// Creates a request for [url] covering the byte range from [startByte].
   const DownloadRequest({
     required this.url,
     required this.startByte,
@@ -17,6 +18,7 @@ final class DownloadRequest {
     this.maxRedirects = 2,
   });
 
+  /// The resource to fetch.
   final String url;
 
   /// First byte to fetch.
@@ -25,9 +27,16 @@ final class DownloadRequest {
   /// Last byte to fetch, inclusive; `null` means "to the end".
   final int? endByte;
 
+  /// Caller headers merged into the request.
   final Map<String, String> headers;
+
+  /// User agent to send, falling back to the transport's config when null.
   final String? userAgent;
+
+  /// Connect/read timeout for this request.
   final Duration timeout;
+
+  /// Redirects to follow before treating the transfer as failed.
   final int maxRedirects;
 
   /// Whether this request is a plain full-file fetch.
@@ -39,6 +48,7 @@ final class DownloadRequest {
 
 /// A server's answer.
 final class DownloadResponse {
+  /// Creates a response carrying [statusCode] and the body [byteStream].
   const DownloadResponse({
     required this.statusCode,
     required this.byteStream,
@@ -47,6 +57,7 @@ final class DownloadResponse {
     this.acceptsRanges = false,
   });
 
+  /// HTTP status code the server answered with.
   final int statusCode;
 
   /// Body bytes, already positioned at the requested offset.
@@ -102,9 +113,13 @@ abstract interface class DownloadTransport {
 
 /// Thrown when a server answers with a status the transfer cannot use.
 final class DownloadHttpException implements Exception {
+  /// Creates an error for [statusCode] returned for [url].
   const DownloadHttpException(this.statusCode, this.url);
 
+  /// The status the server returned.
   final int statusCode;
+
+  /// The URL that produced it.
   final String url;
 
   @override
@@ -117,15 +132,14 @@ final class DownloadHttpException implements Exception {
 /// stream, and pulling an HTTP package in for that would put the queue's
 /// timeout and redirect behaviour at the mercy of another library.
 final class HttpDownloadTransport implements DownloadTransport {
-  HttpDownloadTransport({io.HttpClient? client, DownloadConfig config = DownloadConfig.defaults})
-    : _client = client ?? io.HttpClient(),
-      _config = config;
+  /// Creates a transport over an optional [client], applying [config] defaults.
+  HttpDownloadTransport({io.HttpClient? client, this.config = DownloadConfig.defaults})
+    : _client = client ?? io.HttpClient();
 
   io.HttpClient _client;
-  DownloadConfig _config;
 
-  /// Applies a new configuration to subsequent requests.
-  void updateConfig(DownloadConfig config) => _config = config;
+  /// The configuration applied to subsequent requests.
+  DownloadConfig config;
 
   @override
   Future<DownloadResponse> fetch(DownloadRequest request) async {
@@ -136,7 +150,7 @@ final class HttpDownloadTransport implements DownloadTransport {
     while (true) {
       final httpRequest = await _client.getUrl(current).timeout(request.timeout);
       httpRequest.followRedirects = false;
-      httpRequest.headers.set(io.HttpHeaders.userAgentHeader, request.userAgent ?? _config.userAgent);
+      httpRequest.headers.set(io.HttpHeaders.userAgentHeader, request.userAgent ?? config.userAgent);
       applyHeaders(httpRequest, request.headers);
       final rangeHeader = request.rangeHeader;
       if (rangeHeader != null) {

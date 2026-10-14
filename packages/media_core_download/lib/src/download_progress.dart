@@ -1,5 +1,6 @@
 /// Transfer state of one task.
 final class DownloadProgress {
+  /// Creates a progress snapshot.
   const DownloadProgress({
     this.receivedBytes = 0,
     this.totalBytes = -1,
@@ -51,6 +52,7 @@ final class DownloadProgress {
     return Duration(seconds: (remainingBytes / speedBytesPerSecond).ceil());
   }
 
+  /// A copy with the given fields replaced; omitted ones keep their current value.
   DownloadProgress copyWith({
     int? receivedBytes,
     int? totalBytes,
@@ -68,5 +70,5 @@ final class DownloadProgress {
   }
 
   @override
-  String toString() => 'DownloadProgress(${receivedBytes}/${hasTotal ? totalBytes : '?'}B, $speedBytesPerSecond B/s)';
+  String toString() => 'DownloadProgress($receivedBytes/${hasTotal ? totalBytes : '?'}B, $speedBytesPerSecond B/s)';
 }

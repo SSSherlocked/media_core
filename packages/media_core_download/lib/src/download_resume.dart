@@ -14,8 +14,10 @@ enum DownloadResumeDecision {
 
 /// A resume decision with the numbers it was made from.
 final class DownloadResumePlan {
+  /// Creates a plan recording the [decision] and the offsets it was made from.
   const DownloadResumePlan({required this.decision, this.startByte = 0, this.verifyBytes = 0, this.reason});
 
+  /// What should happen to the partial file.
   final DownloadResumeDecision decision;
 
   /// Offset the transfer continues from.
@@ -43,6 +45,7 @@ final class DownloadResumePlan {
 /// Without that check the failure mode is the worst kind: the download "succeeds"
 /// and the file plays up to exactly the point where the mismatch is.
 final class DownloadResumePlanner {
+  /// Creates a planner that applies [config]'s resume tunables.
   const DownloadResumePlanner({this.config = DownloadConfig.defaults});
 
   /// Tunables.
@@ -53,11 +56,7 @@ final class DownloadResumePlanner {
   /// [remoteBytes] is the remote size when the server told us; `null` means it
   /// did not, in which case a known partial size is still resumable but cannot
   /// be checked for completeness.
-  DownloadResumePlan plan({
-    required int localBytes,
-    required int? remoteBytes,
-    required bool serverAcceptsRanges,
-  }) {
+  DownloadResumePlan plan({required int localBytes, required int? remoteBytes, required bool serverAcceptsRanges}) {
     if (localBytes < 0) {
       throw ArgumentError.value(localBytes, 'localBytes', 'Byte count cannot be negative');
     }
