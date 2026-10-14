@@ -20,30 +20,21 @@ class SoapResponse {
 /// handling are unit-testable without a TV on the network: a test
 /// hands it a closure that returns canned envelopes, and production
 /// uses the [HttpSoapTransport] default.
-typedef SoapPoster = Future<SoapResponse> Function(
-  String url,
-  String action,
-  Map<String, String> headers,
-  String body,
-);
+typedef SoapPoster = Future<SoapResponse> Function(String url, String action, Map<String, String> headers, String body);
 
 /// [SoapPoster] over `dart:io HttpClient`.
 class HttpSoapTransport {
   /// Creates a transport with its own [client].
   HttpSoapTransport({HttpClient? client, Duration timeout = const Duration(seconds: 8)})
-    : _client = client ?? HttpClient()..connectionTimeout = timeout,
+    : _client = client ?? HttpClient()
+        ..connectionTimeout = timeout,
       _timeout = timeout;
 
   final HttpClient _client;
   final Duration _timeout;
 
   /// Sends one control request.
-  Future<SoapResponse> call(
-    String url,
-    String action,
-    Map<String, String> headers,
-    String body,
-  ) async {
+  Future<SoapResponse> call(String url, String action, Map<String, String> headers, String body) async {
     final request = await _client.postUrl(Uri.parse(url)).timeout(_timeout);
     headers.forEach((name, value) => request.headers.set(name, value));
     request.add(utf8.encode(body));
@@ -94,13 +85,10 @@ class HttpDescriptionFetcher {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       await response.drain<void>();
-      throw FormatException(
-        'device description at $url answered ${response.statusCode}',
-        url,
-      );
+      throw FormatException('device description at $url answered ${response.statusCode}', url);
     }
 
-    return readBoundedBody(response);
+    return await readBoundedBody(response);
   }
 
   /// Closes pooled sockets.
@@ -126,9 +114,7 @@ Future<String> readBoundedBody(HttpClientResponse response) async {
     builder.add(chunk);
     if (builder.length > maxCastResponseBodyBytes) {
       await response.drain<void>();
-      throw const FormatException(
-        'response body exceeded the cast response size limit',
-      );
+      throw const FormatException('response body exceeded the cast response size limit');
     }
   }
 

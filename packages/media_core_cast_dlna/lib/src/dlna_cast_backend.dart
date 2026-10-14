@@ -7,10 +7,10 @@ import 'package:media_core/casting/media_cast_backend.dart';
 import 'package:media_core_cast_dlna/src/didl_lite.dart';
 import 'package:media_core_cast_dlna/src/dlna_device_description.dart';
 import 'package:media_core_cast_dlna/src/http_transport.dart';
-import 'package:media_core_cast_dlna/src/ssdp_discovery.dart';
 import 'package:media_core_cast_dlna/src/soap.dart';
-import 'package:media_core_cast_dlna/src/ssdp_source.dart';
+import 'package:media_core_cast_dlna/src/ssdp_discovery.dart';
 import 'package:media_core_cast_dlna/src/ssdp_message.dart';
+import 'package:media_core_cast_dlna/src/ssdp_source.dart';
 
 /// [MediaCastBackend] over DLNA/UPnP: SSDP to find, HTTP+SOAP to
 /// drive.
@@ -35,11 +35,8 @@ class DlnaCastBackend implements MediaCastBackend {
   /// without a network: a scripted [SsdpDiscovery], a
   /// [fetchDescription] that returns canned XML, and a [post] that
   /// answers SOAP envelopes from a table.
-  DlnaCastBackend({
-    SsdpSource? discovery,
-    DescriptionFetcher? fetchDescription,
-    SoapPoster? post,
-  }) : _discovery = discovery ?? SsdpDiscovery() {
+  DlnaCastBackend({SsdpSource? discovery, DescriptionFetcher? fetchDescription, SoapPoster? post})
+    : _discovery = discovery ?? SsdpDiscovery() {
     // The defaults each own an HttpClient. Keeping the object rather than
     // only its `call` tear-off is what makes [dispose] able to close the
     // pooled sockets; a caller-supplied function owns its own transport and
@@ -129,15 +126,7 @@ class DlnaCastBackend implements MediaCastBackend {
   @override
   Future<void> setMedia(CastDevice device, CastMedia media) async {
     final service = _transportOf(device);
-    await _call(
-      device,
-      service,
-      Soap.setUri(
-        service: service,
-        didl: DidlLite.build(media),
-        url: media.url,
-      ),
-    );
+    await _call(device, service, Soap.setUri(service: service, didl: DidlLite.build(media), url: media.url));
   }
 
   @override
@@ -182,14 +171,7 @@ class DlnaCastBackend implements MediaCastBackend {
       if (relTime == null && trackDuration == null) {
         return const CastPosition.unknown();
       }
-      return CastPosition(
-        position: relTime ?? Duration.zero,
-        duration: trackDuration ?? Duration.zero,
-        // DLNA carries transport state in the evented
-        // LastChange, not in GetPositionInfo; the controller keeps
-        // its own state and this read simply does not contradict it.
-        transportState: CastTransportState.unknown,
-      );
+      return CastPosition(position: relTime ?? Duration.zero, duration: trackDuration ?? Duration.zero);
     } on Object {
       return const CastPosition.unknown();
     }
@@ -279,10 +261,7 @@ class DlnaCastBackend implements MediaCastBackend {
     if (url == null) {
       throw CastException('device has no AVTransport control URL', deviceId: device.id);
     }
-    return SoapServiceRef(
-      type: device.typeName ?? 'urn:schemas-upnp-org:service:AVTransport:1',
-      controlUrl: url,
-    );
+    return SoapServiceRef(type: device.typeName ?? 'urn:schemas-upnp-org:service:AVTransport:1', controlUrl: url);
   }
 
   Future<void> _call(CastDevice device, SoapServiceRef service, SoapRequest request) async {
@@ -299,17 +278,10 @@ class DlnaCastBackend implements MediaCastBackend {
 
     final fault = Soap.parseFault(response.body);
     if (fault != null) {
-      throw CastException(
-        'device refused ${request.action}: $fault',
-        deviceId: device.id,
-        cause: fault,
-      );
+      throw CastException('device refused ${request.action}: $fault', deviceId: device.id, cause: fault);
     }
     if (response.statusCode ~/ 100 != 2) {
-      throw CastException(
-        'device answered ${response.statusCode} to ${request.action}',
-        deviceId: device.id,
-      );
+      throw CastException('device answered ${response.statusCode} to ${request.action}', deviceId: device.id);
     }
   }
 }

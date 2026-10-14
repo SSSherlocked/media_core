@@ -1,5 +1,3 @@
-
-
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:media_core/casting/cast_media.dart';
@@ -125,41 +123,26 @@ LOCATION: http://192.168.1.41:8090/desc.xml
     });
 
     test('a device without AVTransport is refused', () {
-      final noTransport = description.replaceAll(
-        RegExp(r'<service>.*?AVTransport.*?</service>', dotAll: true),
-        '',
-      );
+      final noTransport = description.replaceAll(RegExp('<service>.*?AVTransport.*?</service>', dotAll: true), '');
 
-      expect(
-        () => DlnaDeviceDescription.parse(noTransport, location: location),
-        throwsA(isA<FormatException>()),
-      );
+      expect(() => DlnaDeviceDescription.parse(noTransport, location: location), throwsA(isA<FormatException>()));
     });
 
     test('a missing UDN is refused', () {
       final noUdn = description.replaceAll('<UDN>uuid:TV-001</UDN>', '');
 
-      expect(
-        () => DlnaDeviceDescription.parse(noUdn, location: location),
-        throwsA(isA<FormatException>()),
-      );
+      expect(() => DlnaDeviceDescription.parse(noUdn, location: location), throwsA(isA<FormatException>()));
     });
 
     test('malformed XML is refused', () {
-      expect(
-        () => DlnaDeviceDescription.parse('<root><device>', location: location),
-        throwsA(isA<FormatException>()),
-      );
+      expect(() => DlnaDeviceDescription.parse('<root><device>', location: location), throwsA(isA<FormatException>()));
     });
   });
 
   group('DidlLite.build', () {
     test('escapes markup in title and url', () {
       final didl = DidlLite.build(
-        const CastMedia(
-          url: 'https://cdn.example.com/a&b<b>.mp4',
-          title: 'Tom & Jerry <The Movie>',
-        ),
+        const CastMedia(url: 'https://cdn.example.com/a&b<b>.mp4', title: 'Tom & Jerry <The Movie>'),
       );
 
       expect(didl, contains('&amp;b&lt;b&gt;'));
@@ -170,21 +153,15 @@ LOCATION: http://192.168.1.41:8090/desc.xml
     });
 
     test('mime comes from the declaration, else from the extension', () {
-      final declared = DidlLite.build(
-        const CastMedia(url: 'https://x/y', title: 't', mimeType: 'video/x-matroska'),
-      );
-      final guessed = DidlLite.build(
-        const CastMedia(url: 'https://x/y.mkv', title: 't'),
-      );
+      final declared = DidlLite.build(const CastMedia(url: 'https://x/y', title: 't', mimeType: 'video/x-matroska'));
+      final guessed = DidlLite.build(const CastMedia(url: 'https://x/y.mkv', title: 't'));
 
       expect(declared, contains('http-get:video/x-matroska:'));
       expect(guessed, contains('http-get:video/x-matroska:'));
     });
 
     test('an unknown mime still emits a usable res line', () {
-      final didl = DidlLite.build(
-        const CastMedia(url: 'https://x/stream', title: 't'),
-      );
+      final didl = DidlLite.build(const CastMedia(url: 'https://x/stream', title: 't'));
 
       // MIME `*` with an empty profile: legal, and devices fall back
       // to sniffing. A fabricated profile hint would be worse than no
@@ -211,10 +188,7 @@ LOCATION: http://192.168.1.41:8090/desc.xml
   });
 
   group('Soap', () {
-    const service = SoapServiceRef(
-      type: 'urn:schemas-upnp-org:service:AVTransport:1',
-      controlUrl: 'http://tv/av',
-    );
+    const service = SoapServiceRef(type: 'urn:schemas-upnp-org:service:AVTransport:1', controlUrl: 'http://tv/av');
 
     test('envelopes carry the exact argument names devices match literally', () {
       final play = Soap.play(service: service);

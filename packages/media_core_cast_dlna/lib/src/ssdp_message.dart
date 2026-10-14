@@ -8,10 +8,7 @@ import 'dart:convert';
 /// still alive (CACHE-CONTROL) or gone (BYEBYE).
 final class SsdpMessage {
   /// Creates a parsed message.
-  const SsdpMessage({
-    required this.method,
-    required this.headers,
-  });
+  const SsdpMessage({required this.method, required this.headers});
 
   /// The line that opened the message: the request method
   /// (`M-SEARCH`, `NOTIFY`) or `RESPONSE` for a 200 answer to a
@@ -37,10 +34,7 @@ final class SsdpMessage {
       return null;
     }
 
-    final requestLine = lines.firstWhere(
-      (line) => line.trim().isNotEmpty,
-      orElse: () => '',
-    );
+    final requestLine = lines.firstWhere((line) => line.trim().isNotEmpty, orElse: () => '');
     if (requestLine.isEmpty) {
       return null;
     }
@@ -75,12 +69,10 @@ final class SsdpMessage {
   /// Whether this is the departure announcement of a device.
   bool get isByebye =>
       method == 'NOTIFY' &&
-      (headers['nts']?.toUpperCase() == 'SSDP:BYEBYE' ||
-          (headers['nt'] ?? '').contains('ssdp:byebye'));
+      (headers['nts']?.toUpperCase() == 'SSDP:BYEBYE' || (headers['nt'] ?? '').contains('ssdp:byebye'));
 
   /// Whether this is an arrival or renewal alive announcement.
-  bool get isAlive =>
-      method == 'NOTIFY' && !isByebye && (headers['nt'] ?? '').isNotEmpty;
+  bool get isAlive => method == 'NOTIFY' && !isByebye && (headers['nt'] ?? '').isNotEmpty;
 
   /// Whether this answers an M-SEARCH.
   bool get isSearchResponse => method == 'RESPONSE';
@@ -131,8 +123,7 @@ abstract final class SsdpProtocol {
   static const int port = 1900;
 
   /// The search target that finds DLNA renderers.
-  static const String mediaRendererTarget =
-      'urn:schemas-upnp-org:device:MediaRenderer:1';
+  static const String mediaRendererTarget = 'urn:schemas-upnp-org:device:MediaRenderer:1';
 
   /// Builds an M-SEARCH request for [searchTarget].
   ///

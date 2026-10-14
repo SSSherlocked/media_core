@@ -15,12 +15,7 @@ abstract final class DidlLite {
   /// firmwares will refuse a `*` profile they can't match to a
   /// decoder, while `DLNA.ORG_PN=MP3`/`AVI`/none is a hint they do
   /// understand. An unknown MIME still emits a usable `*` line.
-  static String build(
-    CastMedia media, {
-    String objectId = '0',
-    String parentID = '-1',
-    bool restricted = true,
-  }) {
+  static String build(CastMedia media, {String objectId = '0', String parentID = '-1', bool restricted = true}) {
     final mime = media.mimeType ?? _mimeFromUrl(media.url);
     final profile = _profileFor(mime);
     final protocol = 'http-get:$mime:${profile ?? ''}';
@@ -94,10 +89,6 @@ abstract final class DidlLite {
   }
 
   static String _escape(String value) {
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;');
+    return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
   }
 }

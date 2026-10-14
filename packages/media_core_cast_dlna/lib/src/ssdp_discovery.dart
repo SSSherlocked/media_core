@@ -1,9 +1,10 @@
-import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
-import 'package:media_core_cast_dlna/src/ssdp_source.dart';
+
 import 'package:media_core_cast_dlna/src/ssdp_message.dart';
+import 'package:media_core_cast_dlna/src/ssdp_source.dart';
 
 /// A raw SSDP datagram: decoded text plus the address it came from.
 class SsdpDatagram {
@@ -41,7 +42,7 @@ class SsdpDiscovery implements SsdpSource {
     : _socketFactory = socketFactory ?? _defaultSocket;
 
   static Future<RawDatagramSocket> _defaultSocket() async {
-    final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0, reuseAddress: true, reusePort: false);
+    final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
 
     try {
       socket.joinMulticast(InternetAddress(SsdpProtocol.multicastAddress));

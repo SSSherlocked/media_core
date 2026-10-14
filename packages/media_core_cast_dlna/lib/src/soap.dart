@@ -15,7 +15,7 @@ class SoapServiceRef {
 
   /// `AVTransport` / `RenderingControl` extracted from the URN.
   String get name {
-    final match = RegExp(r':service:([^:]+)').firstMatch(type);
+    final match = RegExp(':service:([^:]+)').firstMatch(type);
     return match?.group(1) ?? type;
   }
 }
@@ -24,11 +24,7 @@ class SoapServiceRef {
 /// control POST must carry.
 class SoapRequest {
   /// Creates a request.
-  const SoapRequest({
-    required this.action,
-    required this.body,
-    required this.headers,
-  });
+  const SoapRequest({required this.action, required this.body, required this.headers});
 
   /// The SOAP action header value (quoted, per UPnP).
   final String action;
@@ -59,11 +55,7 @@ abstract final class Soap {
     return _request(
       service: service,
       action: 'SetAVTransportURI',
-      arguments: <String, String>{
-        'InstanceID': '$instanceId',
-        'CurrentURI': url,
-        'CurrentURIMetaData': didl,
-      },
+      arguments: <String, String>{'InstanceID': '$instanceId', 'CurrentURI': url, 'CurrentURIMetaData': didl},
     );
   }
 
@@ -78,36 +70,20 @@ abstract final class Soap {
 
   /// `Pause`.
   static SoapRequest pause({required SoapServiceRef service, int instanceId = 0}) {
-    return _request(
-      service: service,
-      action: 'Pause',
-      arguments: <String, String>{'InstanceID': '$instanceId'},
-    );
+    return _request(service: service, action: 'Pause', arguments: <String, String>{'InstanceID': '$instanceId'});
   }
 
   /// `Stop`.
   static SoapRequest stop({required SoapServiceRef service, int instanceId = 0}) {
-    return _request(
-      service: service,
-      action: 'Stop',
-      arguments: <String, String>{'InstanceID': '$instanceId'},
-    );
+    return _request(service: service, action: 'Stop', arguments: <String, String>{'InstanceID': '$instanceId'});
   }
 
   /// `Seek` to an absolute REL_TIME target.
-  static SoapRequest seek({
-    required SoapServiceRef service,
-    required Duration target,
-    int instanceId = 0,
-  }) {
+  static SoapRequest seek({required SoapServiceRef service, required Duration target, int instanceId = 0}) {
     return _request(
       service: service,
       action: 'Seek',
-      arguments: <String, String>{
-        'InstanceID': '$instanceId',
-        'Unit': 'REL_TIME',
-        'Target': formatClock(target),
-      },
+      arguments: <String, String>{'InstanceID': '$instanceId', 'Unit': 'REL_TIME', 'Target': formatClock(target)},
     );
   }
 
@@ -132,11 +108,7 @@ abstract final class Soap {
   }
 
   /// `GetVolume` on RenderingControl.
-  static SoapRequest getVolume({
-    required SoapServiceRef service,
-    String channel = 'Master',
-    int instanceId = 0,
-  }) {
+  static SoapRequest getVolume({required SoapServiceRef service, String channel = 'Master', int instanceId = 0}) {
     return _request(
       service: service,
       action: 'GetVolume',
@@ -154,11 +126,7 @@ abstract final class Soap {
     return _request(
       service: service,
       action: 'SetVolume',
-      arguments: <String, String>{
-        'InstanceID': '$instanceId',
-        'Channel': channel,
-        'DesiredVolume': '$desiredVolume',
-      },
+      arguments: <String, String>{'InstanceID': '$instanceId', 'Channel': channel, 'DesiredVolume': '$desiredVolume'},
     );
   }
 
@@ -272,10 +240,7 @@ abstract final class Soap {
     );
   }
 
-  static String _escape(String value) => value
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;');
+  static String _escape(String value) => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
   static XmlElement? _descendant(XmlElement root, String localName) {
     for (final element in root.descendantElements) {
@@ -312,6 +277,5 @@ class SoapFault implements Exception {
   final String? errorDescription;
 
   @override
-  String toString() =>
-      'SoapFault($errorCode ${errorDescription ?? faultString ?? faultCode ?? ''})';
+  String toString() => 'SoapFault($errorCode ${errorDescription ?? faultString ?? faultCode ?? ''})';
 }

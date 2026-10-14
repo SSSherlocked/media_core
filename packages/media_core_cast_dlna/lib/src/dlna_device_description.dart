@@ -3,11 +3,7 @@ import 'package:xml/xml.dart';
 /// A control endpoint parsed from a UPnP device description.
 final class DlnaService {
   /// Creates a service entry.
-  const DlnaService({
-    required this.type,
-    required this.controlUrl,
-    this.eventUrl,
-  });
+  const DlnaService({required this.type, required this.controlUrl, this.eventUrl});
 
   /// Full service type URN, e.g.
   /// `urn:schemas-upnp-org:service:AVTransport:1`.
@@ -21,7 +17,7 @@ final class DlnaService {
 
   /// The short service name (`AVTransport`, `RenderingControl`).
   String get name {
-    final match = RegExp(r':service:([^:]+)').firstMatch(type);
+    final match = RegExp(':service:([^:]+)').firstMatch(type);
     return match?.group(1) ?? type;
   }
 }
@@ -33,7 +29,7 @@ final class DlnaService {
 /// service endpoints, because those are the only things a controller
 /// can act on — everything else a renderer reports is either honored
 /// by the device itself or is a UI decoration the host can read from
-/// [rawXml] if it truly needs it.
+/// `rawXml` if it truly needs it.
 final class DlnaDeviceDescription {
   /// Creates a parsed description.
   const DlnaDeviceDescription({
@@ -54,7 +50,7 @@ final class DlnaDeviceDescription {
   /// read — a document without a UDN or an AVTransport service is not
   /// a renderer, and pretending otherwise would let the user pick a
   /// dead device.
-  static DlnaDeviceDescription parse(String xml, {required Uri location}) {
+  factory DlnaDeviceDescription.parse(String xml, {required Uri location}) {
     final XmlDocument document;
     try {
       document = XmlDocument.parse(xml);
@@ -90,9 +86,7 @@ final class DlnaDeviceDescription {
           DlnaService(
             type: type,
             controlUrl: resolve(location, control),
-            eventUrl: _text(service, 'eventSubURL') == null
-                ? null
-                : resolve(location, _text(service, 'eventSubURL')!),
+            eventUrl: _text(service, 'eventSubURL') == null ? null : resolve(location, _text(service, 'eventSubURL')!),
           ),
         );
       }
@@ -155,8 +149,7 @@ final class DlnaDeviceDescription {
   DlnaService get avTransport => services.firstWhere((s) => s.name == 'AVTransport');
 
   /// The volume endpoint, when the device has one.
-  DlnaService? get renderingControl =>
-      services.where((s) => s.name == 'RenderingControl').firstOrNull;
+  DlnaService? get renderingControl => services.where((s) => s.name == 'RenderingControl').firstOrNull;
 
   static XmlElement? _first(XmlElement parent, String name) {
     for (final element in parent.children.whereType<XmlElement>()) {

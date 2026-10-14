@@ -93,7 +93,7 @@ void main() {
     backend.events.listen(seen.add);
   });
 
-  tearDown(() async => backend.dispose());
+  tearDown(() => backend.dispose());
 
   group('discovery to picker', () {
     test('an announcement resolves its description and surfaces a device', () async {
@@ -195,9 +195,7 @@ void main() {
 
       await expectLater(
         backend.play(device),
-        throwsA(
-          isA<CastException>().having((e) => e.message, 'message', contains('701')),
-        ),
+        throwsA(isA<CastException>().having((e) => e.message, 'message', contains('701'))),
       );
     });
 
@@ -220,7 +218,7 @@ void main() {
     });
 
     test('an unreachable device yields the unknown position, not a throw', () async {
-      responder = (action, body) => throw Exception("socket closed");
+      responder = (action, body) => throw Exception('socket closed');
       final device = await announced();
 
       final position = await backend.position(device);

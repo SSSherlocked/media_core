@@ -1,3 +1,4 @@
+import 'package:media_core_cast_dlna/media_core_cast_dlna.dart' show DlnaCastBackend, SsdpDiscovery;
 import 'package:media_core_cast_dlna/src/ssdp_message.dart';
 
 /// The discovery feed a [DlnaCastBackend] consumes.

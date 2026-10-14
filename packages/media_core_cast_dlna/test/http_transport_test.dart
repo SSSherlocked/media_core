@@ -10,14 +10,8 @@ void main() {
       // rogue device point this process at a local or embedded resource.
       final fetcher = HttpDescriptionFetcher();
 
-      expect(
-        () => fetcher('file:///etc/passwd'),
-        throwsA(isA<FormatException>()),
-      );
-      expect(
-        () => fetcher('data:text/xml,<root/>'),
-        throwsA(isA<FormatException>()),
-      );
+      expect(() => fetcher('file:///etc/passwd'), throwsA(isA<FormatException>()));
+      expect(() => fetcher('data:text/xml,<root/>'), throwsA(isA<FormatException>()));
     });
   });
 }
