@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:media_core_media_kit/src/media_kit_player_adapter.dart';
+import 'package:media_core_media_kit/src/no_engine_video_controls.dart';
 import 'package:media_kit_video/media_kit_video.dart' as mkv;
 
 /// Renders the surface owned by [MediaKitPlayerAdapter].
@@ -18,9 +19,10 @@ import 'package:media_kit_video/media_kit_video.dart' as mkv;
 /// MediaKitVideoView(adapter: myAdapter)
 /// ```
 class MediaKitVideoView extends StatelessWidget {
+  /// Creates the view that renders [adapter]'s video.
   const MediaKitVideoView({
-    super.key,
     required this.adapter,
+    super.key,
     this.controls,
     this.width,
     this.height,
@@ -72,7 +74,7 @@ class MediaKitVideoView extends StatelessWidget {
         return mkv.Video(
           controller: controller,
           fit: fit,
-          controls: controls ?? mkv.NoVideoControls,
+          controls: controls ?? noEngineVideoControls,
           width: width,
           height: height,
           fill: fill,

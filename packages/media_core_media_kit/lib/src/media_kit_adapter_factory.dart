@@ -1,8 +1,9 @@
-import 'package:media_core_media_kit/src/media_kit_player_adapter.dart';
 import 'package:media_core/media_core.dart';
+import 'package:media_core_media_kit/src/media_kit_player_adapter.dart';
 import 'package:media_kit/media_kit.dart' as mk;
 import 'package:media_kit_video/media_kit_video.dart' as mkv;
 
+/// Backend id the media_kit adapter registers under, and the id its factory answers to.
 const String kMediaKitPlayerBackendId = 'mpv';
 
 /// Metadata key carrying an app-owned input recipe; a source with it is
@@ -27,6 +28,7 @@ final class MediaKitAdapterFactory implements PlayerAdapterFactory {
     this.configure,
   });
 
+  /// Capability set every adapter this factory creates reports.
   final PlayerAdapterCapabilities capabilities;
 
   /// Native media_kit player configuration; null uses engine defaults.
@@ -41,11 +43,15 @@ final class MediaKitAdapterFactory implements PlayerAdapterFactory {
   /// them up without an app restart).
   final mkv.VideoControllerConfiguration Function()? videoControllerConfigurationBuilder;
 
+  /// Opens a source whose metadata carries [kMediaKitCustomInputKey], using the
+  /// app's own input recipe. Null means such a source is refused rather than
+  /// opened through the ordinary path with a recipe the engine cannot read.
   final Future<void> Function(mk.Player player, Object recipe)? customInputOpener;
 
   /// Per-source engine properties; see [MediaKitPlayerAdapter.beforeOpen].
   final Future<void> Function(mk.Player player, PlayerSource source)? beforeOpen;
 
+  /// Runs once per adapter after construction, for per-instance customisation.
   final void Function(MediaKitPlayerAdapter adapter)? configure;
 
   @override

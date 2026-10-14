@@ -16,15 +16,15 @@
 /// media_kit's own build hook, so no `media_kit_libs_*` package is involved.
 library;
 
+import 'package:media_core_media_kit/src/media_kit_player_adapter.dart' show MediaKitPlayerAdapter;
+
+export 'package:media_core_media_kit/src/media_kit_adapter_factory.dart';
 // Adapter, configs, factory, view.
 export 'package:media_core_media_kit/src/media_kit_player_adapter.dart';
-export 'package:media_core_media_kit/src/media_kit_adapter_factory.dart';
 export 'package:media_core_media_kit/src/media_kit_video_view.dart';
-
+export 'package:media_core_media_kit/src/utils/mpv_platform_profile.dart' show MpvPlatformProfile;
 // Public utils: settings UIs, diagnostics, tuning.
 export 'package:media_core_media_kit/src/utils/player_consts.dart' show PlayerConsts;
-export 'package:media_core_media_kit/src/utils/mpv_platform_profile.dart' show MpvPlatformProfile;
-
 // The upstream packages this adapter is built on, re-exported so a host gets
 // them from its single dependency on this adapter. media_core's own public
 // types use composed names (PlayerIdentity, PlayerCoreState, ...), so the

@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Position reporting is throttled to a UI cadence (250 ms, leading edge) instead of forwarded per frame. libmpv fires `time-pos` on every displayed frame, so a 60 fps video used to rebuild the transport state and repaint every listener 60 times a second per player - the main cause of feed/list stutter on weak devices. A seek or loop restart still lands immediately, and a value owed inside the gap is flushed when the gap closes so the bar never ends up a frame behind.
+
 - Re-exports `package:media_kit/media_kit.dart` and `package:media_kit_video/media_kit_video.dart`, so a host that depends on this adapter alone gets the upstream API (`Media`, `Video`, `VideoController`, `PlayerConfiguration`, `MediaKit.ensureInitialized()`, …) without declaring them itself. Nothing is hidden: `media_core`'s own public types use composed names (`PlayerIdentity`, `PlayerCoreState`, `PlayerTransportState`, `PlayerMediaType`), so importing both barrels is unambiguous even for media_kit's `Player` and `PlayerState`.
 
 ## 0.1.0

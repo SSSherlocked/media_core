@@ -6,6 +6,8 @@
 
 `MediaKitPlayerAdapter` 继承 `PlayerAdapterBase`、实现 `PlayerVideo`，把 mpv 接到 [media_core](../media_core) 的契约上：`onInitialize` / `onBeforeOpen` / `onOpen` / `onAfterOpen` / `onPlay` / `onPause` / `onStop` / `onSeek` / `onSetVolume` / `onSetRate` / `onSetAudioOnly` / `onApplyEngineOptions` / `onCaptureFrame` / `onClose` / `onDispose` 全部实现，画面侧是 `build()` / `available` / `attach()` / `detach()` / `setVideoFit()`。会话、串行化与恢复梯级来自核心，本包只管 mpv 细节。
 
+**位置按 UI 节奏上报，不是按帧**：libmpv 的 `time-pos` 属性在**每一帧**都会触发一次事件，60fps 就是每秒 60 次 transport state 重建 + 每一层监听重绘，这是弱机上信息流一滑一顿的直接来源。适配器用 `PositionThrottle`（250ms、前缘立即出）把它收敛到每秒约 4 次：起播与 seek 仍然即刻到位（跳变越过节流窗口就直接放行），gap 内欠下的最新值在窗口关闭时补发，进度条不会停在旧位置。同族的 fvp 本来就是 500ms 轮询 —— 这条只是把事件驱动的那台拉回同一水位。
+
 引擎来源在 `pubspec.yaml` 里钉到 commit：`Predidit/media-kit` 的 `media_kit` 与 `media_kit_video`，原生库由 media_kit 自己的 build hook 提供，**不**需要 `media_kit_libs_*`。注意这份 revision 不含 PureLive 分支的那些补丁（`setVideoOutputEnabled`、Windows 的 `frameRevision` 等），适配器也不依赖它们。这是 **git 依赖**：pub.dev 不接受带 git 依赖的发布，所以在 `media_kit` / `media_kit_video` 换回 hosted 版本（或本包改成 `publish_to: none`）之前，这个包只能按路径 / git 依赖分发。
 
 后端 id 是 `kMediaKitPlayerBackendId = 'mpv'`（注册表与日志里看到的就是 `mpv`），`registration()` 默认 priority 100，高于 ijk（90）、fvp 与 better_player（80）。

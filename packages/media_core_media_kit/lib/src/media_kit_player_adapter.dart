@@ -1,13 +1,14 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show TargetPlatform, ValueListenable, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:media_core/media_core.dart';
+import 'package:media_core_media_kit/media_core_media_kit.dart';
+import 'package:media_core_media_kit/src/no_engine_video_controls.dart';
+import 'package:media_core_media_kit/src/position_throttle.dart';
 import 'package:media_kit/media_kit.dart' as mk;
 import 'package:media_kit_video/media_kit_video.dart' as mkv;
-import 'package:media_core_media_kit/media_core_media_kit.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform, ValueListenable;
-
 
 /// [PlayerAdapter] implementation backed by the local media_kit
 /// snapshot — the MPV engine.
@@ -17,8 +18,8 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, Tar
 /// how the texture is produced.
 ///
 /// **Platform-specific settings:**
-/// The adapter configures nothing on its own: [playerConfiguration] and
-/// [videoControllerConfiguration] are media_kit's own types passed
+/// The adapter configures nothing on its own: `playerConfiguration` and
+/// `videoControllerConfiguration` are media_kit's own types passed
 /// verbatim, and every runtime tuning value arrives as an engine option
 /// (an mpv property) from the caller.
 
@@ -29,6 +30,8 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, Tar
 // stream handlers call the protected `PlayerAdapterBase` emit API, which
 // only the class itself may touch.
 part 'media_kit_player_adapter_engine.dart';
+
+/// The media_kit (libmpv) engine, driven through the shared `PlayerAdapter` contract.
 final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVideo {
   /// Creates the adapter.
   ///
@@ -163,7 +166,6 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
 
   final List<StreamSubscription<dynamic>> _subscriptions = [];
 
-
   /// What the device is, as far as the platform probe could say.
   ///
   /// Falls back to the process's own CPU count when nothing was probed, which
@@ -180,9 +182,7 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
   /// The container says nothing about this: an MP4 carries H.264, HEVC or AV1,
   /// and which decoder to reach for depends on the codec.
 
-  // ignore: unused_field
   bool _audioOutputSuppressed = false;
-
 
   /// Whether the current source is a live (non-seekable) stream.
   ///
@@ -194,10 +194,17 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
   bool _bufferingNow = false;
   bool _hasOpened = false;
 
+  /// Reduces libmpv's per-frame `time-pos` events to a UI cadence.
+  ///
+  /// See [PositionThrottle]: forwarding every frame's position would rebuild the
+  /// transport state and repaint every listener some 60 times a second per
+  /// player, which is the difference between a smooth feed and a stuttering one.
+  final PositionThrottle _positionThrottle = PositionThrottle();
+
   int? _width;
   int? _height;
 
-  double _lastEmittedVolume = -1.0;
+  double _lastEmittedVolume = -1;
 
   BoxFit _videoFit = BoxFit.contain;
 
@@ -250,13 +257,7 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
     return ValueListenableBuilder<BoxFit>(
       valueListenable: _fitNotifier,
       builder: (context, fit, _) {
-        return mkv.Video(
-          controller: controller,
-          fit: fit,
-          controls: mkv.NoVideoControls,
-          onEnterFullscreen: mkv.defaultEnterNativeFullscreen,
-          onExitFullscreen: mkv.defaultExitNativeFullscreen,
-        );
+        return mkv.Video(controller: controller, fit: fit, controls: noEngineVideoControls);
       },
     );
   }
@@ -361,9 +362,7 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
       // see [mpvListOptionCommands].
       final applied = await _applyNativeOption(option);
 
-      outcomes.add(
-        applied ? EngineOptionOutcome.appliedLive : EngineOptionOutcome.unsupported,
-      );
+      outcomes.add(applied ? EngineOptionOutcome.appliedLive : EngineOptionOutcome.unsupported);
     }
 
     return outcomes;
@@ -377,7 +376,7 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
   String _mpvOptionValue(Object? value) {
     return switch (value) {
       null => '',
-      bool flag => flag ? 'yes' : 'no',
+      final bool flag => flag ? 'yes' : 'no',
       final String text => text,
       final other => '$other',
     };
@@ -410,7 +409,6 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
     } else {
       await player.open(
         mk.Media(source.uri.toString(), httpHeaders: source.hasHeaders ? source.headers!.values : null),
-        play: true,
       );
       // A composite (Bilibili DASH: video.m4s + audio.m4s) arrives here with
       // the primary video URI flattened by [MediaSourceBridge] and the full
@@ -421,6 +419,9 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
       await _attachCompositeAudio(source);
     }
 
+    // A new video's position has nothing in common with the last one reported:
+    // the first tick must reach the UI at once instead of waiting out a gap.
+    _positionThrottle.reset();
     _hasOpened = true;
 
     if (audioOnly) {
@@ -503,16 +504,10 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
   }
 
   /// Appends one URL to an mpv list option, logging rather than throwing.
-  Future<void> _sideChannelAppend(
-    dynamic native,
-    String list,
-    String url,
-    MediaTrack track,
-  ) async {
+  Future<void> _sideChannelAppend(dynamic native, String list, String url, MediaTrack track) async {
     try {
-      // ignore: avoid_dynamic_calls
       await (native as dynamic).command(<Object>['change-list', list, 'append', url]);
-    } catch (error) {
+    } on Object catch (error) {
       MediaCoreLog.warning(
         LogCategory.renderer,
         'composite $list attach failed for $url: $error',
@@ -526,29 +521,19 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
   }
 
   /// Applies the composition layer's alignment as mpv's `audio-delay`.
-  Future<void> _applyAudioAlignment(
-    dynamic native,
-    MediaTimeline timeline,
-    TimelineTrack? video,
-  ) async {
+  Future<void> _applyAudioAlignment(dynamic native, MediaTimeline timeline, TimelineTrack? video) async {
     if (video == null) {
       return;
     }
-    final audio = timeline.tracks
-        .where((entry) => entry.track.kind == MediaTrackType.audio)
-        .firstOrNull;
+    final audio = timeline.tracks.where((entry) => entry.track.kind == MediaTrackType.audio).firstOrNull;
     if (audio == null || audio.offset == video.offset) {
       return; // aligned; leave the user's own delay untouched
     }
     final seconds = (audio.offset - video.offset).inMicroseconds / 1000000;
     try {
-      // ignore: avoid_dynamic_calls
       await (native as dynamic).setProperty('audio-delay', seconds);
-    } catch (error) {
-      MediaCoreLog.warning(
-        LogCategory.renderer,
-        'composite audio-delay ${seconds}s rejected by mpv: $error',
-      );
+    } on Object catch (error) {
+      MediaCoreLog.warning(LogCategory.renderer, 'composite audio-delay ${seconds}s rejected by mpv: $error');
     }
   }
 
@@ -570,36 +555,29 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
 
     if (userAgent != null) {
       try {
-        // ignore: avoid_dynamic_calls
         await (native as dynamic).setProperty('user-agent', userAgent);
-      } catch (error) {
+      } on Object catch (error) {
         // The side-channel fetch runs without a user agent, which is exactly
         // the request a CDN answers with 403; the audio track then fails for
         // a reason nothing else would report.
-        MediaCoreLog.warning(
-          LogCategory.network,
-          'side-channel user-agent was not applied: $error',
-          error: error,
-        );
+        MediaCoreLog.warning(LogCategory.network, 'side-channel user-agent was not applied: $error', error: error);
       }
     }
 
     if (sanitized.isEmpty) return;
     final fields = HttpHeaderSanitizer.mpvFields(sanitized);
     try {
-      // ignore: avoid_dynamic_calls
       await (native as dynamic).setProperty('http-header-fields', fields);
-    } catch (error) {
+    } on Object catch (error) {
       // Older mpv builds take a comma-joined string; best-effort fallback.
       try {
-        // ignore: avoid_dynamic_calls
         await (native as dynamic).setProperty('http-header-fields', fields.join(','));
-      } catch (fallbackError) {
+      } on Object catch (fallbackError) {
         MediaCoreLog.warning(
           LogCategory.network,
           'side-channel request headers were not applied in either form '
-              '($error / $fallbackError); the extra essences will be '
-              'fetched without Referer or Cookie',
+          '($error / $fallbackError); the extra essences will be '
+          'fetched without Referer or Cookie',
           error: fallbackError,
         );
       }
@@ -625,6 +603,10 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
     _playingNow = false;
     _bufferingNow = false;
     _hasOpened = false;
+
+    // A owed position from the stopped source must not arrive after the next
+    // one starts: drop the pending value along with the gap.
+    _positionThrottle.reset();
 
     _hasDecodedVideoFrame = false;
     _width = null;
@@ -665,6 +647,7 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
     _height = null;
 
     _lastFrameHeartbeatMs = -frameHeartbeatIntervalMs;
+    _positionThrottle.reset();
   }
 
   @override
@@ -672,6 +655,8 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
     await Future.wait(_subscriptions.map((subscription) => subscription.cancel()));
 
     _subscriptions.clear();
+
+    _positionThrottle.dispose();
 
     // Stop the frame heartbeat clock before tearing down the player.
     if (_frameHeartbeatClock.isRunning) {
@@ -695,13 +680,13 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
   // ---------------------------------------------------------------------------
 
   /// Suppresses audio output for the next open.
-  Future<void> setAudioOutputSuppressed(bool suppressed) async {
+  Future<void> setAudioOutputSuppressed({required bool suppressed}) async {
     _audioOutputSuppressed = suppressed;
 
     if (suppressed) {
       try {
         await player.setAudioTrack(mk.AudioTrack.no());
-      } catch (_) {
+      } on Object catch (_) {
         // Best-effort; some builds reject track selection before open.
       }
     }
@@ -715,14 +700,14 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
     if (_audioOutputSuppressed) {
       try {
         await player.setAudioTrack(mk.AudioTrack.no());
-      } catch (_) {
+      } on Object catch (_) {
         // Best-effort.
       }
     }
   }
 
   @override
-  Future<void> onSetAudioOnly(bool audioOnly) => _applyAudioOnly(audioOnly);
+  Future<void> onSetAudioOnly({required bool audioOnly}) => _applyAudioOnly(audioOnly);
 
   Future<void> _applyAudioOnly(bool audioOnly) async {
     await player.setVideoTrack(audioOnly ? mk.VideoTrack.no() : mk.VideoTrack.auto());
@@ -755,7 +740,7 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
         format: request.mimeType,
         includeLibassSubtitles: request.includeSubtitles && _libassEnabled,
       );
-    } catch (error) {
+    } on Object catch (error) {
       // The web backend throws instead of declaring no capability; the caller
       // falls back to the rendered surface, which is the only route there.
       MediaCoreLog.warning(LogCategory.renderer, 'captureFrame failed: $error', error: error);
@@ -831,7 +816,7 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
       MediaCoreLog.warning(
         LogCategory.renderer,
         'no hardware decoder for ${track.codec} on this device; frames '
-            'depend on software decoding',
+        'depend on software decoding',
         fields: <String, Object?>{'codec': track.codec},
       );
       return;
@@ -869,7 +854,7 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
       (native as dynamic).observeProperty?.call(property, (dynamic value) async {
         _onNativeFrameSignal(property, value?.toString() ?? '');
       });
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       MediaCoreLog.warning(
         LogCategory.renderer,
         'observeProperty failed: $error',
@@ -931,7 +916,20 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
 
     _bufferingNow = buffering;
 
-    emitBuffering(buffering, resumePlaying: buffering ? null : _playingNow);
+    emitBuffering(buffering: buffering, resumePlaying: buffering ? null : _playingNow);
+  }
+
+  /// The throttle's emit, held as one object instead of a fresh closure per
+  /// frame: this runs at frame rate, and a per-tick allocation is exactly the
+  /// cost the throttle exists to remove.
+  ///
+  /// The `_hasOpened` gate matters because the trailing edge can land after the
+  /// source was closed on another generation; a late value from the old one
+  /// would leak into the new.
+  late final void Function(Duration value) _emitGatedPosition = _emitGatedPositionImpl;
+
+  void _emitGatedPositionImpl(Duration value) {
+    if (_hasOpened) emitPositionChanged(value);
   }
 
   void _onPosition(Duration position) {
@@ -939,7 +937,7 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
     // guard the previous source's teardown leaks into the next generation.
     if (!_hasOpened) return;
 
-    emitPositionChanged(position);
+    _positionThrottle.report(position, _emitGatedPosition);
   }
 
   void _onDuration(Duration duration) {
@@ -999,6 +997,9 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
   // Capabilities
   // ---------------------------------------------------------------------------
 
+  /// The capability table this adapter reports. Each entry is argued in the
+  /// comment beside it, because a claimed capability the engine cannot deliver
+  /// is worse than an absent one.
   static const PlayerAdapterCapabilities defaultCapabilities = PlayerAdapterCapabilities(
     // Core playback.
     supportsLive: true,
@@ -1007,7 +1008,6 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
     supportsStop: true,
     supportsRateControl: true,
     supportsVolumeControl: true,
-    supportsMuteControl: false,
     supportsAudioOnly: true,
     supportsEngineOptions: true,
 
@@ -1020,42 +1020,10 @@ final class MediaKitPlayerAdapter extends PlayerAdapterBase implements PlayerVid
     // `adapter.capabilities`.
     supportsVideoFrameProgress: true,
     supportsVideoSizeChanged: true,
-    supportsVideoReconfig: false,
-    supportsHwdecInfo: false,
-    supportsVideoFilters: false,
     supportsScreenshot: true,
-
-    // Audio.
-    supportsAudioReconfig: false,
-    supportsAudioDeviceSelection: false,
-    supportsAudioFilters: false,
-
-    // Tracks and subtitles.
-    supportsTrackSelection: false,
-    supportsSubtitleTrack: false,
-    supportsExternalSubtitle: false,
-
-    // Playback state and buffering.
-    supportsCacheState: false,
-    supportsBufferingProgress: false,
-    supportsChapterControl: false,
-    supportsLoop: false,
-
-    // Metadata and playlist.
-    supportsMetadata: false,
-    supportsPlaylist: false,
-    supportsPlaylistControl: false,
-
-    // Diagnostics and integration.
-    supportsClientMessage: false,
-    supportsLogMessages: false,
 
     // Decoders.
     supportsHardwareDecoder: true,
-    supportsSoftwareDecoder: true,
-
-    // Presentation.
-    supportsPictureInPicture: false,
     supportsFullscreen: true,
 
     // Source matching.

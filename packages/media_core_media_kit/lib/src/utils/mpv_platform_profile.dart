@@ -31,18 +31,22 @@ const Map<String, String> _iosHardwareDecoders = {
 /// Every choice is normalised here before it reaches libmpv, so a value
 /// persisted on one platform cannot leak a broken driver into another.
 abstract final class MpvPlatformProfile {
+  /// The video output drivers a platform will accept, in preference order.
   static Map<String, String> videoOutputDriversForPlatform(TargetPlatform platform) =>
       platform == TargetPlatform.iOS ? _iosVideoOutputDrivers : PlayerConsts.videoOutputDrivers;
 
+  /// The audio output drivers a platform will accept, in preference order.
   static Map<String, String> audioOutputDriversForPlatform(TargetPlatform platform) => switch (platform) {
     TargetPlatform.android => _androidAudioOutputDrivers,
     TargetPlatform.iOS => _iosAudioOutputDrivers,
     _ => PlayerConsts.audioOutputDrivers,
   };
 
+  /// The hardware decoders a platform is allowed to reach for.
   static Map<String, String> hardwareDecodersForPlatform(TargetPlatform platform) =>
       platform == TargetPlatform.iOS ? _iosHardwareDecoders : PlayerConsts.hardwareDecoder;
 
+  /// The video driver used when the host configured none.
   static String defaultVideoOutputDriverForPlatform(TargetPlatform platform) =>
       platform == TargetPlatform.iOS ? 'libmpv' : 'gpu';
 
@@ -54,12 +58,15 @@ abstract final class MpvPlatformProfile {
     _ => null,
   };
 
+  /// Maps a configured video driver onto one this platform can actually load.
   static String normalizeVideoOutputDriverForPlatform(String value, TargetPlatform platform) =>
       _normalize(value, videoOutputDriversForPlatform(platform), defaultVideoOutputDriverForPlatform(platform));
 
+  /// Maps a configured audio driver onto one this platform can actually load.
   static String normalizeAudioOutputDriverForPlatform(String value, TargetPlatform platform) =>
       _normalize(value, audioOutputDriversForPlatform(platform), 'auto');
 
+  /// Maps a configured decoder onto one this platform can actually load.
   static String normalizeHardwareDecoderForPlatform(String value, TargetPlatform platform) =>
       _normalize(value, hardwareDecodersForPlatform(platform), 'auto');
 
@@ -84,6 +91,7 @@ abstract final class MpvPlatformProfile {
     return normalized;
   }
 
+  /// Whether the resolved configuration asks for audio to be switched off.
   static bool isAudioOutputDisabledForPlatform({
     required bool customOutput,
     required String configuredDriver,
