@@ -1,6 +1,5 @@
 import 'package:media_core/media_core.dart' show PlayerSource;
-import 'package:media_core_danmaku/media_core_danmaku.dart'
-    show DanmakuOverlaySession;
+import 'package:media_core_danmaku/media_core_danmaku.dart' show DanmakuOverlaySession;
 
 /// What a cell is doing.
 enum MultiviewCellStatus {
@@ -33,8 +32,7 @@ enum MultiviewCellStatus {
 /// Produces a fresh source for one whose signed URL has expired.
 ///
 /// Returning null keeps the current source; throwing fails the open.
-typedef MultiviewSourceRenew =
-    Future<MultiviewCellSource?> Function(MultiviewCellSource current);
+typedef MultiviewSourceRenew = Future<MultiviewCellSource?> Function(MultiviewCellSource current);
 
 /// Why a cell failed.
 enum MultiviewCellFailureKind {
@@ -50,28 +48,28 @@ enum MultiviewCellFailureKind {
 
 /// One cell's failure, with the attempt it happened on.
 final class MultiviewCellFailure {
-  const MultiviewCellFailure({
-    required this.kind,
-    required this.message,
-    this.attempt = 1,
-    this.cause,
-  });
+  /// Creates a failure of [kind] with [message], on restart [attempt], caused by [cause].
+  const MultiviewCellFailure({required this.kind, required this.message, this.attempt = 1, this.cause});
 
+  /// Why the cell failed.
   final MultiviewCellFailureKind kind;
+
+  /// Human-readable reason shown by the host.
   final String message;
 
   /// Which restart attempt this failure belongs to.
   final int attempt;
 
+  /// The underlying error, when one was caught.
   final Object? cause;
 
   @override
-  String toString() =>
-      'MultiviewCellFailure(${kind.name}, attempt $attempt: $message)';
+  String toString() => 'MultiviewCellFailure(${kind.name}, attempt $attempt: $message)';
 }
 
 /// What a cell is playing.
 final class MultiviewCellSource {
+  /// Creates a cell source with its playback metadata and renewal hook.
   const MultiviewCellSource({
     required this.source,
     this.title,
@@ -107,8 +105,8 @@ final class MultiviewCellSource {
   /// Returning null keeps the current source; throwing fails the open.
   final MultiviewSourceRenew? renew;
 
-  bool isExpired(DateTime now) =>
-      expiresAt != null && !now.isBefore(expiresAt!);
+  /// Whether the source's signed URL is no longer valid at [now].
+  bool isExpired(DateTime now) => expiresAt != null && !now.isBefore(expiresAt!);
 
   @override
   String toString() => 'MultiviewCellSource(${title ?? roomId ?? source.uri})';
@@ -120,6 +118,7 @@ final class MultiviewCellSource {
 /// focus many times while the wall is up, and copying it on every change would
 /// make the host's rebuild path more expensive than the change.
 final class MultiviewCell {
+  /// Creates the cell at grid [index] with its initial state.
   MultiviewCell({
     required this.index,
     this.source,
@@ -165,10 +164,13 @@ final class MultiviewCell {
   /// and sharing one would let a wall cell's backlog appear on another.
   DanmakuOverlaySession? danmaku;
 
+  /// Whether no source is assigned to this cell.
   bool get isEmpty => status == MultiviewCellStatus.empty;
 
+  /// Whether this cell is currently playing.
   bool get isPlaying => status == MultiviewCellStatus.playing;
 
+  /// Whether this cell is paused by the host.
   bool get isPaused => status == MultiviewCellStatus.paused;
 
   /// Whether the cell is in a state that can still become playing.
@@ -178,12 +180,8 @@ final class MultiviewCell {
       status == MultiviewCellStatus.recovering;
 
   /// Whether the cell should be retried automatically.
-  bool get canRecover =>
-      !isPlaying &&
-      status != MultiviewCellStatus.offline &&
-      status != MultiviewCellStatus.empty;
+  bool get canRecover => !isPlaying && status != MultiviewCellStatus.offline && status != MultiviewCellStatus.empty;
 
   @override
-  String toString() =>
-      'MultiviewCell($index, ${status.name}${source == null ? '' : ', $source'})';
+  String toString() => 'MultiviewCell($index, ${status.name}${source == null ? '' : ', $source'})';
 }

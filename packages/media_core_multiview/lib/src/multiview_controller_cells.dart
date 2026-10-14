@@ -8,17 +8,11 @@ extension MultiviewControllerCells on MultiviewController {
   // ---------------------------------------------------------------------------
 
   /// Assigns [source] to [index] and starts it.
-  Future<void> assign(
-    int index,
-    MultiviewCellSource source, {
-    List<MultiviewCellSource>? playlist,
-  }) async {
+  Future<void> assign(int index, MultiviewCellSource source, {List<MultiviewCellSource>? playlist}) async {
     _ensureNotDisposed();
     final cell = _cellAt(index);
 
-    if (_config.budgetPolicy == MultiviewBudgetPolicy.refuseNewCells &&
-        _isAtBudget &&
-        cell.isEmpty) {
+    if (_config.budgetPolicy == MultiviewBudgetPolicy.refuseNewCells && _isAtBudget && cell.isEmpty) {
       _log.warning(
         'refusing a new cell: at the decode budget',
         fields: <String, Object?>{
@@ -51,9 +45,10 @@ extension MultiviewControllerCells on MultiviewController {
       _playlists.remove(index);
     }
 
-    cell.source = source;
-    cell.failure = null;
-    cell.restarts = 0;
+    cell
+      ..source = source
+      ..failure = null
+      ..restarts = 0;
     await _openCell(cell);
     await _applyAudio();
     _emit();
@@ -62,9 +57,7 @@ extension MultiviewControllerCells on MultiviewController {
   /// Fills the wall from [sources], one per cell, in order.
   Future<void> assignAll(List<MultiviewCellSource> sources) async {
     _ensureNotDisposed();
-    final limit = sources.length < _config.effectiveMaxCells
-        ? sources.length
-        : _config.effectiveMaxCells;
+    final limit = sources.length < _config.effectiveMaxCells ? sources.length : _config.effectiveMaxCells;
     for (var index = 0; index < limit; index++) {
       await assign(index, sources[index]);
     }
@@ -83,9 +76,7 @@ extension MultiviewControllerCells on MultiviewController {
       return false;
     }
 
-    final position = playlist.indexWhere(
-      (candidate) => candidate.roomId == current.roomId,
-    );
+    final position = playlist.indexWhere((candidate) => candidate.roomId == current.roomId);
     final next = playlist[(position + 1) % playlist.length];
     _log.debug(
       'advancing to the next room in the playlist',
@@ -103,12 +94,12 @@ extension MultiviewControllerCells on MultiviewController {
   /// Clears [index]: stops it and gives its player back.
   Future<void> clear(int index) async {
     _ensureNotDisposed();
-    final cell = _cells[index];
-    cell.source = null;
-    cell.qualityLabel = null;
-    cell.failure = null;
-    cell.restarts = 0;
-    cell.status = MultiviewCellStatus.empty;
+    _cells[index]
+      ..source = null
+      ..qualityLabel = null
+      ..failure = null
+      ..restarts = 0
+      ..status = MultiviewCellStatus.empty;
     _playlists.remove(index);
     await _releaseCell(index);
     _emit();
@@ -168,10 +159,7 @@ extension MultiviewControllerCells on MultiviewController {
     if (handle == null || !cell.isPaused) {
       return;
     }
-    _progress[index] = (
-      position: _progress[index]?.position ?? Duration.zero,
-      at: _clock(),
-    );
+    _progress[index] = (position: _progress[index]?.position ?? Duration.zero, at: _clock());
     await handle.play();
     cell.status = MultiviewCellStatus.playing;
     await _applyAudio();
@@ -192,7 +180,7 @@ extension MultiviewControllerCells on MultiviewController {
     final handle = _handles[index];
     if (handle != null) {
       await handle.setVolume(volume.clamp(0.0, 1.0));
-      await handle.setMute(volume <= 0);
+      await handle.setMute(muted: volume <= 0);
     }
     await _applyAudio();
     _emit();
@@ -236,8 +224,7 @@ extension MultiviewControllerCells on MultiviewController {
   }
 
   Future<void> _applyBudget() async {
-    final crowded =
-        _playingCount > _config.effectiveMaxCells || _pressure.hasPressure;
+    final crowded = _playingCount > _config.effectiveMaxCells || _pressure.hasPressure;
     _budgetExceeded = crowded;
     if (!crowded) {
       return;
@@ -245,18 +232,13 @@ extension MultiviewControllerCells on MultiviewController {
 
     switch (_config.budgetPolicy) {
       case MultiviewBudgetPolicy.keepFocusedOnly:
-        final severe =
-            _pressure.shouldStopPreload || _pressure.shouldReleaseResources;
+        final severe = _pressure.shouldStopPreload || _pressure.shouldReleaseResources;
         if (!severe && _playingCount <= _config.effectiveMaxCells) {
           return;
         }
         _log.warning(
           'over budget: pausing every cell but the focused one',
-          fields: <String, Object?>{
-            'playing': _playingCount,
-            'budget': _config.effectiveMaxCells,
-            'severe': severe,
-          },
+          fields: <String, Object?>{'playing': _playingCount, 'budget': _config.effectiveMaxCells, 'severe': severe},
         );
         for (final cell in _cells) {
           if (cell.index == _focusedIndex || !cell.isPlaying) {
@@ -269,10 +251,7 @@ extension MultiviewControllerCells on MultiviewController {
       case MultiviewBudgetPolicy.refuseNewCells:
         _log.debug(
           'over budget, policy leaves the cells alone',
-          fields: <String, Object?>{
-            'policy': _config.budgetPolicy.name,
-            'playing': _playingCount,
-          },
+          fields: <String, Object?>{'policy': _config.budgetPolicy.name, 'playing': _playingCount},
         );
         return;
     }

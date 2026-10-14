@@ -72,10 +72,8 @@ final MemoryAccount _memory = MediaCoreMemory.of(MemoryModule.multiview);
 /// the host can show *why* cells went quiet instead of leaving them looking
 /// broken.
 final class MultiviewController {
-  /// This instance's key in the shared account: a module can have several
-  /// live instances, and a report sums their contributions rather than
-  /// keeping whichever reported last.
-  late final String _memoryKey = memoryContributorKey(this);
+  /// Creates a wall backed by [players], sized by [config], with an optional
+  /// [qualityResolver] and a [clock] override for deterministic tests.
   MultiviewController({
     required PoolPlayerHost players,
     MultiviewConfig config = MultiviewConfig.defaults,
@@ -84,12 +82,14 @@ final class MultiviewController {
   }) : _players = players,
        _config = config,
        _clock = clock ?? DateTime.now {
-    _cells = List<MultiviewCell>.generate(
-      _config.layout.capacity,
-      (index) => MultiviewCell(index: index),
-    );
+    _cells = List<MultiviewCell>.generate(_config.layout.capacity, (index) => MultiviewCell(index: index));
     _startTicking();
   }
+
+  /// This instance's key in the shared account: a module can have several
+  /// live instances, and a report sums their contributions rather than
+  /// keeping whichever reported last.
+  late final String _memoryKey = memoryContributorKey(this);
 
   final PoolPlayerHost _players;
 
@@ -102,28 +102,36 @@ final class MultiviewController {
   late List<MultiviewCell> _cells;
 
   /// Cell index → the rest of its playlist, for cells that cycle.
-  final Map<int, List<MultiviewCellSource>> _playlists =
-      <int, List<MultiviewCellSource>>{};
+  final Map<int, List<MultiviewCellSource>> _playlists = <int, List<MultiviewCellSource>>{};
 
   /// Cell index → its player handle.
   final Map<int, PoolPlayerHandle> _handles = <int, PoolPlayerHandle>{};
 
   /// Cell index → per-cell substreams.
-  final Map<int, StreamSubscription<PlayerTransportState>>
-  _progressSubscriptions = <int, StreamSubscription<PlayerTransportState>>{};
+  final Map<int, StreamSubscription<PlayerTransportState>> _progressSubscriptions =
+      <int, StreamSubscription<PlayerTransportState>>{};
 
   /// Cell index → last observed playback position and when it changed.
-  final Map<int, ({Duration position, DateTime at})> _progress =
-      <int, ({Duration position, DateTime at})>{};
+  final Map<int, ({Duration position, DateTime at})> _progress = <int, ({Duration position, DateTime at})>{};
 
   /// Cell index → a host-set manual volume that overrides the audio-mode one.
   final Map<int, double> _cellVolumes = <int, double>{};
 
-  final StreamController<MultiviewSnapshot> _snapshotController =
-      StreamController<MultiviewSnapshot>.broadcast();
+  final StreamController<MultiviewSnapshot> _snapshotController = StreamController<MultiviewSnapshot>.broadcast();
 
   Timer? _tick;
   Timer? _patrol;
+
+  /// Whether a progress sweep is still running.
+  ///
+  /// The tick is a `Timer.periodic`, which does not wait for its async body: a
+  /// cell restart that takes longer than the interval would otherwise start a
+  /// second sweep over the same cells, double-count restart budgets and issue
+  /// overlapping restarts - the wall's version of a retry storm.
+  bool _sweeping = false;
+
+  /// Whether a patrol rotation is still running; same reason as [_sweeping].
+  bool _rotating = false;
   int _focusedIndex = 0;
   int? _audioIndex;
 
@@ -238,13 +246,7 @@ final class MultiviewController {
     _patrol?.cancel();
     _patrol = null;
 
-    _log.debug(
-      'releasing the wall',
-      fields: <String, Object?>{
-        'cells': _cells.length,
-        'playing': _playingCount,
-      },
-    );
+    _log.debug('releasing the wall', fields: <String, Object?>{'cells': _cells.length, 'playing': _playingCount});
 
     for (final index in _cells.map((cell) => cell.index).toList()) {
       await _releaseCell(index);

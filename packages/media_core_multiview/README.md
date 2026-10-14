@@ -8,7 +8,7 @@
 
 - **谁在响。** 九条流同时出声是噪音不是信息。`MultiviewAudioMode`（`exclusive` / `muted` / `mixed`）决定音量怎么分，而"被听的格子"与"被看的格子"是两个设置（`setAudioFocus` / `setVideoFocus`）：观众把声音钉在一个房间、眼睛扫别的房间是真实用法。`muteAll` 会记住静音前的模式，取消静音不会把一面 mixed 墙偷偷变成 exclusive。
 - **解码器数量。** 每个格子是一个解码器。无视这点的墙不是多播了几路，而是把观众在意的那一路饿死。预算是 `MultiviewConfig.effectiveMaxCells`（布局容量与宿主 `maxCells` 取小者），`reportPressure(ResourcePressure)` 立刻生效而不是等下一次 tick——设备出问题时不该再等两秒。策略三选一：`keepFocusedOnly`（除焦点格外的播放格全部停下）、`letPlatformDrop`（交给平台丢帧）、`refuseNewCells`（到预算就拒绝新格子并抛 `StateError`）。`snapshot.budgetExceeded` 让宿主能把"这些格子为什么安静了"讲清楚，而不是留下九个看起来坏掉的窗口。
-- **逐格死活。** `MultiviewCellStatus`（`empty` / `starting` / `playing` / `paused` / `offline` / `recovering` / `failed`）配 `MultiviewCellFailureKind`（解析失败 / 开流失败 / 停滞）。每 2 秒的 tick 检查每个播放格的位置是否还在前进，停滞超过 `cellStallTimeout` 就在 `cellMaxRestarts` 预算内重启；预算耗尽后带 playlist 的格子前进到下一个房间——这是"在监控"和"盯着一帧静止画面"的区别。`offline` 是业务状态不是故障：平台说没开播，就不该开一个播放器去制造一个观众早已知道原因的错误。
+- **逐格死活。** `MultiviewCellStatus`（`empty` / `starting` / `playing` / `paused` / `offline` / `recovering` / `failed`）配 `MultiviewCellFailureKind`（解析失败 / 开流失败 / 停滞）。每 2 秒的 tick 检查每个播放格的位置是否还在前进，停滞超过 `cellStallTimeout` 就在 `cellMaxRestarts` 预算内重启；预算耗尽后带 playlist 的格子前进到下一个房间——这是"在监控"和"盯着一帧静止画面"的区别。**上一轮没跑完就不再开第二轮**：tick 是 `Timer.periodic` 而不等异步体，一次比 2 秒慢的重启若被后面的 tick 重复看到，同一格会被记第二次、第三次重启，预算就这样被幽灵扫描吃光；巡更（patrol）同理。`offline` 是业务状态不是故障：平台说没开播，就不该开一个播放器去制造一个观众早已知道原因的错误。
 - **谁该看清晰。** `MultiviewQualityPolicy.focusFirst` 给焦点格 `best`、其余 `lowest`；但只有宿主知道自己的站点怎么换档，所以质量是注入的回调 `MultiviewQualityResolver`——没给就是没有降级，这一点写明而不是假装。焦点变化时本包只标记 `cell.hasVideoFocus`，真正换档时机由宿主决定：为了换档把正在播的格子拆了重连，代价是所有其他格子陪它重新缓冲。
 
 墙通过核心的 `PoolPlayerHost` 取还播放器：换房间的格子复用热播放器，不必每次付一次冷启动；释放时先 `recycle` 再还给 host。弹幕是 `media_core_danmaku` 的 `DanmakuOverlaySession`，每格一个队列（共享一个就会让 A 格的积压出现在 B 格），`danmakuOnlyOnFocused` 只决定喂不喂。决策写进 `LogCategory.multiview`，占用按实例报进 `MemoryModule.multiview`（计入的是所有已指派格子，不只是在播的——暂停的格子还握着解码器）。
@@ -69,7 +69,7 @@ await wall.dispose();                                      // 每格的播放器
 
 - 播放器池与 `PoolPlayerHost` / `ResourcePressure`：[../media_core](../media_core)
 - 逐格弹幕：[../media_core_danmaku](../media_core_danmaku)
-- 格子交给小窗：[../media_core_pip](../media_core_pip) · [../media_core_floating](../media_core_floating)
+- 格子交给小窗：[../media_core_pip](../media_core_pip)
 - 设备能力探针：[../media_core_native](../media_core_native)
 - 内存记账：[../media_core_memory](../media_core_memory)
 - 仓库总览：[../../README.md](../../README.md)

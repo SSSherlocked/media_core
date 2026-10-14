@@ -11,8 +11,7 @@ final class _FakeHandle implements PoolPlayerHandle {
   @override
   final String id;
 
-  final StreamController<PlayerTransportState> _states =
-      StreamController<PlayerTransportState>.broadcast();
+  final StreamController<PlayerTransportState> _states = StreamController<PlayerTransportState>.broadcast();
 
   String? openedSource;
   double volume = 1;
@@ -22,6 +21,10 @@ final class _FakeHandle implements PoolPlayerHandle {
   bool recycled = false;
   Object? openError;
 
+  /// Held until the test completes it: a restart whose engine work outlives the
+  /// watchdog interval is the overlap the sweep guard exists for.
+  Completer<void>? openGate;
+
   @override
   bool isDisposed = false;
 
@@ -30,14 +33,21 @@ final class _FakeHandle implements PoolPlayerHandle {
 
   /// Emits a position, which is what the stall watchdog watches.
   void emitPosition(Duration position) {
-    _states.add(PlayerTransportState.initial().copyWith(position: position));
+    _states.add(const PlayerTransportState.initial().copyWith(position: position));
   }
 
   @override
   Future<void> open(PlayerSource source, {bool autoPlay = false}) async {
     final error = openError;
     if (error != null) {
+      // A test double replaying whatever the host configured, so the thrown
+      // object's static type is intentionally `Object?`.
+      // ignore: only_throw_errors
       throw error;
+    }
+    final gate = openGate;
+    if (gate != null && !gate.isCompleted) {
+      await gate.future;
     }
     openedSource = source.id.value;
     playing = autoPlay;
@@ -60,7 +70,7 @@ final class _FakeHandle implements PoolPlayerHandle {
   Future<void> setVolume(double value) async => volume = value;
 
   @override
-  Future<void> setMute(bool value) async => muted = value;
+  Future<void> setMute({required bool muted}) async => this.muted = muted;
 }
 
 final class _FakePlayerHost implements PoolPlayerHost {
@@ -75,11 +85,15 @@ final class _FakePlayerHost implements PoolPlayerHost {
   /// the error on the handle in use would test the old player, not the restart.
   Object? nextOpenError;
 
+  /// Same reason, for a restart that must still be in flight.
+  Completer<void>? nextOpenGate;
+
   @override
   Future<PoolPlayerHandle> acquire() async {
     acquireCount++;
     final handle = _FakeHandle('player-$acquireCount')
-      ..openError = nextOpenError;
+      ..openError = nextOpenError
+      ..openGate = nextOpenGate;
     handles.add(handle);
     return handle;
   }
@@ -106,12 +120,7 @@ PlayerSource _source(String id) => PlayerSource(
 );
 
 MultiviewCellSource _room(String id, {bool live = true, String? title}) =>
-    MultiviewCellSource(
-      source: _source(id),
-      roomId: id,
-      title: title ?? id,
-      isLive: live,
-    );
+    MultiviewCellSource(source: _source(id), roomId: id, title: title ?? id, isLive: live);
 
 void main() {
   late _FakePlayerHost host;
@@ -135,49 +144,29 @@ void main() {
     test('assigns a room, opens a player and reports it playing', () async {
       await wall.assign(
         0,
-        MultiviewCellSource(
-          source: _testSource,
-          roomId: 'a',
-          title: 'room a',
-          qualityLabel: '720p',
-        ),
+        MultiviewCellSource(source: _testSource, roomId: 'a', title: 'room a', qualityLabel: '720p'),
       );
 
       expect(wall.cells[0].status, MultiviewCellStatus.playing);
-      expect(
-        wall.cells[0].qualityLabel,
-        '720p',
-        reason: 'without a resolver the caller label is kept',
-      );
+      expect(wall.cells[0].qualityLabel, '720p', reason: 'without a resolver the caller label is kept');
       expect(host.handles.single.openedSource, 'test');
       expect(wall.snapshot.playingCount, 1);
     });
 
-    test(
-      'fills the wall from a list, capped by the configured maximum',
-      () async {
-        await wall.updateConfig(wall.config.copyWith(maxCells: 2));
+    test('fills the wall from a list, capped by the configured maximum', () async {
+      await wall.updateConfig(wall.config.copyWith(maxCells: 2));
 
-        await wall.assignAll(<MultiviewCellSource>[
-          _room('a'),
-          _room('b'),
-          _room('c'),
-        ]);
+      await wall.assignAll(<MultiviewCellSource>[_room('a'), _room('b'), _room('c')]);
 
-        expect(wall.snapshot.assignedCount, 2);
-        expect(wall.cells[2].isEmpty, isTrue);
-      },
-    );
+      expect(wall.snapshot.assignedCount, 2);
+      expect(wall.cells[2].isEmpty, isTrue);
+    });
 
     test('a cell for an offline room needs no player', () async {
       await wall.assign(1, _room('off', live: false));
 
       expect(wall.cells[1].status, MultiviewCellStatus.offline);
-      expect(
-        wall.playerIdOf(1),
-        isNull,
-        reason: 'nothing to open, so nothing to fail',
-      );
+      expect(wall.playerIdOf(1), isNull, reason: 'nothing to open, so nothing to fail');
     });
 
     test('clearing a cell gives its player back for reuse', () async {
@@ -185,11 +174,7 @@ void main() {
 
       await wall.clear(0);
 
-      expect(
-        host.releaseCount,
-        1,
-        reason: 'the pool keeps it warm for the next room',
-      );
+      expect(host.releaseCount, 1, reason: 'the pool keeps it warm for the next room');
       expect(wall.cells[0].isEmpty, isTrue);
       expect(wall.snapshot.playingCount, 0);
     });
@@ -200,39 +185,25 @@ void main() {
 
       await expectLater(wall.restartCell(0), throwsA(isA<StateError>()));
 
-      expect(
-        wall.cells[0].failure?.kind,
-        MultiviewCellFailureKind.startFailure,
-      );
+      expect(wall.cells[0].failure?.kind, MultiviewCellFailureKind.startFailure);
       expect(wall.cells[0].status, MultiviewCellStatus.failed);
     });
 
-    test(
-      'growing the layout adds empty cells and shrinking releases players',
-      () async {
-        await wall.assign(0, _room('a'));
+    test('growing the layout adds empty cells and shrinking releases players', () async {
+      await wall.assign(0, _room('a'));
 
-        await wall.updateConfig(
-          wall.config.copyWith(layout: MultiviewLayout.nine),
-        );
+      await wall.updateConfig(wall.config.copyWith(layout: MultiviewLayout.nine));
 
-        expect(wall.cells.length, MultiviewLayout.nine.capacity);
+      expect(wall.cells.length, MultiviewLayout.nine.capacity);
 
-        await wall.updateConfig(
-          wall.config.copyWith(layout: MultiviewLayout.single),
-        );
+      await wall.updateConfig(wall.config.copyWith(layout: MultiviewLayout.single));
 
-        expect(wall.cells.length, 1);
-        expect(host.releaseCount, greaterThanOrEqualTo(0));
-      },
-    );
+      expect(wall.cells.length, 1);
+      expect(host.releaseCount, greaterThanOrEqualTo(0));
+    });
 
     test('a playlist cell advances to its next room', () async {
-      final playlist = <MultiviewCellSource>[
-        _room('a'),
-        _room('b'),
-        _room('c'),
-      ];
+      final playlist = <MultiviewCellSource>[_room('a'), _room('b'), _room('c')];
       await wall.assign(0, playlist.first, playlist: playlist);
 
       expect(await wall.advanceCell(0), isTrue);
@@ -276,23 +247,20 @@ void main() {
       expect(host.handles[1].muted, isFalse);
     });
 
-    test(
-      'muting the wall keeps the audio focus so unmuting restores it',
-      () async {
-        await wall.assign(0, _room('a'));
-        await wall.assign(1, _room('b'));
-        await wall.setAudioFocus(1);
+    test('muting the wall keeps the audio focus so unmuting restores it', () async {
+      await wall.assign(0, _room('a'));
+      await wall.assign(1, _room('b'));
+      await wall.setAudioFocus(1);
 
-        await wall.muteAll();
+      await wall.muteAll();
 
-        expect(host.handles.every((handle) => handle.muted), isTrue);
+      expect(host.handles.every((handle) => handle.muted), isTrue);
 
-        await wall.muteAll(muted: false);
+      await wall.muteAll(muted: false);
 
-        expect(wall.audioIndex, 1);
-        expect(host.handles[1].muted, isFalse);
-      },
-    );
+      expect(wall.audioIndex, 1);
+      expect(host.handles[1].muted, isFalse);
+    });
 
     test('a background volume can be set instead of silence', () async {
       await wall.updateConfig(wall.config.copyWith(backgroundVolume: 0.2));
@@ -305,31 +273,24 @@ void main() {
       expect(host.handles[1].volume, 0.2);
     });
 
-    test(
-      'muting the wall silences cells that carry their own volume',
-      () async {
-        await wall.assign(0, _room('a'));
-        await wall.assign(1, _room('b'));
-        await wall.setAudioFocus(0);
-        // What a host does when a cell starts: restore the room's own volume.
-        await wall.setCellVolume(0, 0.8);
-        await wall.setCellVolume(1, 0.6);
+    test('muting the wall silences cells that carry their own volume', () async {
+      await wall.assign(0, _room('a'));
+      await wall.assign(1, _room('b'));
+      await wall.setAudioFocus(0);
+      // What a host does when a cell starts: restore the room's own volume.
+      await wall.setCellVolume(0, 0.8);
+      await wall.setCellVolume(1, 0.6);
 
-        await wall.muteAll();
+      await wall.muteAll();
 
-        expect(host.handles.every((handle) => handle.muted), isTrue);
-        expect(host.handles.every((handle) => handle.volume == 0.0), isTrue);
+      expect(host.handles.every((handle) => handle.muted), isTrue);
+      expect(host.handles.every((handle) => handle.volume == 0.0), isTrue);
 
-        await wall.muteAll(muted: false);
+      await wall.muteAll(muted: false);
 
-        expect(host.handles[0].muted, isFalse);
-        expect(
-          host.handles[0].volume,
-          0.8,
-          reason: 'the audible cell keeps its own volume',
-        );
-      },
-    );
+      expect(host.handles[0].muted, isFalse);
+      expect(host.handles[0].volume, 0.8, reason: 'the audible cell keeps its own volume');
+    });
 
     test('a per-cell volume does not keep a background cell audible', () async {
       await wall.assign(0, _room('a'));
@@ -339,17 +300,11 @@ void main() {
       await wall.setAudioFocus(0);
 
       expect(host.handles[0].muted, isFalse);
-      expect(
-        host.handles[1].muted,
-        isTrue,
-        reason: 'exclusive mode still owns the background cell',
-      );
+      expect(host.handles[1].muted, isTrue, reason: 'exclusive mode still owns the background cell');
     });
 
     test('un-muting restores the mode that was in force', () async {
-      await wall.updateConfig(
-        wall.config.copyWith(audioMode: MultiviewAudioMode.mixed),
-      );
+      await wall.updateConfig(wall.config.copyWith(audioMode: MultiviewAudioMode.mixed));
       await wall.assign(0, _room('a'));
       await wall.assign(1, _room('b'));
 
@@ -385,31 +340,18 @@ void main() {
       await wall.reportPressure(ResourcePressure.none);
 
       expect(wall.snapshot.budgetExceeded, isFalse);
-      expect(
-        wall.cells[1].isPlaying,
-        isFalse,
-        reason: 'cells are restarted deliberately, not by a pressure dip',
-      );
+      expect(wall.cells[1].isPlaying, isFalse, reason: 'cells are restarted deliberately, not by a pressure dip');
     });
 
     test('refuseNewCells rejects an assignment past the cap', () async {
-      await wall.updateConfig(
-        wall.config.copyWith(
-          maxCells: 1,
-          budgetPolicy: MultiviewBudgetPolicy.refuseNewCells,
-        ),
-      );
+      await wall.updateConfig(wall.config.copyWith(maxCells: 1, budgetPolicy: MultiviewBudgetPolicy.refuseNewCells));
       await wall.assign(0, _room('a'));
 
       await expectLater(wall.assign(1, _room('b')), throwsA(isA<StateError>()));
     });
 
     test('letPlatformDrop leaves the wall alone', () async {
-      await wall.updateConfig(
-        wall.config.copyWith(
-          budgetPolicy: MultiviewBudgetPolicy.letPlatformDrop,
-        ),
-      );
+      await wall.updateConfig(wall.config.copyWith(budgetPolicy: MultiviewBudgetPolicy.letPlatformDrop));
       await wall.assign(0, _room('a'));
       await wall.assign(1, _room('b'));
 
@@ -422,12 +364,7 @@ void main() {
 
   group('MultiviewController stall watchdog', () {
     test('a stalled cell is restarted within its budget', () async {
-      await wall.updateConfig(
-        wall.config.copyWith(
-          cellStallTimeout: const Duration(seconds: 5),
-          cellMaxRestarts: 2,
-        ),
-      );
+      await wall.updateConfig(wall.config.copyWith(cellStallTimeout: const Duration(seconds: 5), cellMaxRestarts: 2));
       await wall.assign(0, _room('a'));
       final firstPlayer = wall.playerIdOf(0);
 
@@ -436,54 +373,56 @@ void main() {
       await Future<void>.delayed(const Duration(seconds: 3));
 
       expect(wall.cells[0].restarts, greaterThanOrEqualTo(1));
-      expect(
-        wall.playerIdOf(0),
-        isNot(firstPlayer),
-        reason: 'a new player takes over the cell',
-      );
+      expect(wall.playerIdOf(0), isNot(firstPlayer), reason: 'a new player takes over the cell');
     });
 
-    test(
-      'a cell that keeps failing ends up failed instead of restarting forever',
-      () async {
-        await wall.updateConfig(
-          wall.config.copyWith(
-            cellStallTimeout: const Duration(seconds: 1),
-            cellMaxRestarts: 1,
-          ),
-        );
-        await wall.assign(0, _room('a'));
-        host.nextOpenError = StateError('gone');
+    test('a restart slower than the tick does not stack a second sweep', () async {
+      await wall.updateConfig(wall.config.copyWith(cellStallTimeout: const Duration(seconds: 5), cellMaxRestarts: 3));
+      await wall.assign(0, _room('a'));
 
-        now = now.add(const Duration(seconds: 5));
-        await Future<void>.delayed(const Duration(seconds: 3));
+      // The restart's engine work outlives several watchdog ticks. Without the
+      // sweep guard each later tick sees the same frozen cell, counts another
+      // restart and issues another one - the wall tears itself down.
+      host.nextOpenGate = Completer<void>();
+      now = now.add(const Duration(seconds: 10));
+      await Future<void>.delayed(const Duration(seconds: 7));
 
-        expect(wall.cells[0].status, MultiviewCellStatus.failed);
-        expect(
-          wall.cells[0].failure?.kind,
-          MultiviewCellFailureKind.stallFailure,
-        );
-      },
-    );
+      expect(wall.cells[0].restarts, 1, reason: 'one stall, one restart attempt');
+      expect(
+        wall.cells[0].status,
+        MultiviewCellStatus.starting,
+        reason: 'the cell is mid-restart, not failed: the budget was not eaten by phantom sweeps',
+      );
+
+      host.nextOpenGate!.complete();
+      host.nextOpenGate = null;
+      await Future<void>.delayed(const Duration(seconds: 3));
+
+      expect(wall.cells[0].restarts, 1);
+      expect(host.acquireCount, lessThanOrEqualTo(3), reason: 'no pile-up of replacement players');
+    });
+
+    test('a cell that keeps failing ends up failed instead of restarting forever', () async {
+      await wall.updateConfig(wall.config.copyWith(cellStallTimeout: const Duration(seconds: 1), cellMaxRestarts: 1));
+      await wall.assign(0, _room('a'));
+      host.nextOpenError = StateError('gone');
+
+      now = now.add(const Duration(seconds: 5));
+      await Future<void>.delayed(const Duration(seconds: 3));
+
+      expect(wall.cells[0].status, MultiviewCellStatus.failed);
+      expect(wall.cells[0].failure?.kind, MultiviewCellFailureKind.stallFailure);
+    });
 
     test('a failed cell with a playlist moves on', () async {
-      await wall.updateConfig(
-        wall.config.copyWith(
-          cellStallTimeout: const Duration(seconds: 1),
-          cellMaxRestarts: 0,
-        ),
-      );
+      await wall.updateConfig(wall.config.copyWith(cellStallTimeout: const Duration(seconds: 1), cellMaxRestarts: 0));
       final playlist = <MultiviewCellSource>[_room('a'), _room('b')];
       await wall.assign(0, playlist.first, playlist: playlist);
 
       now = now.add(const Duration(seconds: 5));
       await Future<void>.delayed(const Duration(seconds: 3));
 
-      expect(
-        wall.cells[0].source?.roomId,
-        'b',
-        reason: 'a monitor moves to the next live room',
-      );
+      expect(wall.cells[0].source?.roomId, 'b', reason: 'a monitor moves to the next live room');
     });
   });
 
@@ -491,9 +430,7 @@ void main() {
     test('rotates focus and audio to the next playing cell', () async {
       // An interval comfortably longer than the wait, so exactly one rotation
       // happens and the assertion cannot race a second one back to cell 0.
-      await wall.updateConfig(
-        wall.config.copyWith(patrolInterval: const Duration(milliseconds: 200)),
-      );
+      await wall.updateConfig(wall.config.copyWith(patrolInterval: const Duration(milliseconds: 200)));
       await wall.assign(0, _room('a'));
       await wall.assign(1, _room('b'));
       await wall.setVideoFocus(0);
@@ -502,18 +439,12 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 260));
 
       expect(wall.focusedIndex, isNot(0), reason: 'the patrol moved on');
-      expect(
-        wall.audioIndex,
-        wall.focusedIndex,
-        reason: 'a patrol listens to what it is showing',
-      );
+      expect(wall.audioIndex, wall.focusedIndex, reason: 'a patrol listens to what it is showing');
       wall.stopPatrol();
     });
 
     test('skips offline cells', () async {
-      await wall.updateConfig(
-        wall.config.copyWith(patrolInterval: const Duration(milliseconds: 40)),
-      );
+      await wall.updateConfig(wall.config.copyWith(patrolInterval: const Duration(milliseconds: 40)));
       await wall.assign(0, _room('a'));
       await wall.assign(1, _room('off', live: false));
       await wall.setVideoFocus(0);
@@ -521,11 +452,7 @@ void main() {
       wall.startPatrol();
       await Future<void>.delayed(const Duration(milliseconds: 60));
 
-      expect(
-        wall.focusedIndex,
-        0,
-        reason: 'only one playing cell is worth focusing',
-      );
+      expect(wall.focusedIndex, 0, reason: 'only one playing cell is worth focusing');
       wall.stopPatrol();
     });
   });
@@ -557,23 +484,18 @@ void main() {
       expect(wall.focusedDanmaku, same(second));
     });
 
-    test(
-      'a wall configured for danmaku everywhere keeps every cell fed',
-      () async {
-        await wall.updateConfig(
-          wall.config.copyWith(danmakuOnlyOnFocused: false),
-        );
-        await wall.assign(0, _room('a'));
-        await wall.assign(1, _room('b'));
-        final first = wall.ensureDanmakuFor(0);
-        final second = wall.ensureDanmakuFor(1);
+    test('a wall configured for danmaku everywhere keeps every cell fed', () async {
+      await wall.updateConfig(wall.config.copyWith(danmakuOnlyOnFocused: false));
+      await wall.assign(0, _room('a'));
+      await wall.assign(1, _room('b'));
+      final first = wall.ensureDanmakuFor(0);
+      final second = wall.ensureDanmakuFor(1);
 
-        await wall.setVideoFocus(0);
+      await wall.setVideoFocus(0);
 
-        expect(first.isEnabled, isTrue);
-        expect(second.isEnabled, isTrue);
-      },
-    );
+      expect(first.isEnabled, isTrue);
+      expect(second.isEnabled, isTrue);
+    });
   });
 
   group('MultiviewController handover', () {
@@ -581,18 +503,11 @@ void main() {
       await wall.assign(2, _room('c'));
       String? handed;
 
-      final ok = await wall.handOverCell(
-        2,
-        (playerId) async => handed = playerId,
-      );
+      final ok = await wall.handOverCell(2, (playerId) async => handed = playerId);
 
       expect(ok, isTrue);
       expect(handed, wall.playerIdOf(2));
-      expect(
-        wall.cells[2].isPlaying,
-        isTrue,
-        reason: 'the wall keeps the cell; the player moved surface',
-      );
+      expect(wall.cells[2].isPlaying, isTrue, reason: 'the wall keeps the cell; the player moved surface');
     });
 
     test('an empty cell has nothing to hand over', () async {
@@ -601,36 +516,31 @@ void main() {
   });
 
   group('MultiviewController quality policy', () {
-    test(
-      'the focused cell asks for the best quality, the others for the lowest',
-      () async {
-        final asked = <String, MultiviewQualityPreference>{};
-        final resolving = MultiviewController(
-          players: host,
-          clock: () => now,
-          qualityResolver: (source, preference) async {
-            asked[source.roomId ?? ''] = preference;
-            return source;
-          },
-        );
-        addTearDown(resolving.dispose);
+    test('the focused cell asks for the best quality, the others for the lowest', () async {
+      final asked = <String, MultiviewQualityPreference>{};
+      final resolving = MultiviewController(
+        players: host,
+        clock: () => now,
+        qualityResolver: (source, preference) async {
+          asked[source.roomId ?? ''] = preference;
+          return source;
+        },
+      );
+      addTearDown(resolving.dispose);
 
-        await resolving.assign(0, _room('a'));
-        await resolving.assign(1, _room('b'));
+      await resolving.assign(0, _room('a'));
+      await resolving.assign(1, _room('b'));
 
-        expect(asked['a'], MultiviewQualityPreference.best);
-        expect(asked['b'], MultiviewQualityPreference.lowest);
-      },
-    );
+      expect(asked['a'], MultiviewQualityPreference.best);
+      expect(asked['b'], MultiviewQualityPreference.lowest);
+    });
 
     test('a uniform wall asks for the best everywhere', () async {
       final asked = <String, MultiviewQualityPreference>{};
       final resolving = MultiviewController(
         players: host,
         clock: () => now,
-        config: MultiviewConfig.defaults.copyWith(
-          qualityPolicy: MultiviewQualityPolicy.uniform,
-        ),
+        config: MultiviewConfig.defaults.copyWith(qualityPolicy: MultiviewQualityPolicy.uniform),
         qualityResolver: (source, preference) async {
           asked[source.roomId ?? ''] = preference;
           return source;
@@ -646,20 +556,17 @@ void main() {
   });
 
   group('MultiviewController cell playerId', () {
-    test(
-      'stamps the acquired player id onto the cell and clears it on release',
-      () async {
-        await wall.assign(0, _room('a'));
+    test('stamps the acquired player id onto the cell and clears it on release', () async {
+      await wall.assign(0, _room('a'));
 
-        expect(wall.cells[0].status, MultiviewCellStatus.playing);
-        expect(wall.cells[0].playerId, isNotNull);
-        expect(wall.cells[0].playerId, 'player-1');
+      expect(wall.cells[0].status, MultiviewCellStatus.playing);
+      expect(wall.cells[0].playerId, isNotNull);
+      expect(wall.cells[0].playerId, 'player-1');
 
-        await wall.clear(0);
+      await wall.clear(0);
 
-        expect(wall.cells[0].playerId, isNull);
-      },
-    );
+      expect(wall.cells[0].playerId, isNull);
+    });
   });
 
   group('MultiviewController snapshot stream', () {
@@ -676,13 +583,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(wall.cells.first.status, MultiviewCellStatus.playing);
-      expect(
-        statuses,
-        containsAll([
-          MultiviewCellStatus.starting,
-          MultiviewCellStatus.playing,
-        ]),
-      );
+      expect(statuses, containsAll([MultiviewCellStatus.starting, MultiviewCellStatus.playing]));
       // The playing event must be the LAST one: a host that mirrors the wall
       // on this stream ends up with the playing cell, not a stuck resolving.
       expect(statuses.last, MultiviewCellStatus.playing);

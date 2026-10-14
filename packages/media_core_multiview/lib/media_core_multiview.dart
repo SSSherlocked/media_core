@@ -19,6 +19,8 @@
 /// one; it renders nothing, resolves nothing and owns no window.
 library;
 
+import 'package:media_core/media_core.dart' show PoolPlayerHost;
+
 export 'package:media_core_multiview/src/multiview_cell.dart';
 export 'package:media_core_multiview/src/multiview_config.dart';
 export 'package:media_core_multiview/src/multiview_controller.dart';

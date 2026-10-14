@@ -25,13 +25,11 @@ enum MultiviewQualityPreference {
 /// given and the quality policy is inert — which is stated rather than silently
 /// pretended.
 typedef MultiviewQualityResolver =
-    Future<MultiviewCellSource> Function(
-      MultiviewCellSource source,
-      MultiviewQualityPreference preference,
-    );
+    Future<MultiviewCellSource> Function(MultiviewCellSource source, MultiviewQualityPreference preference);
 
 /// Immutable view of the wall, for a host that renders from state.
 final class MultiviewSnapshot {
+  /// Creates a snapshot of the wall's current cells, layout and focus.
   const MultiviewSnapshot({
     required this.cells,
     required this.layout,
@@ -41,7 +39,10 @@ final class MultiviewSnapshot {
     required this.budgetExceeded,
   });
 
+  /// The cells, in grid order. A copy: safe to render without the wall mutating underneath.
   final List<MultiviewCell> cells;
+
+  /// The layout the wall is currently rendered at.
   final MultiviewLayout layout;
 
   /// Cell the viewer is looking at.
@@ -63,6 +64,5 @@ final class MultiviewSnapshot {
   int get assignedCount => cells.where((cell) => !cell.isEmpty).length;
 
   @override
-  String toString() =>
-      'MultiviewSnapshot(${layout.name}, $playingCount playing, focus $focusedIndex)';
+  String toString() => 'MultiviewSnapshot(${layout.name}, $playingCount playing, focus $focusedIndex)';
 }

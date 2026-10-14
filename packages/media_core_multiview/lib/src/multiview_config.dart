@@ -56,6 +56,7 @@ enum MultiviewBudgetPolicy {
 
 /// Tunables for the wall.
 final class MultiviewConfig {
+  /// Creates a wall configuration, using defaults for the unspecified tunables.
   const MultiviewConfig({
     this.layout = MultiviewLayout.quad,
     this.maxCells = 4,
@@ -148,13 +149,12 @@ final class MultiviewConfig {
   final bool autoResumeOnForeground;
 
   /// Whether [cellCount] fits the configured cap.
-  bool acceptsCells(int cellCount) =>
-      cellCount <= maxCells && layout.accepts(cellCount);
+  bool acceptsCells(int cellCount) => cellCount <= maxCells && layout.accepts(cellCount);
 
   /// The effective cap: the smaller of the layout and the host's limit.
-  int get effectiveMaxCells =>
-      layout.capacity < maxCells ? layout.capacity : maxCells;
+  int get effectiveMaxCells => layout.capacity < maxCells ? layout.capacity : maxCells;
 
+  /// A copy with the given tunables replaced; omitted ones keep their current value.
   MultiviewConfig copyWith({
     MultiviewLayout? layout,
     int? maxCells,
@@ -179,20 +179,17 @@ final class MultiviewConfig {
       audioMode: audioMode ?? this.audioMode,
       qualityPolicy: qualityPolicy ?? this.qualityPolicy,
       budgetPolicy: budgetPolicy ?? this.budgetPolicy,
-      degradeQualityWhenCrowded:
-          degradeQualityWhenCrowded ?? this.degradeQualityWhenCrowded,
+      degradeQualityWhenCrowded: degradeQualityWhenCrowded ?? this.degradeQualityWhenCrowded,
       danmakuOnlyOnFocused: danmakuOnlyOnFocused ?? this.danmakuOnlyOnFocused,
       patrolEnabled: patrolEnabled ?? this.patrolEnabled,
       patrolInterval: patrolInterval ?? this.patrolInterval,
-      patrolSkipsOfflineCells:
-          patrolSkipsOfflineCells ?? this.patrolSkipsOfflineCells,
+      patrolSkipsOfflineCells: patrolSkipsOfflineCells ?? this.patrolSkipsOfflineCells,
       cellStartTimeout: cellStartTimeout ?? this.cellStartTimeout,
       cellStallTimeout: cellStallTimeout ?? this.cellStallTimeout,
       cellMaxRestarts: cellMaxRestarts ?? this.cellMaxRestarts,
       focusedVolume: focusedVolume ?? this.focusedVolume,
       backgroundVolume: backgroundVolume ?? this.backgroundVolume,
-      autoResumeOnForeground:
-          autoResumeOnForeground ?? this.autoResumeOnForeground,
+      autoResumeOnForeground: autoResumeOnForeground ?? this.autoResumeOnForeground,
     );
   }
 }

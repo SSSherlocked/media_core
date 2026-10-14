@@ -20,8 +20,9 @@ extension _MultiviewControllerInternals on MultiviewController {
         'cell is offline; no player opened',
         fields: <String, Object?>{'index': cell.index, 'roomId': source.roomId},
       );
-      cell.status = MultiviewCellStatus.offline;
-      cell.qualityLabel = null;
+      cell
+        ..status = MultiviewCellStatus.offline
+        ..qualityLabel = null;
       await _releaseCell(cell.index);
       return;
     }
@@ -37,8 +38,9 @@ extension _MultiviewControllerInternals on MultiviewController {
       },
     );
 
-    cell.status = MultiviewCellStatus.starting;
-    cell.failure = null;
+    cell
+      ..status = MultiviewCellStatus.starting
+      ..failure = null;
     _emit();
 
     try {
@@ -46,15 +48,12 @@ extension _MultiviewControllerInternals on MultiviewController {
       final resolved = await _resolveForCell(cell);
       final handle = await _handleFor(cell.index);
       await handle.open(resolved.source, autoPlay: true);
-      cell.status = MultiviewCellStatus.playing;
-      cell.qualityLabel = resolved.qualityLabel;
+      cell
+        ..status = MultiviewCellStatus.playing
+        ..qualityLabel = resolved.qualityLabel;
       _log.info(
         'cell is playing',
-        fields: <String, Object?>{
-          'index': cell.index,
-          'roomId': resolved.roomId,
-          'quality': resolved.qualityLabel,
-        },
+        fields: <String, Object?>{'index': cell.index, 'roomId': resolved.roomId, 'quality': resolved.qualityLabel},
       );
       _watchProgress(cell.index, handle);
       await _applyAudio();
@@ -109,16 +108,14 @@ extension _MultiviewControllerInternals on MultiviewController {
     if (resolver == null) {
       return source;
     }
-    return resolver(source, _preferenceFor(cell.index));
+    return await resolver(source, _preferenceFor(cell.index));
   }
 
   MultiviewQualityPreference _preferenceFor(int index) {
     if (_config.qualityPolicy == MultiviewQualityPolicy.uniform) {
       return MultiviewQualityPreference.best;
     }
-    return index == _focusedIndex
-        ? MultiviewQualityPreference.best
-        : MultiviewQualityPreference.lowest;
+    return index == _focusedIndex ? MultiviewQualityPreference.best : MultiviewQualityPreference.lowest;
   }
 
   Future<PoolPlayerHandle> _handleFor(int index) async {
@@ -192,10 +189,9 @@ extension _MultiviewControllerInternals on MultiviewController {
         continue;
       }
 
-      final double desired = switch (_config.audioMode) {
+      final desired = switch (_config.audioMode) {
         MultiviewAudioMode.muted => 0.0,
-        MultiviewAudioMode.mixed =>
-          _cellVolumes[cell.index] ?? _config.focusedVolume,
+        MultiviewAudioMode.mixed => _cellVolumes[cell.index] ?? _config.focusedVolume,
         MultiviewAudioMode.exclusive =>
           cell.index == (_audioIndex ?? _focusedIndex)
               ? _cellVolumes[cell.index] ?? _config.focusedVolume
@@ -204,7 +200,7 @@ extension _MultiviewControllerInternals on MultiviewController {
 
       cell.hasAudioFocus = desired > 0;
       await handle.setVolume(desired);
-      await handle.setMute(desired <= 0);
+      await handle.setMute(muted: desired <= 0);
     }
   }
 
@@ -232,9 +228,8 @@ extension _MultiviewControllerInternals on MultiviewController {
         continue;
       }
       // One queue per cell, fed only while the cell is the one being read.
-      final shouldFeed =
-          !_config.danmakuOnlyOnFocused || cell.index == _focusedIndex;
-      session.setEnabled(shouldFeed);
+      final shouldFeed = !_config.danmakuOnlyOnFocused || cell.index == _focusedIndex;
+      session.setEnabled(enabled: shouldFeed);
     }
   }
 
@@ -243,10 +238,7 @@ extension _MultiviewControllerInternals on MultiviewController {
   // ---------------------------------------------------------------------------
 
   void _startTicking() {
-    _tick = Timer.periodic(
-      MultiviewController._tickInterval,
-      (_) => unawaited(_checkCells()),
-    );
+    _tick = Timer.periodic(MultiviewController._tickInterval, (_) => unawaited(_checkCells()));
   }
 
   /// Watches every playing cell for a stall.
@@ -255,10 +247,18 @@ extension _MultiviewControllerInternals on MultiviewController {
   /// the same idea per cell, with its own restart budget, because one dead
   /// stream must not take the wall down with it.
   Future<void> _checkCells() async {
-    if (_disposed) {
+    if (_disposed || _sweeping) {
       return;
     }
+    _sweeping = true;
+    try {
+      await _sweepCells();
+    } finally {
+      _sweeping = false;
+    }
+  }
 
+  Future<void> _sweepCells() async {
     final now = _clock();
     for (final cell in _cells) {
       if (!cell.isPlaying) {
@@ -319,18 +319,14 @@ extension _MultiviewControllerInternals on MultiviewController {
     cell.status = MultiviewCellStatus.recovering;
     _log.info(
       'restarting a stalled cell',
-      fields: <String, Object?>{
-        'index': cell.index,
-        'roomId': cell.source?.roomId,
-        'attempt': cell.restarts,
-      },
+      fields: <String, Object?>{'index': cell.index, 'roomId': cell.source?.roomId, 'attempt': cell.restarts},
     );
     _emit();
 
     await _releaseCell(cell.index);
     try {
       await _openCell(cell);
-    } catch (error) {
+    } on Object catch (error) {
       // The cell reports the stall as its reason and the failed restart as the
       // detail: an operator wants to know that this camera froze, not only that
       // the last attempt to bring it back did not work.
@@ -344,10 +340,7 @@ extension _MultiviewControllerInternals on MultiviewController {
       _log.error(
         'restart after a stall failed',
         error: error,
-        fields: <String, Object?>{
-          'index': cell.index,
-          'attempt': cell.restarts,
-        },
+        fields: <String, Object?>{'index': cell.index, 'attempt': cell.restarts},
       );
       _emit();
     }
@@ -400,9 +393,7 @@ extension _MultiviewControllerInternals on MultiviewController {
     _memory.report(
       _memoryKey,
       items: held,
-      bytes:
-          held * MemoryEstimates.videoStream720p +
-          danmaku * MemoryEstimates.danmakuMessage,
+      bytes: held * MemoryEstimates.videoStream720p + danmaku * MemoryEstimates.danmakuMessage,
       note: '$held cell(s), $playing playing, $danmaku danmaku queued',
     );
   }

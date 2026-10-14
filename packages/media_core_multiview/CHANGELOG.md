@@ -1,3 +1,9 @@
+## Unreleased
+
+- **Conformed to media_core's new signatures**: the cell volume and danmaku-feeding paths call `setMute(muted:)` and `setEnabled(enabled:)` by name, `FakeHandle`-style test doubles were updated to the new overrides, and the package's public members are documented.
+
+- The stall sweep and the patrol rotation now skip a tick while their previous run is still awaiting the engine. Both were `Timer.periodic` bodies with async work inside, so a restart slower than the interval let the next tick see the same frozen cell, count another restart against the budget and issue another one - a wall of cells could spend its whole restart allowance on a single stall.
+
 ## 0.1.0
 
 Initial release.
