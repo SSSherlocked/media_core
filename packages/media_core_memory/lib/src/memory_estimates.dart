@@ -1,3 +1,5 @@
+import 'package:media_core_memory/src/memory_account.dart' show MemoryAccount;
+
 /// Notional per-unit memory costs.
 ///
 /// ## These are estimates, and that is deliberate

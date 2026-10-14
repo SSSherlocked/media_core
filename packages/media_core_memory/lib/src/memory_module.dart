@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show immutable;
+
 /// Identity of a memory consumer.
 ///
 /// A value type rather than an enum, because the set of consumers is not closed:
@@ -8,6 +10,7 @@
 /// report is only as useful as the vocabulary in it, so a module that holds
 /// memory *should* use its constant rather than a fresh string: that is what
 /// makes "the wall is holding 2 GB" comparable across builds and bug reports.
+@immutable
 final class MemoryModule {
   /// Creates a memory module identity.
   const MemoryModule(this.name);

@@ -1,3 +1,4 @@
+import 'package:media_core_memory/src/memory_monitor.dart' show MemoryMonitor;
 import 'package:media_core_memory/src/memory_pressure.dart';
 
 /// Memory limits, expressed as thresholds on a byte total.
@@ -41,12 +42,12 @@ final class MemoryBudget {
     this.maxBytes = 512 * 1024 * 1024,
     this.warningThreshold = 0.70,
     this.criticalThreshold = 0.85,
-  }) : assert(maxBytes > 0),
-       assert(warningThreshold >= 0.0),
-       assert(warningThreshold <= 1.0),
-       assert(criticalThreshold >= 0.0),
-       assert(criticalThreshold <= 1.0),
-       assert(warningThreshold <= criticalThreshold);
+  }) : assert(maxBytes > 0, 'maxBytes must be positive'),
+       assert(warningThreshold >= 0.0, 'warningThreshold must be >= 0.0'),
+       assert(warningThreshold <= 1.0, 'warningThreshold must be <= 1.0'),
+       assert(criticalThreshold >= 0.0, 'criticalThreshold must be >= 0.0'),
+       assert(criticalThreshold <= 1.0, 'criticalThreshold must be <= 1.0'),
+       assert(warningThreshold <= criticalThreshold, 'warningThreshold must not exceed criticalThreshold');
 
   /// Whether budget enforcement is on.
   ///
@@ -98,14 +99,14 @@ final class MemoryBudget {
   /// Usage ratio, clamped to `0.0..1.0`.
   double usageRatio(int bytes) {
     if (maxBytes <= 0) {
-      return 1.0;
+      return 1;
     }
     final ratio = bytes / maxBytes;
     if (ratio <= 0.0) {
-      return 0.0;
+      return 0;
     }
     if (ratio >= 1.0) {
-      return 1.0;
+      return 1;
     }
     return ratio;
   }

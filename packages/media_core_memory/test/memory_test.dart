@@ -24,7 +24,7 @@ final class _FakeDevice {
 
 void main() {
   group('MemoryBudget', () {
-    const budget = MemoryBudget(maxBytes: 100, warningThreshold: 0.7, criticalThreshold: 0.9);
+    const budget = MemoryBudget(maxBytes: 100, criticalThreshold: 0.9);
 
     test('maps a total onto a pressure level at its thresholds', () {
       expect(budget.pressureFor(0), MemoryPressure.normal);
@@ -82,10 +82,9 @@ void main() {
 
   group('MemoryAccount', () {
     test('accumulates, tracks a peak and reports it', () {
-      final account = MemoryAccount(module: MemoryModule.pool);
-
-      account.add(bytes: 100, items: 1, note: 'warm player');
-      account.add(bytes: 300, items: 2);
+      final account = MemoryAccount(module: MemoryModule.pool)
+        ..add(bytes: 100, items: 1, note: 'warm player')
+        ..add(bytes: 300, items: 2);
       expect(account.bytes, 400);
       expect(account.items, 3);
       expect(account.peakBytes, 400);
@@ -99,29 +98,25 @@ void main() {
     });
 
     test('clamps at zero so a double release cannot corrupt other modules', () {
-      final account = MemoryAccount(module: MemoryModule.danmaku);
-
-      account.add(bytes: 10, items: 1);
-      account.remove(bytes: 50, items: 5);
+      final account = MemoryAccount(module: MemoryModule.danmaku)
+        ..add(bytes: 10, items: 1)
+        ..remove(bytes: 50, items: 5);
 
       expect(account.bytes, 0);
       expect(account.items, 0);
     });
 
     test('ignores negative deltas', () {
-      final account = MemoryAccount(module: MemoryModule.cache);
-
-      account.add(bytes: 10);
-      account.add(bytes: -5);
-      account.remove(bytes: -5);
+      final account = MemoryAccount(module: MemoryModule.cache)
+        ..add(bytes: 10)
+        ..add(bytes: -5)
+        ..remove(bytes: -5);
 
       expect(account.bytes, 10);
     });
 
     test('set reports a measured value outright', () {
-      final account = MemoryAccount(module: MemoryModule.download);
-
-      account.set(bytes: 1234, items: 2, note: 'partial file');
+      final account = MemoryAccount(module: MemoryModule.download)..set(bytes: 1234, items: 2, note: 'partial file');
 
       expect(account.bytes, 1234);
       expect(account.items, 2);
@@ -130,8 +125,9 @@ void main() {
 
     test('an untouched account is distinguishable from an emptied one', () {
       final untouched = MemoryAccount(module: MemoryModule.recording);
-      final emptied = MemoryAccount(module: MemoryModule.recording)..add(bytes: 5);
-      emptied.clear();
+      final emptied = MemoryAccount(module: MemoryModule.recording)
+        ..add(bytes: 5)
+        ..clear();
 
       expect(untouched.hasReported, isFalse);
       expect(emptied.hasReported, isTrue);
@@ -139,9 +135,7 @@ void main() {
     });
 
     test('a per-module limit refuses allocations that would break it', () {
-      final account = MemoryAccount(module: MemoryModule.cache, limitBytes: 100);
-
-      account.add(bytes: 80);
+      final account = MemoryAccount(module: MemoryModule.cache, limitBytes: 100)..add(bytes: 80);
 
       expect(account.canAllocate(20), isTrue);
       expect(account.canAllocate(21), isFalse);
@@ -160,11 +154,10 @@ void main() {
     });
 
     test('several contributors add up instead of overwriting each other', () {
-      final account = MemoryAccount(module: MemoryModule.danmaku);
-
-      account.report('cell-1', bytes: 100, items: 10, note: 'cell 1 queue');
-      account.report('cell-2', bytes: 200, items: 20, note: 'cell 2 queue');
-      account.report('cell-3', bytes: 300, items: 30, note: 'cell 3 queue');
+      final account = MemoryAccount(module: MemoryModule.danmaku)
+        ..report('cell-1', bytes: 100, items: 10, note: 'cell 1 queue')
+        ..report('cell-2', bytes: 200, items: 20, note: 'cell 2 queue')
+        ..report('cell-3', bytes: 300, items: 30, note: 'cell 3 queue');
 
       expect(account.bytes, 600, reason: 'nine wall cells must not collapse to the last one');
       expect(account.items, 60);
@@ -174,21 +167,19 @@ void main() {
     });
 
     test('a contributor that reports again replaces its own share', () {
-      final account = MemoryAccount(module: MemoryModule.pip);
-
-      account.report('session', bytes: 100, items: 1);
-      account.report('session', bytes: 40, items: 1);
+      final account = MemoryAccount(module: MemoryModule.pip)
+        ..report('session', bytes: 100, items: 1)
+        ..report('session', bytes: 40, items: 1);
 
       expect(account.bytes, 40);
       expect(account.contributorCount, 1);
     });
 
     test('withdraw drops one contributor and leaves the others alone', () {
-      final account = MemoryAccount(module: MemoryModule.playback);
-
-      account.report('feed', bytes: 10, items: 1);
-      account.report('list', bytes: 20, items: 2);
-      account.withdraw('feed');
+      final account = MemoryAccount(module: MemoryModule.playback)
+        ..report('feed', bytes: 10, items: 1)
+        ..report('list', bytes: 20, items: 2)
+        ..withdraw('feed');
 
       expect(account.bytes, 20);
       expect(account.items, 2);
@@ -199,10 +190,9 @@ void main() {
     });
 
     test('the implicit single-instance API and contributors share the total', () {
-      final account = MemoryAccount(module: MemoryModule.cache);
-
-      account.report('cache-a', bytes: 100, items: 1);
-      account.set(bytes: 50, items: 5);
+      final account = MemoryAccount(module: MemoryModule.cache)
+        ..report('cache-a', bytes: 100, items: 1)
+        ..set(bytes: 50, items: 5);
 
       expect(account.bytes, 150);
       expect(account.items, 6);
@@ -214,9 +204,9 @@ void main() {
     });
 
     test('snapshots carry the contributor count', () {
-      final account = MemoryAccount(module: MemoryModule.multiview);
-      account.report('wall-1', bytes: 10);
-      account.report('wall-2', bytes: 10);
+      final account = MemoryAccount(module: MemoryModule.multiview)
+        ..report('wall-1', bytes: 10)
+        ..report('wall-2', bytes: 10);
 
       expect(account.snapshot().contributorCount, 2);
       expect(account.snapshot().toString(), contains('from 2 instances'));
@@ -225,9 +215,8 @@ void main() {
     test('resetPeaks forgets the peak but keeps the current values', () {
       final account = MemoryAccount(module: MemoryModule.pool)
         ..add(bytes: 500, items: 5)
-        ..remove(bytes: 400, items: 4);
-
-      account.resetPeaks();
+        ..remove(bytes: 400, items: 4)
+        ..resetPeaks();
 
       expect(account.peakBytes, 100);
       expect(account.peakItems, 1);
@@ -256,8 +245,7 @@ void main() {
     test('creates an account on demand and returns the same one after', () {
       final registry = MemoryRegistry();
 
-      final first = registry.accountFor(MemoryModule.kernel);
-      first.add(bytes: 10);
+      final first = registry.accountFor(MemoryModule.kernel)..add(bytes: 10);
 
       expect(registry.accountFor(MemoryModule.kernel).bytes, 10);
       expect(registry.account(MemoryModule.kernel), same(first));
@@ -364,7 +352,7 @@ void main() {
       await registry.dispose();
 
       expect(() => registry.accountFor(MemoryModule.pool), throwsA(isA<StateError>()));
-      expect(() => registry.report(), throwsA(isA<StateError>()));
+      expect(registry.report, throwsA(isA<StateError>()));
     });
 
     test('logs a rising and a falling pressure transition', () {
@@ -375,9 +363,7 @@ void main() {
       addTearDown(MediaCoreLog.reset);
 
       final registry = MemoryRegistry(budget: const MemoryBudget(maxBytes: 100));
-      final pool = registry.accountFor(MemoryModule.pool);
-
-      pool.add(bytes: 75);
+      final pool = registry.accountFor(MemoryModule.pool)..add(bytes: 75);
       registry.report();
       expect(sink.contains('memory pressure rising'), isTrue, reason: '70..85 is critical-free but elevated');
 
@@ -446,9 +432,9 @@ void main() {
     });
 
     test('clear forgets the latest measurement and the history', () {
-      final monitor = MemoryMonitor()..recordValues(usedBytes: 1, availableBytes: 1);
-
-      monitor.clear();
+      final monitor = MemoryMonitor()
+        ..recordValues(usedBytes: 1, availableBytes: 1)
+        ..clear();
 
       expect(monitor.snapshot, isNull);
       expect(monitor.history, isEmpty);
@@ -464,10 +450,9 @@ void main() {
 
   group('MemoryManager', () {
     test('tracks a total directly when no registry is attached', () {
-      final manager = MemoryManager(budget: const MemoryBudget(maxBytes: 100));
-
-      manager.addUsage(60);
-      manager.addUsage(40);
+      final manager = MemoryManager(budget: const MemoryBudget(maxBytes: 100))
+        ..addUsage(60)
+        ..addUsage(40);
       expect(manager.memoryBytes, 100);
       expect(manager.pressure, MemoryPressure.emergency);
       expect(manager.requiresEmergencyCleanup, isTrue);
@@ -505,9 +490,7 @@ void main() {
     });
 
     test('snapshot exposes the current state', () {
-      final manager = MemoryManager(budget: const MemoryBudget(maxBytes: 100));
-
-      manager.updateUsage(80);
+      final manager = MemoryManager(budget: const MemoryBudget(maxBytes: 100))..updateUsage(80);
 
       expect(manager.snapshot().memoryBytes, 80);
       expect(manager.snapshot().pressure, MemoryPressure.elevated);
@@ -583,7 +566,7 @@ void main() {
 
       expect(MediaCoreMemory.totalBytes, 0);
       expect(identical(MediaCoreMemory.registry, old), isFalse);
-      expect(() => old.report(), throwsA(isA<StateError>()));
+      expect(old.report, throwsA(isA<StateError>()));
     });
   });
 

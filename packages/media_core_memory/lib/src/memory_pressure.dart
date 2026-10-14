@@ -1,6 +1,6 @@
 /// How close tracked memory is to its budget.
 ///
-/// The framework's resource layer has [ResourcePressure] (memory + bandwidth +
+/// The framework's resource layer has `ResourcePressure` (memory + bandwidth +
 /// thermal + decoders, resolved into one level). This is the memory-only view,
 /// and it exists because the memory subsystem must not depend on the resource
 /// subsystem that consumes it: the resource layer maps this onto its own type,

@@ -1,5 +1,6 @@
 import 'package:media_core_memory/src/memory_module.dart';
 import 'package:media_core_memory/src/memory_pressure.dart';
+import 'package:media_core_memory/src/memory_registry.dart' show MemoryRegistry;
 
 /// Key identifying one contributor inside an account.
 ///
@@ -169,9 +170,10 @@ final class MemoryAccount {
       return;
     }
     final contribution = _contribution(implicitContributor);
-    contribution.bytes += bytes;
-    contribution.items += items;
-    contribution.note = note ?? contribution.note;
+    contribution
+      ..bytes += bytes
+      ..items += items
+      ..note = note ?? contribution.note;
     _recordPeaks();
     _updates++;
   }
@@ -185,15 +187,16 @@ final class MemoryAccount {
       return;
     }
     final contribution = _contribution(implicitContributor);
-    contribution.bytes -= bytes;
-    contribution.items -= items;
+    contribution
+      ..bytes -= bytes
+      ..items -= items
+      ..note = note ?? contribution.note;
     if (contribution.bytes < 0) {
       contribution.bytes = 0;
     }
     if (contribution.items < 0) {
       contribution.items = 0;
     }
-    contribution.note = note ?? contribution.note;
     _updates++;
   }
 
@@ -270,7 +273,7 @@ final class MemoryAccount {
     );
   }
 
-  _Contribution _contribution(String key) => _contributions.putIfAbsent(key, () => _Contribution());
+  _Contribution _contribution(String key) => _contributions.putIfAbsent(key, _Contribution.new);
 
   void _recordPeaks() {
     final currentBytes = bytes;

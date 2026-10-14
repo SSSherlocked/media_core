@@ -72,7 +72,7 @@ final class MemoryReport {
   /// [module]'s share of the reported total, in `0.0..1.0`.
   double shareOf(MemoryModule module) {
     if (totalBytes <= 0) {
-      return 0.0;
+      return 0;
     }
     return (forModule(module)?.bytes ?? 0) / totalBytes;
   }

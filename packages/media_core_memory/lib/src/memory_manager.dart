@@ -1,4 +1,5 @@
 import 'package:media_core_memory/src/memory_budget.dart';
+import 'package:media_core_memory/src/memory_monitor.dart' show MemoryMonitor;
 import 'package:media_core_memory/src/memory_pressure.dart';
 import 'package:media_core_memory/src/memory_registry.dart';
 

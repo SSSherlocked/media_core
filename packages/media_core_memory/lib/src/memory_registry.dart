@@ -1,11 +1,11 @@
 import 'dart:async';
-
 import 'package:media_core_logging/media_core_logging.dart';
 
 import 'package:media_core_memory/src/memory_account.dart';
 import 'package:media_core_memory/src/memory_budget.dart';
 import 'package:media_core_memory/src/memory_estimates.dart';
 import 'package:media_core_memory/src/memory_module.dart';
+import 'package:media_core_memory/src/memory_monitor.dart' show MemoryMonitor;
 import 'package:media_core_memory/src/memory_pressure.dart';
 import 'package:media_core_memory/src/memory_report.dart';
 import 'package:media_core_memory/src/memory_snapshot.dart';

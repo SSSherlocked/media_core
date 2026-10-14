@@ -74,7 +74,7 @@ final class MemoryMonitor {
 
     try {
       return record(provider());
-    } catch (_) {
+    } on Object catch (_) {
       return null;
     }
   }
