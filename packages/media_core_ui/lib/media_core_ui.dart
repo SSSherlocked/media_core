@@ -30,6 +30,10 @@
 /// a single style set can be dropped into a layout the host already owns.
 library;
 
+import 'package:media_core/media_core.dart' show PlayerHandle;
+import 'package:media_core_ui/media_core_ui.dart'
+    show MediaCorePlayerView, PlayerControlsController, PlayerControlsTheme;
+
 // ============================================================================
 // Public exports
 // ============================================================================

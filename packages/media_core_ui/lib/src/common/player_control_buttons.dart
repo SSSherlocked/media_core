@@ -143,7 +143,7 @@ final class _PlayerIconButtonState extends State<PlayerIconButton> {
     }
 
     if (widget.tooltip != null) {
-      button = Tooltip(message: widget.tooltip!, child: button);
+      button = Tooltip(message: widget.tooltip, child: button);
     }
 
     return button;
@@ -196,7 +196,7 @@ final class _PlayerIconButtonState extends State<PlayerIconButton> {
           decoration: BoxDecoration(
             color: _enabled && (_hovering || _pressed) && highlight != null ? highlight : const Color(0x00000000),
             borderRadius: BorderRadius.circular(_theme.controlButtonRadius),
-            border: Border.all(color: _theme.border ?? const Color(0x33FFFFFF), width: 1),
+            border: Border.all(color: _theme.border ?? const Color(0x33FFFFFF)),
           ),
           child: glyph,
         );
@@ -370,7 +370,10 @@ final class PlayerControlsPanel extends StatelessWidget {
     if (blur != null) {
       panel = ClipRRect(
         borderRadius: BorderRadius.circular(corner),
-        child: BackdropFilter(filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur), child: panel),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+          child: panel,
+        ),
       );
     }
 

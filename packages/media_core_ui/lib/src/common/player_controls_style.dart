@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform, kIsWeb;
+import 'package:media_core_ui/src/common/player_control_icons.dart' show PlayerControlIcons;
 
 /// Visual language of a control set.
 ///

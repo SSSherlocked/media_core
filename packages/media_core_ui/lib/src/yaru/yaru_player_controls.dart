@@ -75,7 +75,8 @@ final class YaruPlayerControls extends StatelessWidget {
             padding: padding,
             child: Column(
               children: <Widget>[
-                if (showHeaderBar) _HeaderBar(controller: controller, theme: theme, showTitle: showTitle, showMenu: showMenu),
+                if (showHeaderBar)
+                  _HeaderBar(controller: controller, theme: theme, showTitle: showTitle, showMenu: showMenu),
                 const Spacer(),
                 _TransportBar(controller: controller, theme: theme, showVolumeSlider: showVolumeSlider),
               ],
@@ -120,10 +121,20 @@ final class _HeaderBar extends StatelessWidget {
           else
             const Spacer(),
           if (controller.canCaptureScreenshot)
-            PlayerIconButton(icon: icons.screenshot, theme: theme, tooltip: 'Save frame', onPressed: controller.captureScreenshot),
+            PlayerIconButton(
+              icon: icons.screenshot,
+              theme: theme,
+              tooltip: 'Save frame',
+              onPressed: controller.captureScreenshot,
+            ),
           if (showMenu) FluentOverflowMenu(controller: controller, theme: theme),
           if (controller.actions.canEnterPip)
-            PlayerIconButton(icon: icons.pictureInPicture, theme: theme, tooltip: 'Picture in picture', onPressed: controller.enterPip),
+            PlayerIconButton(
+              icon: icons.pictureInPicture,
+              theme: theme,
+              tooltip: 'Picture in picture',
+              onPressed: controller.enterPip,
+            ),
           PlayerIconButton(
             icon: icons.fullscreenFor(active: controller.actions.canExitFullscreen),
             theme: theme,
@@ -163,7 +174,10 @@ final class _TransportBar extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text('LIVE', style: theme.timeTextStyle.copyWith(color: theme.accent, fontWeight: FontWeight.w700)),
+                child: Text(
+                  'LIVE',
+                  style: theme.timeTextStyle.copyWith(color: theme.accent, fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           Row(
@@ -233,7 +247,7 @@ final class _TransportBar extends StatelessWidget {
                 tooltip: 'Playback speed',
                 onPressed: controller.cycleRate,
               ),
-              Text('${controller.rate.toString()}x', style: theme.timeTextStyle),
+              Text('${controller.rate}x', style: theme.timeTextStyle),
             ],
           ),
         ],

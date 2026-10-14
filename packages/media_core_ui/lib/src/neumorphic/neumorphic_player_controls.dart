@@ -235,7 +235,7 @@ final class _BottomPlate extends StatelessWidget {
                   tooltip: 'Playback speed',
                   onPressed: controller.cycleRate,
                 ),
-                Text('${controller.rate.toString()}x', style: theme.timeTextStyle),
+                Text('${controller.rate}x', style: theme.timeTextStyle),
                 const SizedBox(width: 8),
                 if (controller.canCaptureScreenshot)
                   PlayerIconButton(

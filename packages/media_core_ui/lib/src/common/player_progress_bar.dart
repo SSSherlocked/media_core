@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:media_core/media_core.dart';
 
@@ -197,7 +199,7 @@ final class _PlayerProgressBarState extends State<PlayerProgressBar> {
         onTapDown: (details) {
           // A tap is a complete gesture: seeking right away is what the viewer
           // asked for.
-          widget.controller.seekTo(_positionFor(_fractionFor(details.localPosition, _barWidth)));
+          unawaited(widget.controller.seekTo(_positionFor(_fractionFor(details.localPosition, _barWidth))));
         },
         onHorizontalDragStart: (details) {
           final fraction = _fractionFor(details.localPosition, _barWidth);
@@ -243,7 +245,7 @@ final class _PlayerProgressBarState extends State<PlayerProgressBar> {
     widget.onPreview?.call(null);
 
     // One seek for the whole gesture, at the position the viewer let go of.
-    widget.controller.seekTo(_positionFor(fraction));
+    unawaited(widget.controller.seekTo(_positionFor(fraction)));
   }
 }
 
@@ -287,12 +289,7 @@ final class _ProgressPainter extends CustomPainter {
     for (final buffered in bufferedFractions) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
-          Rect.fromLTWH(
-            size.width * buffered.start,
-            track.top,
-            size.width * buffered.extent,
-            trackHeight,
-          ),
+          Rect.fromLTWH(size.width * buffered.start, track.top, size.width * buffered.extent, trackHeight),
           radius,
         ),
         Paint()..color = theme.progressBuffered,
@@ -318,11 +315,7 @@ final class _ProgressPainter extends CustomPainter {
     // is always full size.
     final scale = thumb.isDot ? (revealThumb ? 1.0 : 0.55) : 1.0;
 
-    canvas.drawCircle(
-      Offset(size.width * played, centerY),
-      thumbRadius * scale,
-      Paint()..color = theme.progressThumb,
-    );
+    canvas.drawCircle(Offset(size.width * played, centerY), thumbRadius * scale, Paint()..color = theme.progressThumb);
   }
 
   @override
@@ -351,6 +344,7 @@ final class _ProgressPainter extends CustomPainter {
 }
 
 /// A start/end pair on the 0..1 track, used for the buffered fill.
+@immutable
 final class _Fraction {
   const _Fraction(this.start, this.end);
 

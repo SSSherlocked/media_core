@@ -67,7 +67,7 @@ final class PlayerControlsController extends ChangeNotifier {
   /// Host callbacks (fullscreen, PiP, floating, screenshot handling).
   PlayerControlActions actions;
 
-  /// Whether the controls hide themselves after [hideDelay].
+  /// Whether the controls hide themselves after `hideDelay`.
   ///
   /// A host that renders its own chrome — a fullscreen desktop layout, a
   /// kiosk — turns this off and drives [setControlsVisible] instead.
@@ -276,7 +276,11 @@ final class PlayerControlsController extends ChangeNotifier {
       return;
     }
 
+    // Cancel and clear: [_scheduleHide] treats a non-null timer as a countdown
+    // already running, so leaving a cancelled one behind would stop the chrome
+    // from ever arming an auto-hide again after this call.
     _hideTimer?.cancel();
+    _hideTimer = null;
 
     if (!_controlsVisible) {
       return;
@@ -303,7 +307,7 @@ final class PlayerControlsController extends ChangeNotifier {
   /// Forces the controls to a state, ignoring the idle policy.
   ///
   /// For hosts that own the chrome (fullscreen layouts, kiosk screens).
-  void setControlsVisible(bool visible) {
+  void setControlsVisible({required bool visible}) {
     if (visible) {
       revealControls();
 
@@ -313,20 +317,52 @@ final class PlayerControlsController extends ChangeNotifier {
     hideControls(force: true);
   }
 
-  void _scheduleHide() {
-    _hideTimer?.cancel();
+  /// Whether activity was seen while the current countdown was running.
+  ///
+  /// Hover fires on every pointer move - a hundred or more times a second on a
+  /// desktop - and each one used to cancel the countdown and build a new
+  /// `Timer`. The contract a viewer expects is only "the chrome stays up while
+  /// I am doing something, and falls after a quiet stretch", so the running
+  /// countdown now notes the activity and re-arms once when it expires: same
+  /// behaviour, one timer per window instead of one per event.
+  bool _activityWhileCounting = false;
 
+  void _scheduleHide() {
     if (!_autoHide || !_controlsVisible || !isPlaying) {
+      _hideTimer?.cancel();
+      _hideTimer = null;
+
       return;
     }
 
-    _hideTimer = Timer(_hideDelay ?? theme.hideDelay, () {
-      if (!_disposed && _controlsVisible && isPlaying) {
-        _controlsVisible = false;
+    if (_hideTimer != null) {
+      _activityWhileCounting = true;
 
-        notifyListeners();
-      }
-    });
+      return;
+    }
+
+    _activityWhileCounting = false;
+    _hideTimer = Timer(_hideDelay ?? theme.hideDelay, _onHideDeadline);
+  }
+
+  void _onHideDeadline() {
+    _hideTimer = null;
+
+    if (_disposed || !_controlsVisible || !isPlaying) {
+      return;
+    }
+
+    if (_activityWhileCounting) {
+      // The pointer was still moving: give the viewer another full window
+      // rather than hiding under their hand.
+      _scheduleHide();
+
+      return;
+    }
+
+    _controlsVisible = false;
+
+    notifyListeners();
   }
 
   // ---------------------------------------------------------------------------
@@ -384,7 +420,7 @@ final class PlayerControlsController extends ChangeNotifier {
     final clamped = value.clamp(0.0, 1.0);
 
     if (isMuted && clamped > 0) {
-      return handle.setMute(false).then((_) => handle.setVolume(clamped));
+      return handle.setMute(muted: false).then((_) => handle.setVolume(clamped));
     }
 
     return handle.setVolume(clamped);
@@ -394,14 +430,14 @@ final class PlayerControlsController extends ChangeNotifier {
   Future<void> toggleMute() {
     revealControls();
 
-    return handle.setMute(!isMuted);
+    return handle.setMute(muted: !isMuted);
   }
 
   /// Turns looping on or off.
   Future<void> toggleLoop() {
     revealControls();
 
-    return handle.setLoop(!isLooping);
+    return handle.setLoop(loop: !isLooping);
   }
 
   /// Moves to the next rate in [rates], wrapping around.
@@ -428,10 +464,10 @@ final class PlayerControlsController extends ChangeNotifier {
   }
 
   /// Restricts playback to the audio track.
-  Future<void> setAudioOnly(bool value) {
+  Future<void> setAudioOnly({required bool value}) {
     revealControls();
 
-    return handle.setAudioOnly(value);
+    return handle.setAudioOnly(audioOnly: value);
   }
 
   /// Whether playback is restricted to the audio track.
@@ -484,7 +520,7 @@ final class PlayerControlsController extends ChangeNotifier {
   }
 
   /// Playback rates a rate button cycles through.
-  static const List<double> defaultRates = <double>[0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+  static const List<double> defaultRates = <double>[0.5, 0.75, 1, 1.25, 1.5, 2];
 
   // ---------------------------------------------------------------------------
   // Internals
@@ -524,11 +560,13 @@ final class PlayerControlsController extends ChangeNotifier {
       return;
     }
 
-    // Position-only ticks keep the visibility countdown alive while the
-    // controls are shown, but they do not rebuild the bars.
-    if (_controlsVisible && state.isPlaying) {
-      _scheduleHide();
-    }
+    // Position-only ticks do not touch the countdown. The countdown measures how
+    // long the viewer has been idle, and the engine reports position many times
+    // a second while anything plays: refreshing on ticks meant the desktop
+    // chrome could never fade during playback - each tick cancelled the timer
+    // and started a new one, so it expired only when the stream stalled.
+    // Ticks also must not rebuild the bars; that is what playbackListenable is
+    // for.
   }
 
   void _onSourceChanged() {
@@ -556,9 +594,9 @@ final class PlayerControlsController extends ChangeNotifier {
     _hideTimer?.cancel();
     _hideTimer = null;
 
-    _playbackSubscription?.cancel();
+    unawaited(_playbackSubscription?.cancel());
     _playbackSubscription = null;
-    _sourceSubscription?.cancel();
+    unawaited(_sourceSubscription?.cancel());
     _sourceSubscription = null;
 
     _playback.dispose();

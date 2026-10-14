@@ -158,7 +158,11 @@ final class FluentOverflowMenu extends StatelessWidget {
           const Divider(height: 1, color: Color(0x33FFFFFF)),
         ],
         MenuItemButton(
-          leadingIcon: Icon(icons.loop, size: theme.compactIconSize, color: controller.isLooping ? theme.accent : theme.foreground),
+          leadingIcon: Icon(
+            icons.loop,
+            size: theme.compactIconSize,
+            color: controller.isLooping ? theme.accent : theme.foreground,
+          ),
           onPressed: controller.toggleLoop,
           child: Text('Loop', style: theme.timeTextStyle),
         ),
@@ -168,7 +172,7 @@ final class FluentOverflowMenu extends StatelessWidget {
             size: theme.compactIconSize,
             color: controller.isAudioOnly ? theme.accent : theme.foreground,
           ),
-          onPressed: () => controller.setAudioOnly(!controller.isAudioOnly),
+          onPressed: () => controller.setAudioOnly(value: !controller.isAudioOnly),
           child: Text('Audio only', style: theme.timeTextStyle),
         ),
         if (controller.canCaptureScreenshot)
@@ -282,7 +286,7 @@ final class _TransportRow extends StatelessWidget {
               ),
               const SizedBox(width: 6),
             ],
-            Text('${controller.rate.toString()}x', style: theme.timeTextStyle),
+            Text('${controller.rate}x', style: theme.timeTextStyle),
             const SizedBox(width: 10),
             if (controller.actions.canEnterPip)
               PlayerIconButton(

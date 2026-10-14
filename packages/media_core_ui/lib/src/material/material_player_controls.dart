@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:media_core_ui/src/common/player_control_buttons.dart';
@@ -70,8 +72,7 @@ final class MaterialPlayerControls extends StatelessWidget {
   /// Padding around the whole set.
   final EdgeInsets padding;
 
-  PlayerControlsTheme get _theme =>
-      theme ?? const PlayerControlsTheme.material();
+  PlayerControlsTheme get _theme => theme ?? const PlayerControlsTheme.material();
 
   @override
   Widget build(BuildContext context) {
@@ -89,12 +90,7 @@ final class MaterialPlayerControls extends StatelessWidget {
             child: Column(
               children: <Widget>[
                 if (showTopBar)
-                  _TopBar(
-                    controller: controller,
-                    theme: theme,
-                    showTitle: showTitle,
-                    showMenu: showOverflowMenu,
-                  ),
+                  _TopBar(controller: controller, theme: theme, showTitle: showTitle, showMenu: showOverflowMenu),
                 Expanded(
                   child: _CenterControls(
                     controller: controller,
@@ -114,12 +110,7 @@ final class MaterialPlayerControls extends StatelessWidget {
 }
 
 final class _TopBar extends StatelessWidget {
-  const _TopBar({
-    required this.controller,
-    required this.theme,
-    required this.showTitle,
-    required this.showMenu,
-  });
+  const _TopBar({required this.controller, required this.theme, required this.showTitle, required this.showMenu});
 
   final PlayerControlsController controller;
   final PlayerControlsTheme theme;
@@ -139,12 +130,7 @@ final class _TopBar extends StatelessWidget {
           children: <Widget>[
             if (showTitle && title != null)
               Expanded(
-                child: Text(
-                  title,
-                  style: theme.titleTextStyle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                child: Text(title, style: theme.titleTextStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
               )
             else
               const Spacer(),
@@ -187,11 +173,11 @@ final class _OverflowMenu extends StatelessWidget {
       onSelected: (value) {
         switch (value) {
           case 'rate':
-            controller.cycleRate();
+            unawaited(controller.cycleRate());
           case 'loop':
-            controller.toggleLoop();
+            unawaited(controller.toggleLoop());
           case 'floating':
-            controller.enterFloating();
+            unawaited(controller.enterFloating());
         }
       },
       itemBuilder: (context) => <PopupMenuEntry<String>>[
@@ -204,10 +190,7 @@ final class _OverflowMenu extends StatelessWidget {
                 const SizedBox(width: 12),
                 const Text('Playback speed'),
                 const Spacer(),
-                Text(
-                  '${controller.rate.toStringAsFixed(2)}x',
-                  style: const TextStyle(color: Colors.black54),
-                ),
+                Text('${controller.rate.toStringAsFixed(2)}x', style: const TextStyle(color: Colors.black54)),
               ],
             ),
           ),
@@ -322,11 +305,7 @@ final class _BottomBar extends StatelessWidget {
                   // YouTube-Android order: elapsed, slider, duration, then the
                   // glyphs at the end of the same row.
                   Expanded(
-                    child: PlayerTimeline(
-                      controller: controller,
-                      theme: theme,
-                      barHeight: 26,
-                    ),
+                    child: PlayerTimeline(controller: controller, theme: theme, barHeight: 26),
                   ),
                   PlayerIconButton(
                     icon: icons.volumeFor(muted: controller.isMuted),
@@ -335,16 +314,12 @@ final class _BottomBar extends StatelessWidget {
                     onPressed: controller.toggleMute,
                   ),
                   PlayerIconButton(
-                    icon: icons.fullscreenFor(
-                      active: controller.actions.canExitFullscreen,
-                    ),
+                    icon: icons.fullscreenFor(active: controller.actions.canExitFullscreen),
                     theme: theme,
                     tooltip: 'Fullscreen',
                     onPressed: controller.actions.canExitFullscreen
                         ? controller.exitFullscreen
-                        : (controller.actions.canEnterFullscreen
-                              ? controller.enterFullscreen
-                              : null),
+                        : (controller.actions.canEnterFullscreen ? controller.enterFullscreen : null),
                   ),
                 ],
               )
@@ -352,21 +327,11 @@ final class _BottomBar extends StatelessWidget {
                 children: <Widget>[
                   if (controller.isLive)
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.accent,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: theme.accent, borderRadius: BorderRadius.circular(3)),
                       child: const Text(
                         'LIVE',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFFFFFFFF),
-                        ),
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFFFFFFF)),
                       ),
                     ),
                   const Spacer(),

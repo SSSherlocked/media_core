@@ -1,7 +1,7 @@
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform;
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/widgets.dart';
 import 'package:media_core/media_core.dart';
+import 'package:media_core_ui/media_core_ui.dart' show PlayerControlsStyle;
 
 import 'package:media_core_ui/src/common/player_control_actions.dart';
 import 'package:media_core_ui/src/common/player_controls_controller.dart';
@@ -39,9 +39,7 @@ enum PlayerDoubleTapAction {
   /// memory from every photo app; pointer languages toggle the window, which is
   /// what a double click means on a desktop.
   static PlayerDoubleTapAction forStyle(PlayerControlsStyle style) {
-    return style.isTouch
-        ? PlayerDoubleTapAction.zoom
-        : PlayerDoubleTapAction.fullscreen;
+    return style.isTouch ? PlayerDoubleTapAction.zoom : PlayerDoubleTapAction.fullscreen;
   }
 }
 
@@ -101,7 +99,7 @@ final class MediaCorePlayerView extends StatefulWidget {
   /// Control set to force; null picks the one the platform expects.
   ///
   /// Forcing a style is a real use case, not a workaround: a host that wants
-  /// its iOS look on Android passes [PlayerControlsStyle.ios] and gets it.
+  /// its iOS look on Android passes [PlayerControlsStyle.cupertino] and gets it.
   final PlayerControlsStyle? style;
 
   /// Picks the style per platform when [style] is null.
@@ -170,11 +168,7 @@ final class MediaCorePlayerView extends StatefulWidget {
   final Duration skipStep;
 
   /// Replaces the style's own bar.
-  final Widget Function(
-    BuildContext context,
-    PlayerControlsController controller,
-  )?
-  controls;
+  final Widget Function(BuildContext context, PlayerControlsController controller)? controls;
 
   /// Controller to use; the view creates and owns one when omitted.
   final PlayerControlsController? controller;
@@ -220,13 +214,11 @@ final class _MediaCorePlayerViewState extends State<MediaCorePlayerView> {
       return forced;
     }
 
-    return widget.styleResolver?.call(defaultTargetPlatform) ??
-        PlayerControlsStyle.forPlatform(defaultTargetPlatform);
+    return widget.styleResolver?.call(defaultTargetPlatform) ?? PlayerControlsStyle.forPlatform(defaultTargetPlatform);
   }
 
   /// Theme in use: the host's override, or the style's convention.
-  PlayerControlsTheme get _theme =>
-      widget.theme ?? PlayerControlsTheme.of(_style);
+  PlayerControlsTheme get _theme => widget.theme ?? PlayerControlsTheme.of(_style);
 
   /// Double tap behaviour, defaulted per style.
   PlayerDoubleTapAction get _doubleTapAction {
@@ -316,9 +308,7 @@ final class _MediaCorePlayerViewState extends State<MediaCorePlayerView> {
       // Soft UI is invisible without a page that shares its surface color, so
       // the composed view seeds the background from the theme; every other
       // language keeps the neutral black.
-      backgroundColor:
-          widget.backgroundColor ??
-          (style == PlayerControlsStyle.neumorphic ? _theme.surface : null),
+      backgroundColor: widget.backgroundColor ?? (style == PlayerControlsStyle.neumorphic ? _theme.surface : null),
       captureBoundary: widget.captureBoundary,
       zoom: _zoom,
       enablePinchZoom: widget.pinchToZoom,
@@ -332,19 +322,12 @@ final class _MediaCorePlayerViewState extends State<MediaCorePlayerView> {
       keyboardShortcuts: widget.keyboardShortcuts,
       shortcuts: widget.shortcuts,
       onTapVideo: widget.onTapVideo,
-      onDoubleTap: doubleTap == PlayerDoubleTapAction.fullscreen
-          ? () => controller.enterFullscreen()
-          : null,
-      controls: widget.showControls
-          ? _buildControls(controller, style)
-          : const SizedBox.shrink(),
+      onDoubleTap: doubleTap == PlayerDoubleTapAction.fullscreen ? controller.enterFullscreen : null,
+      controls: widget.showControls ? _buildControls(controller, style) : const SizedBox.shrink(),
     );
   }
 
-  Widget _buildControls(
-    PlayerControlsController controller,
-    PlayerControlsStyle style,
-  ) {
+  Widget _buildControls(PlayerControlsController controller, PlayerControlsStyle style) {
     final custom = widget.controls;
 
     if (custom != null) {
@@ -362,26 +345,11 @@ final class _MediaCorePlayerViewState extends State<MediaCorePlayerView> {
         showSkipButtons: widget.showSkipButtons,
         skipStep: widget.skipStep,
       ),
-      PlayerControlsStyle.cupertino => CupertinoPlayerControls(
-        controller: controller,
-        theme: theme,
-      ),
-      PlayerControlsStyle.fluent => FluentPlayerControls(
-        controller: controller,
-        theme: theme,
-      ),
-      PlayerControlsStyle.macos => MacosPlayerControls(
-        controller: controller,
-        theme: theme,
-      ),
-      PlayerControlsStyle.yaru => YaruPlayerControls(
-        controller: controller,
-        theme: theme,
-      ),
-      PlayerControlsStyle.neumorphic => NeumorphicPlayerControls(
-        controller: controller,
-        theme: theme,
-      ),
+      PlayerControlsStyle.cupertino => CupertinoPlayerControls(controller: controller, theme: theme),
+      PlayerControlsStyle.fluent => FluentPlayerControls(controller: controller, theme: theme),
+      PlayerControlsStyle.macos => MacosPlayerControls(controller: controller, theme: theme),
+      PlayerControlsStyle.yaru => YaruPlayerControls(controller: controller, theme: theme),
+      PlayerControlsStyle.neumorphic => NeumorphicPlayerControls(controller: controller, theme: theme),
     };
   }
 }

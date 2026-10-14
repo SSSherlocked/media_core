@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-
+import 'package:media_core/media_core.dart' show MediaPlayerView;
 import 'package:media_core_ui/src/common/player_controls_controller.dart';
 import 'package:media_core_ui/src/common/player_controls_style.dart';
 
@@ -23,7 +23,11 @@ import 'package:media_core_ui/src/common/player_controls_style.dart';
 /// | escape | leave fullscreen |
 final class PlayerShortcuts {
   /// Creates a mapping.
-  const PlayerShortcuts({this.seekStep = const Duration(seconds: 5), this.largeSeekStep = const Duration(seconds: 10), this.volumeStep = 0.05});
+  const PlayerShortcuts({
+    this.seekStep = const Duration(seconds: 5),
+    this.largeSeekStep = const Duration(seconds: 10),
+    this.volumeStep = 0.05,
+  });
 
   /// Step of `left`/`right`.
   final Duration seekStep;
@@ -166,20 +170,13 @@ final class _PlayerControlsStageState extends State<PlayerControlsStage> {
         );
 
         if (_style.revealsOnHover) {
-          content = MouseRegion(
-            onHover: (_) => widget.controller.revealControls(),
-            child: content,
-          );
+          content = MouseRegion(onHover: (_) => widget.controller.revealControls(), child: content);
         }
 
         if (widget.keyboardShortcuts) {
           content = CallbackShortcuts(
             bindings: widget.shortcuts.bindings(widget.controller),
-            child: Focus(
-              focusNode: _focusNode,
-              autofocus: true,
-              child: content,
-            ),
+            child: Focus(focusNode: _focusNode, autofocus: true, child: content),
           );
         }
 

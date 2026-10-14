@@ -121,17 +121,13 @@ final class PlayerControlActions {
 /// button is pressed.
 final class KernelPlayerControlActions extends PlayerControlActions {
   /// Creates actions for [playerId] on [kernel].
-  KernelPlayerControlActions({
-    required this.kernel,
-    required this.playerId,
-    Future<void> Function(PlayerScreenshot screenshot)? onScreenshot,
-  }) : super(
-         enterFullscreen: () => kernel.enterFullscreen(playerId),
-         exitFullscreen: () => kernel.exitFullscreen(playerId),
-         enterPip: () => kernel.enterPip(playerId),
-         enterFloating: () => kernel.enterFloating(playerId),
-         onScreenshot: onScreenshot,
-       );
+  KernelPlayerControlActions({required this.kernel, required this.playerId, super.onScreenshot})
+    : super(
+        enterFullscreen: () => kernel.enterFullscreen(playerId),
+        exitFullscreen: () => kernel.exitFullscreen(playerId),
+        enterPip: () => kernel.enterPip(playerId),
+        enterFloating: () => kernel.enterFloating(playerId),
+      );
 
   /// Kernel holding the presentation driver.
   final PlayerKernel kernel;

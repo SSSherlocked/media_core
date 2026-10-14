@@ -110,7 +110,9 @@ final class _TopBar extends StatelessWidget {
         child: Row(
           children: <Widget>[
             if (showTitle && title != null)
-              Expanded(child: Text(title, style: theme.titleTextStyle, maxLines: 1, overflow: TextOverflow.ellipsis))
+              Expanded(
+                child: Text(title, style: theme.titleTextStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+              )
             else
               const Spacer(),
             if (controller.actions.canEnterPip)
@@ -169,7 +171,9 @@ final class _CenterControls extends StatelessWidget {
       children: <Widget>[
         if (showSkipButtons)
           PlayerIconButton(
-            icon: seconds <= 10 ? CupertinoIcons.gobackward_10 : (seconds >= 45 ? CupertinoIcons.gobackward_45 : icons.rewind),
+            icon: seconds <= 10
+                ? CupertinoIcons.gobackward_10
+                : (seconds >= 45 ? CupertinoIcons.gobackward_45 : icons.rewind),
             theme: theme,
             size: theme.primaryIconSize * 0.6,
             tooltip: 'Back ${seconds}s',
@@ -187,7 +191,9 @@ final class _CenterControls extends StatelessWidget {
         ),
         if (showSkipButtons)
           PlayerIconButton(
-            icon: seconds <= 10 ? CupertinoIcons.goforward_10 : (seconds >= 45 ? CupertinoIcons.goforward_45 : icons.forward),
+            icon: seconds <= 10
+                ? CupertinoIcons.goforward_10
+                : (seconds >= 45 ? CupertinoIcons.goforward_45 : icons.forward),
             theme: theme,
             size: theme.primaryIconSize * 0.6,
             tooltip: 'Forward ${seconds}s',
