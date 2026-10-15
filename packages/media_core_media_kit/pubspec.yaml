@@ -31,13 +31,13 @@ dependencies:
   media_kit:
     git:
       url: https://github.com/SSSherlocked/media-kit.git
-      ref: 35f8e8993c3ed737b5e8807c7d330780741f321e
+      ref: f38e69d275fe5759e01bfe6ba5de3c429663ca75
       path: ./media_kit
 
   media_kit_video:
     git:
       url: https://github.com/SSSherlocked/media-kit.git
-      ref: 35f8e8993c3ed737b5e8807c7d330780741f321e
+      ref: f38e69d275fe5759e01bfe6ba5de3c429663ca75
       path: ./media_kit_video
 
 dev_dependencies:

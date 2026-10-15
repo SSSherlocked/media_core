@@ -295,6 +295,31 @@ final class LivePlaybackController {
     });
   }
 
+  /// Ends the current stream and keeps the player warm for the next play.
+  ///
+  /// Unlike [pause], nothing of the stream stays behind: its connection
+  /// closes and the engine drops its decoded picture, so the next play - of
+  /// the same source or another - never shows what played before. Unlike
+  /// [close], the engine stays attached, so that play starts without a cold
+  /// player.
+  Future<void> stop() async {
+    _playbackRequested = false;
+    _playGeneration++;
+
+    _supersedeQueued('superseded by stop');
+
+    watchdogs.cancelAll();
+
+    await _enqueue(TaskType.stop, (token) async {
+      // Forget the stream, or a play of the same source would be taken for
+      // a duplicate of a playback that is no longer running.
+      _currentSource = null;
+      final handle = _handle;
+      if (handle != null && !handle.disposed) await handle.stop();
+      _setState(_liveState(PlayerPlaybackState.stopped));
+    });
+  }
+
   /// Resumes playback.
   Future<void> resume() async {
     _playbackRequested = true;
