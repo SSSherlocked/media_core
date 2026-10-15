@@ -73,6 +73,11 @@ class MediaKitVideoView extends StatelessWidget {
           controller: controller,
           fit: fit,
           controls: controls ?? mkv.NoVideoControls,
+          // Background playback is the host's call (media_core's lifecycle
+          // coordinator). Left on, the widget paused the player whenever the
+          // app was paused, and the host resumed it: about a second of
+          // silence at every switch away from the app.
+          pauseUponEnteringBackgroundMode: false,
           width: width,
           height: height,
           fill: fill,
