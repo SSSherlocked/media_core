@@ -196,7 +196,14 @@ final class FeedPlayerController {
     }
 
     if (_handle == null || _handle!.disposed) {
-      _handle = await kernel.create();
+      final created = await kernel.create();
+      // Disposed while the player was being created: dispose found no handle
+      // to release, so this one would be left playing with no owner.
+      if (_disposed) {
+        await _releaseOrphan(created);
+        return;
+      }
+      _handle = created;
     }
     _reattachTransport();
 
@@ -208,7 +215,14 @@ final class FeedPlayerController {
     try {
       await handle.open(source, autoPlay: true);
 
-      if (_disposed || _index != index) {
+      if (_disposed) {
+        // Disposed while the source was opening (with autoPlay): if dispose
+        // did not get to release this handle, it must not go on playing.
+        await _releaseOrphan(handle);
+        return;
+      }
+
+      if (_index != index) {
         // The user kept swiping while this page was opening.
         _log.debug(
           'feed open finished after the viewer moved on',
@@ -339,6 +353,17 @@ final class FeedPlayerController {
   /// every player change also survives an item switch, where each item gets a
   /// fresh handle.
   Stream<PlayerTransportState> get onPlaybackStateChanged => _transportController.stream;
+
+  /// Releases a handle this controller created but no longer holds, after it
+  /// was disposed; a pooled handle is the pool's.
+  Future<void> _releaseOrphan(PlayerHandle handle) async {
+    if (pool != null || handle.disposed) return;
+    try {
+      await kernel.release(handle.id);
+    } catch (_) {
+      // Best-effort release.
+    }
+  }
 
   /// Releases the shared player and the feed.
   ///
