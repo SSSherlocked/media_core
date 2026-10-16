@@ -355,6 +355,12 @@ final class LiveWatchdogs {
   /// how recovery should be scheduled.
   void Function(LiveStallKind kind)? onStall;
 
+  /// While true, a stream that stops moving (buffering, no new frame, the
+  /// position standing still) is not reported: the host knows why it waits
+  /// (a Twitch ad break taken out of the stream) and that it will resume.
+  /// Open and pause watchdogs are unaffected.
+  bool stallsHeld = false;
+
   /// Called when the watchdog wants the playback owner to perform
   /// a lifecycle-safe recovery action.
   ///

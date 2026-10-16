@@ -5,6 +5,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'hls_session_cookies.dart';
+import 'twitch_ads.dart';
 
 /// Rewrites an HLS manifest tree so every child is an absolute loopback URL.
 ///
@@ -32,6 +33,8 @@ final class LoopbackIngestRelay {
     required Uri Function(Uri)? childUriPolicy,
     required bool sessionCookies,
     required int prefetchSegments,
+    required bool dropTwitchAds,
+    required void Function(TwitchAdFilterResult result)? onTwitchAds,
   }) : _server = server,
        _client = client,
        _headers = headers,
@@ -41,6 +44,8 @@ final class LoopbackIngestRelay {
        _maximumManifestBytes = maximumManifestBytes,
        _childUriPolicy = childUriPolicy,
        _prefetchSegments = prefetchSegments,
+       _dropTwitchAds = dropTwitchAds,
+       _onTwitchAds = onTwitchAds,
        _cookies = sessionCookies ? HlsSessionCookies() : null {
     _children['root.m3u8'] = _Child(uri: upstream, manifest: true);
   }
@@ -66,6 +71,12 @@ final class LoopbackIngestRelay {
   /// it only starts when it needs the segment. Twitch's announced next
   /// segments (`#EXT-X-TWITCH-PREFETCH`) are fetched too. 0 turns it off.
   ///
+  /// [dropTwitchAds] takes Twitch's stitched-in ad segments out of every
+  /// media playlist (see [withoutTwitchAds]); [onTwitchAds] hears about each
+  /// playlist that had some. While a break fills the whole playlist, the
+  /// last ad-free one is served again, so the player waits on the live
+  /// stream instead of showing the ad.
+  ///
   /// [findProxy] is the upstream proxy directive for every request this relay
   /// makes itself. Without it the relay goes direct even when the host player is
   /// proxied, so a provider that is only reachable through a proxy would read the
@@ -77,6 +88,8 @@ final class LoopbackIngestRelay {
     Uri Function(Uri)? childUriPolicy,
     bool sessionCookies = false,
     int prefetchSegments = 0,
+    bool dropTwitchAds = false,
+    void Function(TwitchAdFilterResult result)? onTwitchAds,
     String Function(Uri url)? findProxy,
     Duration manifestTimeout = const Duration(seconds: 15),
     Duration childIdleTimeout = const Duration(seconds: 10),
@@ -112,6 +125,8 @@ final class LoopbackIngestRelay {
       childUriPolicy: childUriPolicy,
       sessionCookies: sessionCookies,
       prefetchSegments: prefetchSegments,
+      dropTwitchAds: dropTwitchAds,
+      onTwitchAds: onTwitchAds,
     );
     server.listen(relay._handle, onError: (Object _) {}, cancelOnError: false);
     if (rootManifest != null) {
@@ -144,6 +159,11 @@ final class LoopbackIngestRelay {
   final Uri Function(Uri)? _childUriPolicy;
   final HlsSessionCookies? _cookies;
   final int _prefetchSegments;
+  final bool _dropTwitchAds;
+  final void Function(TwitchAdFilterResult result)? _onTwitchAds;
+
+  /// Per playlist child name, the last body served without ads.
+  final Map<String, String> _lastAdFree = <String, String>{};
 
   /// Upstream URL -> its prefetched body, oldest first.
   final Map<String, Future<_Fetched?>> _prefetched =
@@ -230,8 +250,9 @@ final class LoopbackIngestRelay {
       body = await _readManifest(upstream);
     }
     if (_closed) return;
-    final String rewritten = _rewrite(body, manifest);
-    if (_prefetchSegments > 0) _prefetchNewest(body, manifest);
+    final String served = _dropTwitchAds ? _adFree(name, body) : body;
+    final String rewritten = _rewrite(served, manifest);
+    if (_prefetchSegments > 0) _prefetchNewest(served, manifest);
     final HttpResponse response = request.response;
     response.statusCode = HttpStatus.ok;
     response.headers.contentType = ContentType(
@@ -401,6 +422,18 @@ final class LoopbackIngestRelay {
     await target.close();
   }
 
+  /// [body] without Twitch's ad segments. A playlist that is all ad gets the
+  /// last ad-free one again; with none yet (the room opened during a break),
+  /// the ad plays rather than nothing at all.
+  String _adFree(String name, String body) {
+    final TwitchAdFilterResult result = withoutTwitchAds(body);
+    if (result.dropped > 0) _onTwitchAds?.call(result);
+    final String? filtered = result.body;
+    if (filtered == null) return _lastAdFree[name] ?? body;
+    _lastAdFree[name] = filtered;
+    return filtered;
+  }
+
   /// Starts fetching the newest [_prefetchSegments] segments of the media
   /// playlist [body] (and Twitch's announced next ones) that are not fetched
   /// yet. A master playlist lists playlists, not segments: nothing to do.
@@ -512,6 +545,7 @@ final class LoopbackIngestRelay {
     _children.clear();
     _byUpstream.clear();
     _prefetched.clear();
+    _lastAdFree.clear();
     _client.close(force: true);
     await _server.close(force: true);
   }

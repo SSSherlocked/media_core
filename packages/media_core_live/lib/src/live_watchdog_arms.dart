@@ -103,7 +103,7 @@ extension _LiveWatchdogArms on LiveWatchdogs {
         return;
       }
 
-      if (_buffering) {
+      if (_buffering && !stallsHeld) {
         onStall?.call(LiveStallKind.bufferingStallTimeout);
       }
     });
@@ -183,6 +183,7 @@ extension _LiveWatchdogArms on LiveWatchdogs {
 
           _cancelVideoFrameStall();
 
+          if (stallsHeld) return;
           onStall?.call(LiveStallKind.videoFrameStallTimeout);
         });
   }
@@ -246,6 +247,7 @@ extension _LiveWatchdogArms on LiveWatchdogs {
 
           _cancelPositionStall();
 
+          if (stallsHeld) return;
           onStall?.call(LiveStallKind.positionStallTimeout);
         });
   }
