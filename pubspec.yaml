@@ -13,6 +13,7 @@ workspace:
   - packages/media_core_memory
   - packages/media_core_media_kit
   - packages/media_core_better_player
+  - packages/media_core_video_player
   - packages/media_core_cast_dlna
   - packages/media_core_native
   - packages/media_core_native/example
