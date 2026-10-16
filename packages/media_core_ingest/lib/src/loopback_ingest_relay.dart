@@ -31,6 +31,7 @@ final class LoopbackIngestRelay {
     required int maximumManifestBytes,
     required Uri Function(Uri)? childUriPolicy,
     required bool sessionCookies,
+    required int prefetchSegments,
   }) : _server = server,
        _client = client,
        _headers = headers,
@@ -39,6 +40,7 @@ final class LoopbackIngestRelay {
        _childIdleTimeout = childIdleTimeout,
        _maximumManifestBytes = maximumManifestBytes,
        _childUriPolicy = childUriPolicy,
+       _prefetchSegments = prefetchSegments,
        _cookies = sessionCookies ? HlsSessionCookies() : null {
     _children['root.m3u8'] = _Child(uri: upstream, manifest: true);
   }
@@ -58,6 +60,12 @@ final class LoopbackIngestRelay {
   /// [childIdleTimeout] bounds how long a proxied child may go without sending
   /// another byte, and how long the relay may wait for its response headers.
   ///
+  /// [prefetchSegments] is how many of a live playlist's newest segments the
+  /// relay fetches as soon as it serves the playlist, before the player asks:
+  /// the player then reads them from memory instead of waiting for a request
+  /// it only starts when it needs the segment. Twitch's announced next
+  /// segments (`#EXT-X-TWITCH-PREFETCH`) are fetched too. 0 turns it off.
+  ///
   /// [findProxy] is the upstream proxy directive for every request this relay
   /// makes itself. Without it the relay goes direct even when the host player is
   /// proxied, so a provider that is only reachable through a proxy would read the
@@ -68,6 +76,7 @@ final class LoopbackIngestRelay {
     String? rootManifest,
     Uri Function(Uri)? childUriPolicy,
     bool sessionCookies = false,
+    int prefetchSegments = 0,
     String Function(Uri url)? findProxy,
     Duration manifestTimeout = const Duration(seconds: 15),
     Duration childIdleTimeout = const Duration(seconds: 10),
@@ -102,6 +111,7 @@ final class LoopbackIngestRelay {
       maximumManifestBytes: maximumManifestBytes,
       childUriPolicy: childUriPolicy,
       sessionCookies: sessionCookies,
+      prefetchSegments: prefetchSegments,
     );
     server.listen(relay._handle, onError: (Object _) {}, cancelOnError: false);
     if (rootManifest != null) {
@@ -119,6 +129,10 @@ final class LoopbackIngestRelay {
     r'(\.m3u8|/(master_)?playlist)$',
     caseSensitive: false,
   );
+  static const String _twitchPrefetch = '#EXT-X-TWITCH-PREFETCH:';
+
+  /// Prefetched bodies kept at most: a few playlists' worth of segments.
+  static const int _cacheLimit = 12;
 
   final HttpServer _server;
   final HttpClient _client;
@@ -129,6 +143,11 @@ final class LoopbackIngestRelay {
   final int _maximumManifestBytes;
   final Uri Function(Uri)? _childUriPolicy;
   final HlsSessionCookies? _cookies;
+  final int _prefetchSegments;
+
+  /// Upstream URL -> its prefetched body, oldest first.
+  final Map<String, Future<_Fetched?>> _prefetched =
+      <String, Future<_Fetched?>>{};
 
   final Map<String, _Child> _children = <String, _Child>{};
 
@@ -212,6 +231,7 @@ final class LoopbackIngestRelay {
     }
     if (_closed) return;
     final String rewritten = _rewrite(body, manifest);
+    if (_prefetchSegments > 0) _prefetchNewest(body, manifest);
     final HttpResponse response = request.response;
     response.statusCode = HttpStatus.ok;
     response.headers.contentType = ContentType(
@@ -310,6 +330,25 @@ final class LoopbackIngestRelay {
   }
 
   Future<void> _proxyChild(HttpRequest request, Uri upstream) async {
+    final String? range = request.headers.value(HttpHeaders.rangeHeader);
+    final Future<_Fetched?>? prefetched = request.method == 'GET' &&
+            (range == null || range.isEmpty)
+        ? _prefetched[upstream.toString()]
+        : null;
+    if (prefetched != null) {
+      final _Fetched? fetched = await prefetched;
+      if (_closed) return;
+      if (fetched != null) {
+        final HttpResponse target = request.response;
+        target.statusCode = HttpStatus.ok;
+        target.headers.contentType = fetched.contentType;
+        target.contentLength = fetched.bytes.length;
+        target.add(fetched.bytes);
+        await target.close();
+        return;
+      }
+      // The prefetch failed: the request goes upstream itself.
+    }
     // The child idle timeout is a gap between bytes, not a total budget: a live
     // segment can be large and a large one is not a stalled one. What must not
     // happen is the relay waiting forever on an upstream that accepted the
@@ -321,7 +360,7 @@ final class LoopbackIngestRelay {
     final HttpClientResponse response = await _open(
       request.method,
       upstream,
-      range: request.headers.value(HttpHeaders.rangeHeader),
+      range: range,
     ).timeout(_childIdleTimeout);
     if (_closed) {
       await response.drain<void>();
@@ -360,6 +399,75 @@ final class LoopbackIngestRelay {
       target.add(bytes);
     }
     await target.close();
+  }
+
+  /// Starts fetching the newest [_prefetchSegments] segments of the media
+  /// playlist [body] (and Twitch's announced next ones) that are not fetched
+  /// yet. A master playlist lists playlists, not segments: nothing to do.
+  void _prefetchNewest(String body, Uri manifest) {
+    final List<Uri> segments = <Uri>[];
+    final List<Uri> announced = <Uri>[];
+    for (final String rawLine in const LineSplitter().convert(body)) {
+      final String line = rawLine.trim();
+      if (line.isEmpty) continue;
+      if (line.startsWith(_twitchPrefetch)) {
+        final Uri? uri = _segmentUri(
+          manifest,
+          line.substring(_twitchPrefetch.length).trim(),
+        );
+        if (uri != null) announced.add(uri);
+      } else if (!line.startsWith('#')) {
+        final Uri? uri = _segmentUri(manifest, line);
+        if (uri != null) segments.add(uri);
+      }
+    }
+    final int skip = segments.length > _prefetchSegments
+        ? segments.length - _prefetchSegments
+        : 0;
+    for (final Uri uri in <Uri>[...segments.skip(skip), ...announced]) {
+      final String key = uri.toString();
+      if (_prefetched.containsKey(key)) continue;
+      _prefetched[key] = _fetchWhole(uri);
+      while (_prefetched.length > _cacheLimit) {
+        _prefetched.remove(_prefetched.keys.first);
+      }
+    }
+  }
+
+  /// [raw] resolved against [manifest] when it is a segment (not a playlist).
+  static Uri? _segmentUri(Uri manifest, String raw) {
+    if (Uri.tryParse(raw) == null) return null;
+    final Uri resolved = manifest.resolve(raw);
+    if (!const <String>{'http', 'https'}.contains(resolved.scheme.toLowerCase()) ||
+        resolved.host.isEmpty ||
+        resolved.userInfo.isNotEmpty ||
+        _manifestPath.hasMatch(resolved.path)) {
+      return null;
+    }
+    return resolved;
+  }
+
+  /// One segment read whole, or null when it could not be (the player's own
+  /// request then goes upstream).
+  Future<_Fetched?> _fetchWhole(Uri uri) async {
+    try {
+      final HttpClientResponse response = await _open(
+        'GET',
+        uri,
+      ).timeout(_childIdleTimeout);
+      if (response.statusCode != HttpStatus.ok) {
+        await response.drain<void>();
+        return null;
+      }
+      final BytesBuilder body = BytesBuilder(copy: false);
+      await for (final List<int> chunk in response.timeout(_childIdleTimeout)) {
+        if (_closed) return null;
+        body.add(chunk);
+      }
+      return _Fetched(body.takeBytes(), response.headers.contentType);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<HttpClientResponse> _open(
@@ -403,6 +511,7 @@ final class LoopbackIngestRelay {
     _closed = true;
     _children.clear();
     _byUpstream.clear();
+    _prefetched.clear();
     _client.close(force: true);
     await _server.close(force: true);
   }
@@ -413,4 +522,11 @@ final class _Child {
 
   final Uri uri;
   final bool manifest;
+}
+
+final class _Fetched {
+  const _Fetched(this.bytes, this.contentType);
+
+  final Uint8List bytes;
+  final ContentType? contentType;
 }
