@@ -219,7 +219,14 @@ final class LoopbackIngestRelay {
       'vnd.apple.mpegurl',
     );
     response.headers.set(HttpHeaders.cacheControlHeader, 'no-store');
-    response.write(rewritten);
+    // With its length: a body of unknown length goes out chunked, and ffmpeg,
+    // told to reconnect streamed inputs, reads the end of a chunked body as
+    // a cut. It reconnected after every playlist ("Will reconnect at <size>
+    // ... End of file"), waited a second each time, and the live HLS
+    // playlist fell behind until segments expired under the player.
+    final List<int> bytes = utf8.encode(rewritten);
+    response.contentLength = bytes.length;
+    response.add(bytes);
     await response.close();
   }
 
@@ -324,7 +331,6 @@ final class LoopbackIngestRelay {
     target.statusCode = response.statusCode;
     target.headers.contentType = response.headers.contentType;
     for (final String header in const <String>[
-      HttpHeaders.contentLengthHeader,
       HttpHeaders.contentRangeHeader,
       HttpHeaders.acceptRangesHeader,
       HttpHeaders.etagHeader,
@@ -333,7 +339,26 @@ final class LoopbackIngestRelay {
       final String? value = response.headers.value(header);
       if (value != null) target.headers.set(header, value);
     }
-    await target.addStream(response.timeout(_childIdleTimeout));
+    // The length the player is told must be the length of what it gets. The
+    // upstream header is wrong for a body HttpClient decompressed (it counts
+    // the compressed bytes), and a body sent without a length is read by
+    // ffmpeg as cut short (see _serveManifest): such a body is read whole
+    // first, then sent with its real length.
+    final int length = response.contentLength;
+    if (length >= 0 &&
+        response.compressionState !=
+            HttpClientResponseCompressionState.decompressed) {
+      target.contentLength = length;
+      await target.addStream(response.timeout(_childIdleTimeout));
+    } else {
+      final BytesBuilder body = BytesBuilder(copy: false);
+      await for (final List<int> chunk in response.timeout(_childIdleTimeout)) {
+        body.add(chunk);
+      }
+      final List<int> bytes = body.takeBytes();
+      target.contentLength = bytes.length;
+      target.add(bytes);
+    }
     await target.close();
   }
 
