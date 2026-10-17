@@ -18,6 +18,7 @@ void main() {
     final TwitchAdFilterResult result = withoutTwitchAds(body);
     expect(result.adOngoing, isFalse);
     expect(result.dropped, 3);
+    expect(result.marker, 'title "Amazon|123"');
     expect(result.body, contains('#EXT-X-MEDIA-SEQUENCE:13'));
     expect(result.body, isNot(contains('seg/11')));
     expect(result.body, contains('seg/15'));
@@ -58,5 +59,20 @@ void main() {
     expect(result.body, isNull);
     expect(result.dropped, 2);
     expect(result.adOngoing, isTrue);
+    expect(result.marker, 'daterange stitched-ad-1 (bounded)');
+  });
+
+  test('a planned duration ends an ad range', () {
+    final String body =
+        '#EXTM3U\n#EXT-X-MEDIA-SEQUENCE:5\n'
+        '#EXT-X-DATERANGE:ID="stitched-ad-2",CLASS="twitch-stitched-ad",START-DATE="2026-10-17T10:00:00.000Z",PLANNED-DURATION=4.0\n'
+        '${_segment(5, time: '2026-10-17T10:00:00.000Z')}${_segment(6, time: '2026-10-17T10:00:02.000Z')}'
+        '${_segment(7, time: '2026-10-17T10:00:04.000Z')}${_segment(8, time: '2026-10-17T10:00:06.000Z')}'
+        '${_segment(9, time: '2026-10-17T10:00:08.000Z')}';
+    final TwitchAdFilterResult result = withoutTwitchAds(body);
+    // Without the planned duration the range would cover 7, 8 and 9 too.
+    expect(result.dropped, 2);
+    expect(result.adOngoing, isFalse);
+    expect(result.body, contains('#EXT-X-MEDIA-SEQUENCE:7'));
   });
 }

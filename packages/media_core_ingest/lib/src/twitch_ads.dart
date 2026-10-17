@@ -2,7 +2,7 @@ import 'dart:convert';
 
 /// What [withoutTwitchAds] did to one media playlist.
 final class TwitchAdFilterResult {
-  const TwitchAdFilterResult(this.body, {required this.dropped, required this.adOngoing});
+  const TwitchAdFilterResult(this.body, {required this.dropped, required this.adOngoing, this.marker});
 
   /// The playlist without its ad segments; null when nothing of the live
   /// stream is left in it (the whole window is an ad).
@@ -13,6 +13,10 @@ final class TwitchAdFilterResult {
 
   /// Whether the playlist ends in an ad: the break is still running.
   final bool adOngoing;
+
+  /// What marked the first ad segment, for the log: its `#EXTINF` title or
+  /// the `#EXT-X-DATERANGE` that covers it.
+  final String? marker;
 }
 
 /// Takes Twitch's stitched-in ad segments out of a live media playlist.
@@ -73,7 +77,9 @@ TwitchAdFilterResult withoutTwitchAds(String body, {int minimumLiveRun = 3}) {
   }
 
   final int firstSequence = header.map(_mediaSequence).whereType<int>().firstOrNull ?? 0;
-  final List<bool> ads = <bool>[for (final _Segment segment in segments) segment.isAd(adRanges)];
+  final List<String?> markers = <String?>[for (final _Segment segment in segments) segment.adMarker(adRanges)];
+  final List<bool> ads = <bool>[for (final String? marker in markers) marker != null];
+  final String? marker = markers.whereType<String>().firstOrNull;
   final int adCount = ads.where((ad) => ad).length;
   if (adCount == 0) return TwitchAdFilterResult(body, dropped: 0, adOngoing: false);
 
@@ -96,7 +102,7 @@ TwitchAdFilterResult withoutTwitchAds(String body, {int minimumLiveRun = 3}) {
     start = afterLastAd;
   }
   if (start >= end) {
-    return TwitchAdFilterResult(null, dropped: adCount, adOngoing: adOngoing);
+    return TwitchAdFilterResult(null, dropped: adCount, adOngoing: adOngoing, marker: marker);
   }
 
   final List<String> output = <String>[
@@ -110,6 +116,7 @@ TwitchAdFilterResult withoutTwitchAds(String body, {int minimumLiveRun = 3}) {
     '${output.join('\n')}\n',
     dropped: segments.length - (end - start),
     adOngoing: adOngoing,
+    marker: marker,
   );
 }
 
@@ -134,25 +141,31 @@ final class _Segment {
   final List<String> tags;
   final String uri;
 
-  bool isAd(List<_AdRange> adRanges) {
+  /// What marks this segment as an ad, or null when it is live.
+  String? adMarker(List<_AdRange> adRanges) {
     for (final String tag in tags) {
       if (tag.startsWith('#EXTINF')) {
         final int comma = tag.indexOf(',');
-        final String title = comma < 0 ? '' : tag.substring(comma + 1).trim().toLowerCase();
-        if (title.contains('amazon') || title.contains('stitched')) return true;
+        final String title = comma < 0 ? '' : tag.substring(comma + 1).trim();
+        final String lower = title.toLowerCase();
+        if (lower.contains('amazon') || lower.contains('stitched')) return 'title "$title"';
       }
       if (tag.startsWith('#EXT-X-PROGRAM-DATE-TIME:')) {
         final DateTime? date = DateTime.tryParse(tag.substring('#EXT-X-PROGRAM-DATE-TIME:'.length).trim());
-        if (date != null && adRanges.any((range) => range.covers(date))) return true;
+        if (date == null) continue;
+        for (final _AdRange range in adRanges) {
+          if (range.covers(date)) return 'daterange ${range.id} (${range.end == null ? 'open-ended' : 'bounded'})';
+        }
       }
     }
-    return false;
+    return null;
   }
 }
 
 final class _AdRange {
-  const _AdRange(this.start, this.end);
+  const _AdRange(this.id, this.start, this.end);
 
+  final String id;
   final DateTime start;
   final DateTime? end;
 
@@ -169,10 +182,13 @@ final class _AdRange {
     final DateTime? start = DateTime.tryParse(attributes['START-DATE'] ?? '');
     if (start == null) return null;
     final DateTime? endDate = DateTime.tryParse(attributes['END-DATE'] ?? '');
-    final double? duration = double.tryParse(attributes['DURATION'] ?? '');
+    // PLANNED-DURATION stands in for a break whose length is not final yet,
+    // as Streamlink reads it; without either the range has no end.
+    final double? duration =
+        double.tryParse(attributes['DURATION'] ?? '') ?? double.tryParse(attributes['PLANNED-DURATION'] ?? '');
     final DateTime? end =
         endDate ?? (duration == null ? null : start.add(Duration(milliseconds: (duration * 1000).round())));
-    return _AdRange(start, end);
+    return _AdRange(attributes['ID'] ?? '?', start, end);
   }
 
   /// An open-ended range (no duration yet) covers everything after it.
