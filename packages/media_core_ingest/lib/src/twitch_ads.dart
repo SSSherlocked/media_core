@@ -32,8 +32,15 @@ final class TwitchAdFilterResult {
 /// segments (`#EXT-X-TWITCH-PREFETCH`) are dropped during a break: they are
 /// ads too.
 ///
+/// A break counts as running until the live run after it holds
+/// [minimumLiveRun] segments. Served the moment the first live segment
+/// appears, that run is one segment long: the player jumps to it, sits at
+/// the live edge with nothing buffered and waits on every later segment as
+/// it is published, stalling every few seconds for as long as it plays.
+/// Three segments is where a player starts a live playlist anyway.
+///
 /// A playlist without ad markers comes back unchanged.
-TwitchAdFilterResult withoutTwitchAds(String body) {
+TwitchAdFilterResult withoutTwitchAds(String body, {int minimumLiveRun = 3}) {
   final List<String> lines = const LineSplitter().convert(body);
   final List<_AdRange> adRanges = lines
       .where((line) => line.startsWith(_dateRange))
@@ -70,11 +77,13 @@ TwitchAdFilterResult withoutTwitchAds(String body) {
   final int adCount = ads.where((ad) => ad).length;
   if (adCount == 0) return TwitchAdFilterResult(body, dropped: 0, adOngoing: false);
 
-  final bool adOngoing = ads.last;
+  final int afterLastAd = ads.lastIndexOf(true) + 1;
+  final bool adOngoing = ads.length - afterLastAd < minimumLiveRun;
   int start;
   int end; // exclusive
   if (adOngoing) {
-    end = ads.length;
+    // The live run before the last break.
+    end = afterLastAd;
     while (end > 0 && ads[end - 1]) {
       end--;
     }
@@ -84,7 +93,7 @@ TwitchAdFilterResult withoutTwitchAds(String body) {
     }
   } else {
     end = ads.length;
-    start = ads.lastIndexOf(true) + 1;
+    start = afterLastAd;
   }
   if (start >= end) {
     return TwitchAdFilterResult(null, dropped: adCount, adOngoing: adOngoing);

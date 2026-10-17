@@ -14,13 +14,27 @@ void main() {
 
   test('after a break: the live run after the last ad, with its own sequence', () {
     final String body =
-        '#EXTM3U\n#EXT-X-MEDIA-SEQUENCE:10\n${_segment(10)}${_segment(11, ad: true)}${_segment(12, ad: true)}${_segment(13)}${_segment(14)}';
+        '#EXTM3U\n#EXT-X-MEDIA-SEQUENCE:10\n${_segment(10)}${_segment(11, ad: true)}${_segment(12, ad: true)}${_segment(13)}${_segment(14)}${_segment(15)}';
     final TwitchAdFilterResult result = withoutTwitchAds(body);
     expect(result.adOngoing, isFalse);
     expect(result.dropped, 3);
     expect(result.body, contains('#EXT-X-MEDIA-SEQUENCE:13'));
     expect(result.body, isNot(contains('seg/11')));
-    expect(result.body, contains('seg/14'));
+    expect(result.body, contains('seg/15'));
+  });
+
+  test('a break holds until the live run after it is three segments long', () {
+    final String body =
+        '#EXTM3U\n#EXT-X-MEDIA-SEQUENCE:10\n${_segment(10)}${_segment(11, ad: true)}${_segment(12, ad: true)}${_segment(13)}${_segment(14)}'
+        '#EXT-X-TWITCH-PREFETCH:https://seg/15.ts\n';
+    final TwitchAdFilterResult result = withoutTwitchAds(body);
+    // Served now, 13 and 14 would leave the player at the live edge with
+    // nothing buffered: the run before the break is served instead.
+    expect(result.adOngoing, isTrue);
+    expect(result.body, contains('#EXT-X-MEDIA-SEQUENCE:10'));
+    expect(result.body, contains('seg/10'));
+    expect(result.body, isNot(contains('seg/13')));
+    expect(result.body, isNot(contains('PREFETCH')));
   });
 
   test('during a break: the live run before it, and no prefetch', () {
